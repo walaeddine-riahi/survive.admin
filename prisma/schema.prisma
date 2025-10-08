@@ -1,0 +1,764 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum TeamRole {
+  LEADER
+  MEMBER
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IncidentStatus {
+  OPEN
+  IN_PROGRESS
+  INVESTIGATING
+  RESOLVED
+  CLOSED
+}
+
+model User {
+  id                     String                 @id @default(auto()) @map("_id") @db.ObjectId
+  email                  String                 @unique
+  password               String
+  firstName              String?
+  lastName               String?
+  phone                  String?                @map("phone")
+  role                   Role                   @default(USER)
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  profile                Profile?
+  teams                  TeamMember[]
+  createdTasks           Task[]                 @relation("UserCreatedTasks")
+  reports                Report[]
+  biaReports             BiaReport[]            @relation("AuthoredBiaReports")
+  incidents              Incident[]
+  participations         Participation[]
+  notifications          Notification[]
+  simulationAssignments  SimulationAssignment[]
+  sentCommunications     Communication[]        @relation("SentCommunications")
+  receivedCommunications Communication[]        @relation("ReceivedCommunications")
+  targetedInjections     Injection[]            @relation("TargetedInjection")
+
+  @@map("users")
+}
+
+model Profile {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  bio       String?
+  avatar    String?
+  phone     String?
+  address   String?
+  userId    String   @unique @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+model Team {
+  id                    String                 @id @default(auto()) @map("_id") @db.ObjectId
+  name                  String
+  description           String?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  members               TeamMember[]
+  teamTasks             Task[]                 @relation("TeamTasks")
+  incidents             Incident[]
+  chats                 TeamChat[]
+  simulationAssignments SimulationAssignment[]
+  communications        Communication[]
+
+  @@map("teams")
+}
+
+model TeamMember {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  role          TeamRole @default(MEMBER)
+  joined        DateTime @default(now())
+  userId        String   @db.ObjectId
+  teamId        String   @db.ObjectId
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  assignedTasks Task[]   @relation("TeamMemberAssignedTasks")
+  user          User     @relation(fields: [userId], references: [id])
+  team          Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@map("team_members")
+}
+
+model Task {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String?
+  status      TaskStatus @default(PENDING)
+  priority    Priority   @default(MEDIUM)
+  role        String?
+  dueDate     DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  planTasks PlanTask[]
+
+  creatorId String @db.ObjectId
+  creator   User   @relation("UserCreatedTasks", fields: [creatorId], references: [id])
+
+  assigneeId String?     @db.ObjectId
+  assignee   TeamMember? @relation("TeamMemberAssignedTasks", fields: [assigneeId], references: [id])
+
+  teamId String @db.ObjectId
+  team   Team   @relation("TeamTasks", fields: [teamId], references: [id])
+
+  @@map("tasks")
+}
+
+model IncidentType {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  name        String     @unique
+  description String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  incidents   Incident[]
+
+  @@map("incident_types")
+}
+
+model Incident {
+  id               String         @id @default(auto()) @map("_id") @db.ObjectId
+  name             String
+  description      String
+  status           IncidentStatus @default(OPEN)
+  location         String
+  resources        String
+  requiredVehicles String         @map("required_vehicles")
+  latitude         String
+  longitude        String
+  delay            Int            @default(0)
+  incidentDate     DateTime       @map("incident_date")
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime?      @updatedAt
+  reporterId       String         @map("reporter_id") @db.ObjectId
+  typeId           String         @map("type_incident_id") @db.ObjectId
+  teamId           String?        @map("team_id") @db.ObjectId
+  planId           String?        @map("plan_id") @db.ObjectId
+  reporter         User           @relation(fields: [reporterId], references: [id])
+  type             IncidentType   @relation(fields: [typeId], references: [id])
+  team             Team?          @relation(fields: [teamId], references: [id])
+  plan             Plan?          @relation("IncidentToPlan", fields: [planId], references: [id])
+
+  @@map("incidents")
+}
+
+model Report {
+  id          String           @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  content     String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  authorId    String           @db.ObjectId
+  structureId String?          @db.ObjectId
+  incidentId  String?          @db.ObjectId
+  author      User             @relation(fields: [authorId], references: [id])
+  structure   ReportStructure? @relation(fields: [structureId], references: [id])
+
+  @@map("reports")
+}
+
+model ReportStructure {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  template  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  reports   Report[]
+
+  @@map("report_structures")
+}
+
+model Plan {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  status      String   @default("draft")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  typeId      String   @db.ObjectId
+
+  planTasks PlanTask[]
+  incidents Incident[] @relation("IncidentToPlan")
+  type      PlanType   @relation("PlanTypeToPlan", fields: [typeId], references: [id])
+
+  @@map("plans")
+}
+
+model PlanTask {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  planId    String   @db.ObjectId
+  taskId    String   @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, taskId])
+  @@map("plan_tasks")
+}
+
+model PlanType {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  plans       Plan[]   @relation("PlanTypeToPlan")
+
+  @@map("plan_types")
+}
+
+model TeamChat {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  message   String
+  senderId  String   @db.ObjectId
+  teamId    String   @db.ObjectId
+  createdAt DateTime @default(now())
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@map("team_chats")
+}
+
+model MigrationVersion {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  version       String    @unique
+  executedAt    DateTime?
+  executionTime Int?
+
+  @@map("migration_versions")
+}
+
+model Participation {
+  id           String      @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String      @db.ObjectId
+  eventId      String      @db.ObjectId
+  simulationId String?     @db.ObjectId
+  status       String      @default("pending")
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event        Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  simulation   Simulation? @relation("SimulationParticipation", fields: [simulationId], references: [id])
+
+  @@unique([userId, eventId])
+  @@map("participations")
+}
+
+model Event {
+  id             String          @id @default(auto()) @map("_id") @db.ObjectId
+  title          String
+  description    String?
+  startDate      DateTime
+  endDate        DateTime
+  location       String?
+  status         String          @default("upcoming")
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  participations Participation[]
+
+  @@map("events")
+}
+
+model Simulation {
+  id             String                 @id @default(auto()) @map("_id") @db.ObjectId
+  title          String
+  description    String?
+  startDate      DateTime
+  endDate        DateTime
+  status         String                 @default("planned")
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  scenarios      Scenario[]
+  assignments    SimulationAssignment[]
+  notifications  Notification[]         @relation("SimulationNotifications")
+  communications Communication[]
+  participations Participation[]        @relation("SimulationParticipation")
+  injections     Injection[]            @relation("SimulationToInjections")
+
+  @@map("simulations")
+}
+
+model SimulationAssignment {
+  id           String     @id @default(auto()) @map("_id") @db.ObjectId
+  role         String     @default("participant")
+  status       String     @default("pending")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  userId       String     @db.ObjectId
+  simulationId String     @db.ObjectId
+  teamId       String?    @db.ObjectId
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  simulation   Simulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
+  team         Team?      @relation(fields: [teamId], references: [id])
+
+  @@unique([userId, simulationId])
+  @@map("simulation_assignments")
+}
+
+model Notification {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  title        String
+  message      String
+  type         String
+  isRead       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  userId       String   @db.ObjectId
+  simulationId String?  @db.ObjectId
+  injectionId  String?  @db.ObjectId
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  simulation Simulation? @relation("SimulationNotifications", fields: [simulationId], references: [id])
+  injection  Injection?  @relation("InjectionNotifications", fields: [injectionId], references: [id])
+
+  @@map("notifications")
+}
+
+enum InjectionTriggerType {
+  MANUAL
+  TIMED
+}
+
+model Scenario {
+  id           String      @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  description  String?
+  simulationId String      @db.ObjectId
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  injections   Injection[] @relation("ScenarioToInjections")
+  simulation   Simulation  @relation(fields: [simulationId], references: [id], onDelete: Cascade)
+
+  @@map("scenarios")
+}
+
+model Injection {
+  id             String               @id @default(auto()) @map("_id") @db.ObjectId
+  title          String
+  content        String?
+  triggerType    InjectionTriggerType @default(MANUAL)
+  timeOffset     Int?
+  isRepeating    Boolean              @default(false)
+  repeatInterval Int?
+  scenarioId     String               @db.ObjectId
+  simulationId   String               @db.ObjectId
+  acknowledged   Boolean              @default(false)
+  isActive       Boolean              @default(true)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  payload        Json                 @default("{}")
+  type           InjectionType        @default(OTHER)
+  imageUrl       String?
+  videoUrl       String?
+  attachments    Json?
+  targetUserId   String?        @db.ObjectId
+
+  scenario      Scenario       @relation("ScenarioToInjections", fields: [scenarioId], references: [id])
+  simulation    Simulation     @relation("SimulationToInjections", fields: [simulationId], references: [id])
+  notifications Notification[] @relation("InjectionNotifications")
+  targetUser    User?          @relation("TargetedInjection", fields: [targetUserId], references: [id])
+
+  @@map("injections")
+}
+
+enum InjectionType {
+  EMAIL
+  SMS
+  MEMO
+  ALERT
+  SOCIAL
+  NEWS_BROADCAST
+  CALL
+  NEWSPAPER
+  OTHER
+}
+
+model Communication {
+  id           String     @id @default(auto()) @map("_id") @db.ObjectId
+  type         String
+  content      String
+  subject      String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  simulationId String     @db.ObjectId
+  senderId     String     @db.ObjectId
+  recipientId  String?    @db.ObjectId
+  teamId       String?    @db.ObjectId
+  simulation   Simulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
+  sender       User       @relation("SentCommunications", fields: [senderId], references: [id])
+  recipient    User?      @relation("ReceivedCommunications", fields: [recipientId], references: [id])
+  team         Team?      @relation(fields: [teamId], references: [id])
+  payload      Json?
+
+  @@map("communications")
+}
+
+// =====================================
+// BIA (Business Impact Analysis) Models
+// =====================================
+
+enum CriticalityLevel {
+  low
+  medium
+  high
+  critical
+}
+
+model Process {
+  id                               String          @id @default(auto()) @map("_id") @db.ObjectId
+  name                             String
+  description                      String?
+  department                       String
+  location                         String
+  impact                           String
+  criticality                      CriticalityLevel
+  
+  // Responsable principal
+  processOwner                     String?         // Nom du responsable principal
+  ownerRole                        String?         // Fonction/Rôle du responsable
+  ownerEmail                       String?         // Email du responsable
+  ownerPhone                       String?         // Téléphone du responsable
+  
+  // Métriques BIA
+  rto                              Int             // Recovery Time Objective (en heures)
+  mtpd                             Int             // Maximum Tolerable Period of Disruption (en heures)
+  rpo                              Int             // Recovery Point Objective (en heures)
+  mbco                             String          // Minimum Business Continuity Objective
+  
+  // Analyse d'impact
+  criticalTimes                    String?         // Périodes critiques d'activité
+  financialImpact                  String?         // Impact financier
+  operationalImpact                String?         // Impact opérationnel
+  reputationImpact                 String?         // Impact sur la réputation
+  operationalCapacityImpact        String?         // Impact sur la capacité opérationnelle
+  
+  // Périmètre et Dépendances
+  mainFunctionality                String?         // Fonctionnalité principale
+  productDependencies              String?         // Dépendances produits
+  interServiceDependencies         String?         // Dépendances inter-services
+  
+  // Activités externalisées
+  externalSuppliers                String?         // Fournisseurs externes
+  supplierTasks                    String?         // Tâches confiées aux fournisseurs
+  supplierContact                  String?         // Contact du fournisseur
+  supplierContinuityPlan           Boolean         // Plan de continuité fournisseur
+  hasSLAClause                     Boolean         // Clause SLA présente
+  supplierRTO                      Int?            // RTO du fournisseur (en heures)
+  supplierMTPD                     Int?            // MTPD du fournisseur (en heures)
+  
+  // Cadre légal et réglementaire
+  legalObligations                String?         // Obligations légales
+  legalReferences                 String?         // Références légales
+  legalAuthority                  String?         // Autorité de régulation
+  legalDetails                    String?         // Détails légaux
+  nonComplianceConsequences       String?         // Conséquences de la non-conformité
+  
+  // MES - Applications IT
+  itSystems                       String?         // Applications IT utilisées
+  systemCriticality               String?         // Niveau de criticité du système
+  systemImpact                    String?         // Impact système
+  supportedActivities             String?         // Activités supportées
+  hasBackupSystems                Boolean         // Systèmes de sauvegarde en place
+  systemRTO                       Int?            // RTO système (en heures)
+  systemRPO                       Int?            // RPO système (en heures)
+  systemMTPD                      Int?            // MTPD système (en heures)
+  workarounds                     String?         // Solutions de contournement
+  previousIncidents               String?         // Incidents antérieurs
+  
+  // Infrastructure
+  dependsOnPhysicalInfra          Boolean         // Dépend d'une infrastructure physique
+  infrastructureType              String?         // Type d'infrastructure
+  infraRTO                        Int?            // RTO infrastructure (en heures)
+  infraMTPD                       Int?            // MTPD infrastructure (en heures)
+  canWorkRemotely                 Boolean         // Travail à distance possible
+  canUseOtherInfra                Boolean         // Peut utiliser d'autres infrastructures
+  
+  // Personnel / Compétences
+  staffRoles                      String?         // Rôles du personnel
+  staffCount                      Int?            // Nombre de personnes
+  staffTasks                      String?         // Tâches du personnel
+  uniqueSkills                    String?         // Compétences uniques
+  criticalityAfterDisruption      String?         // Criticité après perturbation
+  roleRecoveryTime                String?         // Temps de reprise des rôles
+  canBeReplaced                   Boolean         // Personnel remplaçable
+  replacementBy                   String?         // Remplacé par
+  staffWorkarounds                String?         // Solutions de contournement pour le personnel
+  
+  // Équipement industriel
+  industrialEquipment             String?         // Équipement industriel
+  equipmentTasks                  String?         // Tâches de l'équipement
+  equipmentCriticality            String?         // Criticité de l'équipement
+  canReassignEquipment            Boolean         // Réaffectation possible de l'équipement
+  equipmentRTO                    Int?            // RTO équipement (en heures)
+  equipmentMTPD                   Int?            // MTPD équipement (en heures)
+  equipmentWorkarounds            String?         // Solutions de contournement pour l'équipement
+  voltage                         String?         // Tension
+  currentType                     String?         // Type de courant
+  powerRating                     String?         // Puissance nominale
+  dailyConsumption                String?         // Consommation journalière
+  backupCompatible                Boolean         // Compatible avec les systèmes de secours
+  
+  // Équipement bureautique
+  officeEquipment                 String?         // Équipement bureautique
+  equipmentQuantity               Int?            // Quantité d'équipement
+  officeEquipmentTasks            String?         // Tâches de l'équipement bureautique
+  officeEquipmentCriticality      String?         // Criticité de l'équipement bureautique
+  officeRTO                       Int?            // RTO équipement bureautique (en heures)
+  officeMTPD                      Int?            // MTPD équipement bureautique (en heures)
+  requiredAfterDisruption         Int?            // Délai avant besoin (en heures)
+  canReassignOfficeEquipment      Boolean         // Réaffectation possible de l'équipement bureautique
+  officeWorkarounds               String?         // Solutions de contournement pour l'équipement bureautique
+  
+  // Documentation
+  requiredDocumentation           String?         // Documentation requise
+  documentationLocation           String?         // Localisation de la documentation
+  neededAfterDisruption           Boolean         // Nécessaire après perturbation
+  documentationRTO                Int?            // RTO documentation (en heures)
+  hasAlternativeAccess            Boolean         // Accès alternatif disponible
+  hasReplacement                  Boolean         // Documentation de remplacement disponible
+  replacementMeasures             String?         // Mesures de remplacement
+  
+  // Fournisseurs
+  keySuppliers                    String?         // Fournisseurs clés
+  providedService                 String?         // Service fourni
+  supplierDetails                 String?         // Détails du fournisseur
+  supplierCriticality             String?         // Criticité du fournisseur
+  hasAlternativeSupplier          Boolean         // Fournisseur alternatif disponible
+  supplierHasContinuityPlan       Boolean         // Plan de continuité du fournisseur
+  
+  // Métadonnées
+  createdAt                       DateTime        @default(now())
+  updatedAt                       DateTime        @updatedAt
+  
+  // Relations (conservées pour la rétrocompatibilité)
+  responsibles                    Responsible[]
+  activities                      ProcessActivity[]
+  impacts                         Impact[]
+  applications                    ApplicationIT[]
+  infrastructures                 Infrastructure[]
+  industrialEquipmentList         EquipmentIndustrial[] @relation("IndustrialEquipment")
+  officeEquipmentList             EquipmentOffice[]     @relation("OfficeEquipment")
+  documentations                  DocumentationItem[]
+  personnels                      Personnel[]
+  suppliers                       Supplier[]
+  legalRequirements               LegalRequirement[]
+  
+  @@map("processes")
+}
+
+model Responsible {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  role        String
+  phone       String?
+  email       String?
+  processId   String   @db.ObjectId
+  process     Process  @relation(fields: [processId], references: [id], onDelete: Cascade)
+  
+  @@map("responsibles")
+}
+
+model ProcessActivity {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String?
+  processId   String   @db.ObjectId
+  process     Process  @relation(fields: [processId], references: [id], onDelete: Cascade)
+  
+  @@map("process_activities")
+}
+
+model Impact {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  type        String
+  description String
+  level       String
+  processId   String   @db.ObjectId
+  process     Process  @relation(fields: [processId], references: [id], onDelete: Cascade)
+  
+  @@map("impacts")
+}
+
+model ApplicationIT {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String?
+  processId   String   @db.ObjectId
+  process     Process  @relation(fields: [processId], references: [id], onDelete: Cascade)
+  
+  @@map("applications_it")
+}
+
+model Infrastructure {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String?
+  processId   String   @db.ObjectId
+  process     Process  @relation(fields: [processId], references: [id], onDelete: Cascade)
+  
+  @@map("infrastructures")
+}
+
+model EquipmentIndustrial {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  description  String?
+  processId    String   @db.ObjectId
+  process      Process  @relation("IndustrialEquipment", fields: [processId], references: [id], onDelete: Cascade)
+  
+  @@map("industrial_equipment")
+}
+
+model EquipmentOffice {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  description  String?
+  processId    String   @db.ObjectId
+  process      Process  @relation("OfficeEquipment", fields: [processId], references: [id], onDelete: Cascade)
+  
+  @@map("office_equipment")
+}
+
+model DocumentationItem {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String?
+  url         String?
+  processId   String   @db.ObjectId
+  process     Process  @relation(fields: [processId], references: [id], onDelete: Cascade)
+  
+  @@map("documentation_items")
+}
+
+model Personnel {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  role        String
+  department  String
+  processId   String   @db.ObjectId
+  process     Process  @relation(fields: [processId], references: [id], onDelete: Cascade)
+  
+  @@map("personnel")
+}
+
+model Supplier {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  contact     String?
+  service     String
+  processId   String   @db.ObjectId
+  process     Process  @relation(fields: [processId], references: [id], onDelete: Cascade)
+  
+  @@map("suppliers")
+}
+
+model LegalRequirement {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String?
+  processId   String   @db.ObjectId
+  process     Process  @relation(fields: [processId], references: [id], onDelete: Cascade)
+  
+  @@map("legal_requirements")
+}
+
+// =====================================
+// BIA Reports Management
+// =====================================
+
+enum BiaReportFormat {
+  PDF
+  DOCX
+  JSON
+  HTML
+}
+
+enum BiaReportStatus {
+  DRAFT
+  GENERATED
+  ARCHIVED
+  SHARED
+}
+
+model BiaReport {
+  id                  String           @id @default(auto()) @map("_id") @db.ObjectId
+  name                String
+  description         String?
+  format              BiaReportFormat
+  status              BiaReportStatus  @default(GENERATED)
+  
+  // Métadonnées du rapport
+  totalProcesses      Int              @default(0)
+  continuityLevel     Int              @default(0) // Score de continuité (0-100)
+  continuityLevelText String?          // Niveau textuel (Excellent, Bon, etc.)
+  riskCount           Int              @default(0)
+  recommendationCount Int              @default(0)
+  
+  // Contenu du rapport
+  reportData          Json             // Données complètes du rapport
+  content             String?          // Contenu textuel si applicable
+  
+  // Fichier
+  fileName            String?
+  filePath            String?          // Chemin du fichier sur le serveur
+  fileSize            Int              @default(0) // Taille en bytes
+  mimeType            String?
+  
+  // Paramètres de génération
+  generationParams    Json?            // Paramètres utilisés pour générer le rapport
+  includedProcessIds  String[]         // IDs des processus inclus dans le rapport
+  
+  // Partage et permissions
+  isPublic            Boolean          @default(false)
+  shareToken          String?          @unique // Token pour partage public
+  expiresAt           DateTime?        // Date d'expiration du partage
+  downloadCount       Int              @default(0)
+  
+  // Tags et catégorisation
+  tags                String[]         @default([])
+  category            String?          // Catégorie du rapport (mensuel, audit, etc.)
+  
+  // Relations
+  authorId            String           @db.ObjectId
+  author              User             @relation("AuthoredBiaReports", fields: [authorId], references: [id])
+  
+  // Métadonnées
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  
+  @@map("bia_reports")
+}

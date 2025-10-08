@@ -1,0 +1,403 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum TeamRole {
+  LEADER
+  MEMBER
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IncidentStatus {
+  OPEN
+  IN_PROGRESS
+  INVESTIGATING
+  RESOLVED
+  CLOSED
+}
+
+model User {
+  id                    String               @id @default(auto()) @map("_id") @db.ObjectId
+  email                 String               @unique
+  password              String
+  firstName             String?
+  lastName              String?
+  role                  Role                 @default(USER)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  profile               Profile?
+  teams                 TeamMember[]
+  createdTasks          Task[]               @relation("UserCreatedTasks")
+  reports               Report[]
+  incidents             Incident[]
+  participations        Participation[]
+  notifications         Notification[]
+  simulationAssignments SimulationAssignment[]
+  sentCommunications    Communication[]      @relation("SentCommunications")
+  receivedCommunications Communication[]      @relation("ReceivedCommunications")
+
+  @@map("users")
+}
+
+model Profile {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  bio       String?
+  avatar    String?
+  phone     String?
+  address   String?
+  userId    String   @unique @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+model Team {
+  id                  String               @id @default(auto()) @map("_id") @db.ObjectId
+  name                String
+  description         String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  members             TeamMember[]
+  teamTasks           Task[]               @relation("TeamTasks")
+  incidents           Incident[]
+  chats               TeamChat[]
+  simulationAssignments SimulationAssignment[]
+  communications      Communication[]
+
+  @@map("teams")
+}
+
+model TeamMember {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  role      TeamRole  @default(MEMBER)
+  joined    DateTime  @default(now())
+  userId    String    @db.ObjectId
+  teamId    String    @db.ObjectId
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  assignedTasks Task[] @relation("TeamMemberAssignedTasks")
+  user      User      @relation(fields: [userId], references: [id])
+  team      Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@map("team_members")
+}
+
+model Task {
+  id          String      @id @map("_id") @db.ObjectId
+  title       String
+  description String?
+  status      TaskStatus  @default(PENDING)
+  priority    Priority    @default(MEDIUM)
+  dueDate     DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Many-to-many relation with Plan - Owner side
+  planIds     String[]    @db.ObjectId
+  plans       Plan[]      @relation("PlanTasks", fields: [planIds], references: [id])
+
+  // One-to-many relations (Task points to single User/Team/TeamMember)
+  creatorId   String      @db.ObjectId
+  creator     User        @relation("UserCreatedTasks", fields: [creatorId], references: [id])
+
+  assigneeId  String?     @db.ObjectId
+  assignee    TeamMember? @relation("TeamMemberAssignedTasks", fields: [assigneeId], references: [id])
+
+  teamId      String      @db.ObjectId
+  team        Team        @relation("TeamTasks", fields: [teamId], references: [id])
+
+  @@map("tasks")
+}
+
+model IncidentType {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  name        String     @unique
+  description String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  incidents   Incident[]
+
+  @@map("incident_types")
+}
+
+model Incident {
+  id               String         @id @default(auto()) @map("_id") @db.ObjectId
+  name             String
+  description      String
+  status           IncidentStatus @default(OPEN)
+  location         String
+  resources        String
+  requiredVehicles String         @map("required_vehicles")
+  latitude         String
+  longitude        String
+  delay            Int            @default(0)
+  incidentDate     DateTime       @map("incident_date")
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime?      @updatedAt
+  reporterId       String         @db.ObjectId @map("reporter_id")
+  typeId           String         @db.ObjectId @map("type_incident_id")
+  teamId           String?        @db.ObjectId @map("team_id")
+  planId           String?        @db.ObjectId @map("plan_id")
+  reporter         User           @relation(fields: [reporterId], references: [id])
+  type             IncidentType   @relation(fields: [typeId], references: [id])
+  team             Team?          @relation(fields: [teamId], references: [id])
+  plan             Plan?          @relation("IncidentToPlan", fields: [planId], references: [id])
+
+  @@map("incidents")
+}
+
+model Report {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  content     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  authorId    String   @db.ObjectId
+  structureId String?  @db.ObjectId
+  incidentId  String?  @db.ObjectId
+  author      User     @relation(fields: [authorId], references: [id])
+  structure   ReportStructure? @relation(fields: [structureId], references: [id])
+
+  @@map("reports")
+}
+
+model ReportStructure {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  template  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  reports   Report[]
+
+  @@map("report_structures")
+}
+
+model Plan {
+  id          String    @id @map("_id") @db.ObjectId
+  name        String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  status      String    @default("draft")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  typeId      String    @db.ObjectId
+
+  // Explicit Many-to-many relation with Task for MongoDB
+  taskIds     String[]  @db.ObjectId // Scalar list to store IDs of related Tasks
+  tasks       Task[]    @relation("PlanTasks", fields: [taskIds], references: [id])
+
+  incidents   Incident[] @relation("IncidentToPlan")
+  type        PlanType  @relation("PlanTypeToPlan", fields: [typeId], references: [id])
+  
+  @@map("plans")
+}
+
+model PlanType {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  plans       Plan[]   @relation("PlanTypeToPlan")
+  
+  @@map("plan_types")
+}
+
+model TeamChat {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  message   String
+  senderId  String   @db.ObjectId
+  teamId    String   @db.ObjectId
+  createdAt DateTime @default(now())
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@map("team_chats")
+}
+
+model MigrationVersion {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  version       String   @unique
+  executedAt    DateTime?
+  executionTime Int?
+
+  @@map("migration_versions")
+}
+
+model Participation {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String   @db.ObjectId
+  eventId      String   @db.ObjectId
+  simulationId String? @db.ObjectId
+  status       String   @default("pending") // pending, confirmed, cancelled
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  simulation   Simulation? @relation("SimulationParticipation", fields: [simulationId], references: [id])
+
+  @@unique([userId, eventId])
+  @@map("participations")
+}
+
+model Event {
+  id            String          @id @default(auto()) @map("_id") @db.ObjectId
+  title         String
+  description   String?
+  startDate     DateTime
+  endDate       DateTime
+  location      String?
+  status        String          @default("upcoming") // upcoming, ongoing, completed, cancelled
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  participations Participation[]
+  notifications Notification[]
+  scenarios     Scenario[]
+
+  @@map("events")
+}
+
+model Simulation {
+  id                     String                 @id @default(auto()) @map("_id") @db.ObjectId
+  title                  String
+  description            String?
+  startDate              DateTime
+  endDate                DateTime
+  status                 String                 @default("planned") // planned, ongoing, completed, cancelled
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  scenarios              Scenario[]             @relation("SimulationScenarios")
+  assignments            SimulationAssignment[]
+  communications         Communication[]
+  participations         Participation[]        @relation("SimulationParticipation")
+
+  @@map("simulations")
+}
+
+model SimulationAssignment {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String   @db.ObjectId
+  simulationId String   @db.ObjectId
+  role         String
+  status       String   @default("pending") // pending, confirmed, rejected
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id])
+  simulation   Simulation @relation(fields: [simulationId], references: [id])
+
+  @@unique([userId, simulationId])
+  @@map("simulation_assignments")
+}
+
+model Notification {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  message     String
+  type        String
+  read        Boolean  @default(false)
+  userId      String   @db.ObjectId
+  eventId     String?  @db.ObjectId
+  scenarioId  String?  @db.ObjectId
+  injectionId String?  @db.ObjectId
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
+  event       Event?   @relation(fields: [eventId], references: [id])
+  scenario    Scenario? @relation(fields: [scenarioId], references: [id])
+  injection   Injection? @relation(fields: [injectionId], references: [id])
+
+  @@map("notifications")
+}
+
+enum InjectionTriggerType {
+  MANUAL
+  TIMED
+}
+
+model Scenario {
+  id             String                 @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  description    String?
+  simulationId   String                 @db.ObjectId
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  injections     Injection[]
+  notifications  Notification[]
+  simulation     Simulation             @relation("SimulationScenarios", fields: [simulationId], references: [id], onDelete: Cascade)
+
+  @@map("scenarios")
+}
+
+model Injection {
+  id           String             @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  description  String?
+  triggerType  InjectionTriggerType @default(MANUAL)
+  timeOffset   Int? // In minutes or seconds, depending on context
+  payload      Json? // Generic JSON payload for the injection content
+  scenarioId   String             @db.ObjectId
+  notificationId String?          @db.ObjectId
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  scenario     Scenario           @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  notification Notification?    @relation(fields: [notificationId], references: [id])
+
+  @@map("injections")
+}
+
+enum InjectionType {
+  EMAIL
+  CALL
+  SMS
+  ALERT
+  MEMO
+  NEWS_BROADCAST
+  NEWSPAPER
+  SOCIAL
+}
+
+model Communication {
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  type        InjectionType
+  subject     String?
+  content     String
+  senderId    String?       @db.ObjectId
+  recipientId String?       @db.ObjectId
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  sender      User?         @relation("SentCommunications", fields: [senderId], references: [id])
+  recipient   User?         @relation("ReceivedCommunications", fields: [recipientId], references: [id])
+  teamId      String?       @db.ObjectId
+  team        Team?         @relation(fields: [teamId], references: [id])
+
+  @@map("communications")
+} 

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800px" height="600px" viewBox="0 0 800 600" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <!-- Background Elements -->
+        <circle fill="#E5E7EB" opacity="0.4" cx="400" cy="300" r="250"/>
+        <circle fill="#E5E7EB" opacity="0.2" cx="400" cy="300" r="200"/>
+        
+        <!-- Dashboard Elements -->
+        <rect fill="#4F46E5" x="200" y="150" width="400" height="300" rx="20"/>
+        <rect fill="#6366F1" x="220" y="180" width="360" height="250" rx="10"/>
+        
+        <!-- Chart Elements -->
+        <path d="M250,350 L300,300 L350,320 L400,280 L450,290 L500,250" stroke="#A5B4FC" stroke-width="4" fill="none"/>
+        <circle fill="#A5B4FC" cx="250" cy="350" r="4"/>
+        <circle fill="#A5B4FC" cx="300" cy="300" r="4"/>
+        <circle fill="#A5B4FC" cx="350" cy="320" r="4"/>
+        <circle fill="#A5B4FC" cx="400" cy="280" r="4"/>
+        <circle fill="#A5B4FC" cx="450" cy="290" r="4"/>
+        <circle fill="#A5B4FC" cx="500" cy="250" r="4"/>
+        
+        <!-- Task Elements -->
+        <rect fill="#818CF8" x="250" y="200" width="120" height="60" rx="8"/>
+        <rect fill="#818CF8" x="390" y="200" width="120" height="60" rx="8"/>
+        <rect fill="#818CF8" x="250" y="280" width="120" height="60" rx="8"/>
+        <rect fill="#818CF8" x="390" y="280" width="120" height="60" rx="8"/>
+        
+        <!-- Decorative Elements -->
+        <circle fill="#C7D2FE" cx="150" cy="150" r="30"/>
+        <circle fill="#C7D2FE" cx="650" cy="450" r="40"/>
+        <circle fill="#C7D2FE" cx="600" cy="100" r="25"/>
+        <circle fill="#C7D2FE" cx="100" cy="400" r="35"/>
+    </g>
+</svg> 

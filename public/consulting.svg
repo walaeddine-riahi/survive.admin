@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="420" height="320" viewBox="0 0 420 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Elements -->
+  <circle cx="210" cy="160" r="150" fill="#E5E7EB" opacity="0.5"/>
+  <circle cx="210" cy="160" r="120" fill="#D1D5DB" opacity="0.3"/>
+  
+  <!-- Main Figure -->
+  <path d="M210 80C166.8 80 132 114.8 132 158C132 201.2 166.8 236 210 236C253.2 236 288 201.2 288 158C288 114.8 253.2 80 210 80Z" fill="#4B5563"/>
+  
+  <!-- Head -->
+  <circle cx="210" cy="120" r="30" fill="#9CA3AF"/>
+  
+  <!-- Body -->
+  <rect x="180" y="150" width="60" height="80" rx="10" fill="#6B7280"/>
+  
+  <!-- Arms -->
+  <rect x="150" y="160" width="30" height="10" rx="5" fill="#6B7280"/>
+  <rect x="240" y="160" width="30" height="10" rx="5" fill="#6B7280"/>
+  
+  <!-- Decorative Elements -->
+  <circle cx="160" cy="100" r="10" fill="#60A5FA" opacity="0.6"/>
+  <circle cx="260" cy="100" r="10" fill="#60A5FA" opacity="0.6"/>
+  <circle cx="210" cy="60" r="15" fill="#60A5FA" opacity="0.6"/>
+  
+  <!-- Abstract Shapes -->
+  <path d="M100 200C100 200 120 180 140 200" stroke="#60A5FA" stroke-width="4" opacity="0.6"/>
+  <path d="M280 200C280 200 260 180 240 200" stroke="#60A5FA" stroke-width="4" opacity="0.6"/>
+</svg>

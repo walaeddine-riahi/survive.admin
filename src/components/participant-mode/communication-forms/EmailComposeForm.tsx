@@ -1,0 +1,145 @@
+"use client";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { UserSelect, User } from "@/components/user-select";
+import { Mail } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+
+export type EmailFormData = {
+  to: string[]; // Tableau d'IDs des utilisateurs destinataires
+  toEmails?: string[]; // Tableau d'emails des destinataires
+  subject: string;
+  body: string;
+};
+
+export default function EmailComposeForm({
+  onSubmit,
+  onCancel,
+}: {
+  onSubmit: (data: EmailFormData) => void | Promise<void>;
+  onCancel: () => void;
+}) {
+  const { data: session } = useSession();
+  const [users, setUsers] = useState<User[]>([]);
+  const [selectedRecipientIds, setSelectedRecipientIds] = useState<string[]>([]);
+  const [formData, setFormData] = useState<EmailFormData>({
+    to: [],
+    toEmails: [],
+    subject: "",
+    body: "",
+  });
+
+  // Charger la liste des utilisateurs
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch('/api/users');
+        if (response.ok) {
+          const data = await response.json();
+          // Filtrer pour ne pas afficher l'utilisateur actuel dans la liste des destinataires
+          const otherUsers = data.filter((u: User) => u.id !== session?.user?.id);
+          setUsers(otherUsers);
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des utilisateurs:', error);
+      }
+    };
+    
+    if (session?.user?.id) {
+      fetchUsers();
+    }
+  }, [session]);
+
+  // Mettre à jour les données du formulaire quand des destinataires sont sélectionnés
+  useEffect(() => {
+    const selectedUsers = users.filter(u => selectedRecipientIds.includes(u.id));
+    setFormData(prev => ({
+      ...prev,
+      to: selectedUsers.map(u => u.id),
+      toEmails: selectedUsers.map(u => u.email || '')
+    }));
+  }, [selectedRecipientIds, users]);
+
+  // Gestion de la sélection multiple d'utilisateurs
+  const handleRecipientChange = (values: string | string[]) => {
+    // S'assurer d'avoir toujours un tableau
+    const selectedValues = Array.isArray(values) ? values : [values];
+    setSelectedRecipientIds(selectedValues);
+  };
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { id, value } = e.target;
+    setFormData(prevData => ({
+      ...prevData,
+      [id]: value,
+    }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // S'assurer que les emails des destinataires sont inclus
+    const formDataWithEmails = {
+      ...formData,
+      toEmails: formData.toEmails || []
+    };
+    onSubmit(formDataWithEmails);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label>Destinataires</Label>
+        <div className="w-full">
+          <UserSelect
+            multiple
+            value={selectedRecipientIds}
+            onValueChange={handleRecipientChange}
+            placeholder="Sélectionner un ou plusieurs destinataires..."
+          />
+        </div>
+        {formData.toEmails && formData.toEmails.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            {formData.toEmails.map((email, index) => (
+              <div key={index} className="flex items-center bg-gray-100 rounded-full px-3 py-1 text-sm">
+                <Mail className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                <span>{email}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="subject">Objet</Label>
+        <Input
+          id="subject"
+          type="text"
+          value={formData.subject}
+          onChange={handleChange}
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="body">Corps du message</Label>
+        <Textarea
+          id="body"
+          value={formData.body}
+          onChange={handleChange}
+          required
+          rows={10}
+        />
+      </div>
+      <div className="flex justify-end space-x-2">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Annuler
+        </Button>
+        <Button type="submit">Envoyer</Button>
+      </div>
+    </form>
+  );
+}

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Brain/Network Icon -->
+  <circle cx="40" cy="40" r="25" fill="#4B5563"/>
+  
+  <!-- Network Nodes -->
+  <circle cx="40" cy="25" r="5" fill="#60A5FA"/>
+  <circle cx="25" cy="40" r="5" fill="#60A5FA"/>
+  <circle cx="55" cy="40" r="5" fill="#60A5FA"/>
+  <circle cx="40" cy="55" r="5" fill="#60A5FA"/>
+  
+  <!-- Connection Lines -->
+  <path d="M40 30L25 40" stroke="#60A5FA" stroke-width="2"/>
+  <path d="M40 30L55 40" stroke="#60A5FA" stroke-width="2"/>
+  <path d="M40 50L25 40" stroke="#60A5FA" stroke-width="2"/>
+  <path d="M40 50L55 40" stroke="#60A5FA" stroke-width="2"/>
+  
+  <!-- Decorative Elements -->
+  <circle cx="40" cy="40" r="3" fill="#1F2937"/>
+</svg>
