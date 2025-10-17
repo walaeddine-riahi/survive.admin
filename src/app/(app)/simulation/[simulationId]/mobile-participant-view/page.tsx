@@ -1,6 +1,6 @@
 "use client";
 
-import { Inter } from 'next/font/google';
+import { Inter } from "next/font/google";
 import { Badge } from "@/components/ui/badge";
 import React from "react";
 import { useSession } from "next-auth/react";
@@ -17,22 +17,22 @@ import MemoComposeForm from "@/components/participant-mode/communication-forms/M
 import NewsBroadcastComposeForm from "@/components/participant-mode/communication-forms/NewsBroadcastComposeForm";
 import SmsComposeForm from "@/components/participant-mode/communication-forms/SmsComposeForm";
 import SocialComposeForm from "@/components/participant-mode/communication-forms/SocialComposeForm";
-import { 
-  Mail, 
-  MessageSquare, 
-  Phone, 
-  Bell, 
-  FileText, 
-  Newspaper, 
-  Users, 
+import {
+  Mail,
+  MessageSquare,
+  Phone,
+  Bell,
+  FileText,
+  Newspaper,
+  Users,
   ChevronLeft,
   Loader2,
   Inbox,
   PlusCircle,
   Rss,
-  X
-} from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
+  X,
+} from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Form Data Interfaces
 import type { AlertFormData } from "@/components/participant-mode/communication-forms/AlertComposeForm";
@@ -93,9 +93,9 @@ interface ParticipantViewData {
 }
 
 const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-  display: 'swap',
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
 });
 
 // Helper component for a communication channel card
@@ -106,7 +106,7 @@ function CommunicationChannelCard({
   onClick,
   icon: Icon,
   className = "",
-  iconClass = ""
+  iconClass = "",
 }: {
   title: string;
   count: number;
@@ -145,26 +145,29 @@ function CommunicationChannelCard({
 
 // Utility function to format date
 const formatDate = (dateString: string) => {
-  if (!dateString) return 'Non définie';
+  if (!dateString) return "Non définie";
   try {
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) return 'Date invalide';
-    return new Intl.DateTimeFormat('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    if (isNaN(date.getTime())) return "Date invalide";
+    return new Intl.DateTimeFormat("fr-FR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     }).format(date);
   } catch (error) {
-    console.error('Erreur de formatage de date:', error);
-    return 'Date invalide';
+    console.error("Erreur de formatage de date:", error);
+    return "Date invalide";
   }
 };
 
 const getIconForType = (type: string): React.ReactElement => {
-  const iconProps = { className: 'h-5 w-5 text-white drop-shadow-sm', strokeWidth: 1.75 };
-  
+  const iconProps = {
+    className: "h-5 w-5 text-white drop-shadow-sm",
+    strokeWidth: 1.75,
+  };
+
   switch (type.toLowerCase()) {
     case "email":
       return <Mail {...iconProps} />;
@@ -192,33 +195,41 @@ export default function MobileParticipantViewPage() {
   const params = useParams();
   const simulationId = params.simulationId as string;
   const { toast } = useToast();
-  
+
   const [data, setData] = useState<ParticipantViewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [selectedChannel, setSelectedChannel] = useState<keyof ParticipantViewData["communications"] | 'injections' | null>(null);
+  const [selectedChannel, setSelectedChannel] = useState<
+    keyof ParticipantViewData["communications"] | "injections" | null
+  >(null);
   const [isParticipant, setIsParticipant] = useState<boolean>(false);
   const [isComposing, setIsComposing] = useState(false);
   const [composeType, setComposeType] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const [selectedInjection, setSelectedInjection] = useState<Injection | null>(null);
+  const [selectedInjection, setSelectedInjection] = useState<Injection | null>(
+    null
+  );
   const audioContextRef = useRef<AudioContext | null>(null);
   const shownInjectionIds = useRef(new Set<string>());
 
   const playNotification = useCallback(() => {
     try {
       if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioContextRef.current = new (window.AudioContext ||
+          (window as any).webkitAudioContext)();
       }
       const audioContext = audioContextRef.current;
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
-      oscillator.type = 'sine';
+      oscillator.type = "sine";
       oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
       gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.4);
+      gainNode.gain.exponentialRampToValueAtTime(
+        0.001,
+        audioContext.currentTime + 0.4
+      );
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
       oscillator.start();
@@ -230,16 +241,20 @@ export default function MobileParticipantViewPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const response = await fetch(`/api/simulations/${simulationId}/participant-view`);
+      const response = await fetch(
+        `/api/simulations/${simulationId}/participant-view`
+      );
       if (!response.ok) {
-        throw new Error('Failed to fetch participant data');
+        throw new Error("Failed to fetch participant data");
       }
       const result = await response.json();
       setData(result.data);
 
-      if (data) { // Compare with previous data if it exists
+      if (data) {
+        // Compare with previous data if it exists
         const newInjections = result.data.injections.filter(
-          (newInj: Injection) => !data.injections.some((oldInj) => oldInj.id === newInj.id)
+          (newInj: Injection) =>
+            !data.injections.some((oldInj) => oldInj.id === newInj.id)
         );
         if (newInjections.length > 0) {
           playNotification();
@@ -250,7 +265,9 @@ export default function MobileParticipantViewPage() {
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      setError(
+        err instanceof Error ? err.message : "An unknown error occurred"
+      );
     } finally {
       setLoading(false);
     }
@@ -264,7 +281,9 @@ export default function MobileParticipantViewPage() {
 
   useEffect(() => {
     if (session?.user?.id && data?.participants) {
-      const currentUserIsParticipant = data.participants.some(p => p.user?.id === session.user.id);
+      const currentUserIsParticipant = data.participants.some(
+        (p) => p.user?.id === session.user.id
+      );
       setIsParticipant(currentUserIsParticipant);
     }
   }, [session, data]);
@@ -273,8 +292,13 @@ export default function MobileParticipantViewPage() {
     if (!data?.injections) return;
 
     const unseen = data.injections
-      .filter((inj) => !inj.acknowledgedAt && !shownInjectionIds.current.has(inj.id))
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      .filter(
+        (inj) => !inj.acknowledgedAt && !shownInjectionIds.current.has(inj.id)
+      )
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
 
     if (unseen.length > 0) {
       const latest = unseen[0];
@@ -286,15 +310,26 @@ export default function MobileParticipantViewPage() {
 
   const handleAcknowledgeInjection = async (injectionId: string) => {
     try {
-      const response = await fetch(`/api/injections/${injectionId}/acknowledge`, {
-        method: 'POST',
+      const response = await fetch(
+        `/api/injections/${injectionId}/acknowledge`,
+        {
+          method: "POST",
+        }
+      );
+      if (!response.ok) throw new Error("Failed to acknowledge injection");
+      toast({
+        title: "Injection Acknowledged",
+        description: "The injection has been marked as read.",
       });
-      if (!response.ok) throw new Error('Failed to acknowledge injection');
-      toast({ title: 'Injection Acknowledged', description: 'The injection has been marked as read.' });
       setSelectedInjection(null); // Close modal
       fetchData(); // Refresh data
     } catch (error) {
-      toast({ title: 'Error', description: error instanceof Error ? error.message : 'An unknown error occurred', variant: 'destructive' });
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive",
+      });
     }
   };
 
@@ -311,20 +346,33 @@ export default function MobileParticipantViewPage() {
   const genericSubmitHandler = async (type: string, formData: any) => {
     setSubmitting(true);
     try {
-      const response = await fetch(`/api/simulations/${simulationId}/communications`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, type }),
-      });
+      const response = await fetch(
+        `/api/simulations/${simulationId}/communications`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...formData, type }),
+        }
+      );
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || `Failed to send ${type}`);
       }
-      toast({ title: 'Success', description: `${type.charAt(0).toUpperCase() + type.slice(1)} sent successfully.` });
+      toast({
+        title: "Success",
+        description: `${
+          type.charAt(0).toUpperCase() + type.slice(1)
+        } sent successfully.`,
+      });
       handleCancelCompose();
       fetchData();
     } catch (error) {
-      toast({ title: 'Error', description: error instanceof Error ? error.message : `An unknown error occurred`, variant: 'destructive' });
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : `An unknown error occurred`,
+        variant: "destructive",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -333,13 +381,23 @@ export default function MobileParticipantViewPage() {
   const renderChannelContent = () => {
     if (!selectedChannel || !data) return null;
 
-    const items = selectedChannel === 'injections' ? data.injections : (data.communications[selectedChannel] || []);
-    const title = selectedChannel === 'injections' ? 'Injections' : selectedChannel.charAt(0).toUpperCase() + selectedChannel.slice(1);
+    const items =
+      selectedChannel === "injections"
+        ? data.injections
+        : data.communications[selectedChannel] || [];
+    const title =
+      selectedChannel === "injections"
+        ? "Injections"
+        : selectedChannel.charAt(0).toUpperCase() + selectedChannel.slice(1);
 
     return (
       <div className="fixed inset-0 bg-background z-50 flex flex-col">
         <header className="flex items-center justify-between p-4 border-b bg-background">
-          <Button variant="ghost" size="icon" onClick={() => setSelectedChannel(null)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSelectedChannel(null)}
+          >
             <ChevronLeft className="h-6 w-6" />
           </Button>
           <h2 className="text-lg font-bold">{title}</h2>
@@ -347,23 +405,43 @@ export default function MobileParticipantViewPage() {
         </header>
         <ScrollArea className="flex-1 p-4">
           {items.length === 0 ? (
-            <div className="text-center text-muted-foreground py-10">No items to display.</div>
+            <div className="text-center text-muted-foreground py-10">
+              No items to display.
+            </div>
           ) : (
             <div className="space-y-3">
-              {[...items].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((item) => (
-                <Card key={item.id}>
-                  <CardHeader className="p-3">
-                    <CardTitle className="text-sm font-semibold">{item.subject || 'No Subject'}</CardTitle>
-                    <p className="text-xs text-muted-foreground">{formatDate(item.createdAt)}</p>
-                  </CardHeader>
-                  <CardContent className="p-3 text-sm">
-                    <p>{item.content}</p>
-                    {selectedChannel === 'injections' && 'acknowledgedAt' in item && !item.acknowledgedAt && (
-                      <Button className="mt-2 w-full" size="sm" onClick={() => handleAcknowledgeInjection(item.id)}>Acknowledge</Button>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+              {[...items]
+                .sort(
+                  (a, b) =>
+                    new Date(b.createdAt).getTime() -
+                    new Date(a.createdAt).getTime()
+                )
+                .map((item) => (
+                  <Card key={item.id}>
+                    <CardHeader className="p-3">
+                      <CardTitle className="text-sm font-semibold">
+                        {item.subject || "No Subject"}
+                      </CardTitle>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDate(item.createdAt)}
+                      </p>
+                    </CardHeader>
+                    <CardContent className="p-3 text-sm">
+                      <p>{item.content}</p>
+                      {selectedChannel === "injections" &&
+                        "acknowledgedAt" in item &&
+                        !item.acknowledgedAt && (
+                          <Button
+                            className="mt-2 w-full"
+                            size="sm"
+                            onClick={() => handleAcknowledgeInjection(item.id)}
+                          >
+                            Acknowledge
+                          </Button>
+                        )}
+                    </CardContent>
+                  </Card>
+                ))}
             </div>
           )}
         </ScrollArea>
@@ -381,23 +459,25 @@ export default function MobileParticipantViewPage() {
 
     let formComponent;
     switch (composeType) {
-      case 'email':
+      case "email":
         formComponent = <EmailComposeForm {...formProps} />;
         break;
-      case 'sms':
+      case "sms":
         formComponent = <SmsComposeForm {...formProps} />;
         break;
-      case 'social':
+      case "social":
         formComponent = <SocialComposeForm {...formProps} />;
         break;
-      case 'memo':
+      case "memo":
         formComponent = <MemoComposeForm {...formProps} />;
         break;
-      case 'newsBroadcast':
+      case "newsBroadcast":
         formComponent = <NewsBroadcastComposeForm {...formProps} />;
         break;
-      case 'alert':
-        formComponent = <AlertComposeForm {...formProps} isParticipant={isParticipant} />;
+      case "alert":
+        formComponent = (
+          <AlertComposeForm {...formProps} isParticipant={isParticipant} />
+        );
         break;
       default:
         return null;
@@ -407,12 +487,20 @@ export default function MobileParticipantViewPage() {
       <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
         <Card className="w-full max-w-lg m-4">
           <CardHeader>
-            <CardTitle>Compose {composeType.charAt(0).toUpperCase() + composeType.slice(1)}</CardTitle>
-            <Button variant="ghost" size="icon" className="absolute top-2 right-2" onClick={handleCancelCompose}><X className="h-4 w-4" /></Button>
+            <CardTitle>
+              Compose{" "}
+              {composeType.charAt(0).toUpperCase() + composeType.slice(1)}
+            </CardTitle>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-2 right-2"
+              onClick={handleCancelCompose}
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </CardHeader>
-          <CardContent>
-            {formComponent}
-          </CardContent>
+          <CardContent>{formComponent}</CardContent>
         </Card>
       </div>
     );
@@ -423,7 +511,9 @@ export default function MobileParticipantViewPage() {
       <div className="p-4 space-y-4">
         <Skeleton className="h-8 w-1/2" />
         <div className="grid grid-cols-3 gap-4">
-          {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
+          {[...Array(6)].map((_, i) => (
+            <Skeleton key={i} className="h-24 w-full" />
+          ))}
         </div>
       </div>
     );
@@ -437,7 +527,9 @@ export default function MobileParticipantViewPage() {
     return <div className="p-4">No data available.</div>;
   }
 
-  const unacknowledgedInjections = data.injections.filter(inj => !inj.acknowledgedAt).length;
+  const unacknowledgedInjections = data.injections.filter(
+    (inj) => !inj.acknowledgedAt
+  ).length;
 
   return (
     <div className={`${inter.variable} font-sans bg-background min-h-screen`}>
@@ -445,7 +537,7 @@ export default function MobileParticipantViewPage() {
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-xl font-bold">Participant View</h1>
           {isParticipant && (
-            <Button onClick={() => handleComposeClick('email')} size="sm">
+            <Button onClick={() => handleComposeClick("email")} size="sm">
               <PlusCircle className="h-4 w-4 mr-2" />
               Compose
             </Button>
@@ -453,22 +545,77 @@ export default function MobileParticipantViewPage() {
         </div>
 
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 mb-4">
-          <CommunicationChannelCard title="Injections" count={unacknowledgedInjections} injCount={unacknowledgedInjections} onClick={() => setSelectedChannel('injections')} icon={Bell} className="border-amber-500 bg-amber-50" iconClass="text-amber-500 bg-amber-100" />
-          <CommunicationChannelCard title="Email" count={data.counts.email} onClick={() => setSelectedChannel('email')} icon={Mail} className="border-blue-500 bg-blue-50" iconClass="text-blue-500 bg-blue-100" />
-          <CommunicationChannelCard title="SMS" count={data.counts.sms} onClick={() => setSelectedChannel('sms')} icon={MessageSquare} className="border-green-500 bg-green-50" iconClass="text-green-500 bg-green-100" />
-          <CommunicationChannelCard title="Social" count={data.counts.social} onClick={() => setSelectedChannel('social')} icon={Users} className="border-purple-500 bg-purple-50" iconClass="text-purple-500 bg-purple-100" />
-          <CommunicationChannelCard title="Memo" count={data.counts.memo} onClick={() => setSelectedChannel('memo')} icon={FileText} className="border-gray-500 bg-gray-50" iconClass="text-gray-500 bg-gray-100" />
-          <CommunicationChannelCard title="News" count={data.counts.newsBroadcast} onClick={() => setSelectedChannel('newsBroadcast')} icon={Newspaper} className="border-red-500 bg-red-50" iconClass="text-red-500 bg-red-100" />
+          <CommunicationChannelCard
+            title="Injections"
+            count={unacknowledgedInjections}
+            injCount={unacknowledgedInjections}
+            onClick={() => setSelectedChannel("injections")}
+            icon={Bell}
+            className="border-amber-500 bg-amber-50"
+            iconClass="text-amber-500 bg-amber-100"
+          />
+          <CommunicationChannelCard
+            title="Email"
+            count={data.counts.email}
+            onClick={() => setSelectedChannel("email")}
+            icon={Mail}
+            className="border-red-500 bg-red-50"
+            iconClass="text-red-500 bg-red-100"
+          />
+          <CommunicationChannelCard
+            title="SMS"
+            count={data.counts.sms}
+            onClick={() => setSelectedChannel("sms")}
+            icon={MessageSquare}
+            className="border-green-500 bg-green-50"
+            iconClass="text-green-500 bg-green-100"
+          />
+          <CommunicationChannelCard
+            title="Social"
+            count={data.counts.social}
+            onClick={() => setSelectedChannel("social")}
+            icon={Users}
+            className="border-purple-500 bg-purple-50"
+            iconClass="text-purple-500 bg-purple-100"
+          />
+          <CommunicationChannelCard
+            title="Memo"
+            count={data.counts.memo}
+            onClick={() => setSelectedChannel("memo")}
+            icon={FileText}
+            className="border-gray-500 bg-gray-50"
+            iconClass="text-gray-500 bg-gray-100"
+          />
+          <CommunicationChannelCard
+            title="News"
+            count={data.counts.newsBroadcast}
+            onClick={() => setSelectedChannel("newsBroadcast")}
+            icon={Newspaper}
+            className="border-red-500 bg-red-50"
+            iconClass="text-red-500 bg-red-100"
+          />
         </div>
 
         {isParticipant && (
-           <Card>
-             <CardHeader><CardTitle className="text-base">Quick Actions</CardTitle></CardHeader>
-             <CardContent className="grid grid-cols-2 gap-2">
-                <Button variant="outline" onClick={() => handleComposeClick('alert')}>Send Alert</Button>
-                <Button variant="outline" onClick={() => handleComposeClick('memo')}>Write Memo</Button>
-             </CardContent>
-           </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                onClick={() => handleComposeClick("alert")}
+              >
+                Send Alert
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleComposeClick("memo")}
+              >
+                Write Memo
+              </Button>
+            </CardContent>
+          </Card>
         )}
 
         {selectedInjection && (
@@ -476,11 +623,25 @@ export default function MobileParticipantViewPage() {
             <Card className="w-full max-w-md">
               <CardHeader>
                 <CardTitle>{selectedInjection.subject}</CardTitle>
-                <Button variant="ghost" size="icon" className="absolute top-2 right-2" onClick={() => setSelectedInjection(null)}><X className="h-4 w-4" /></Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2"
+                  onClick={() => setSelectedInjection(null)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </CardHeader>
               <CardContent>
                 <p className="mb-4">{selectedInjection.content}</p>
-                <Button className="w-full" onClick={() => handleAcknowledgeInjection(selectedInjection.id)}>Acknowledge</Button>
+                <Button
+                  className="w-full"
+                  onClick={() =>
+                    handleAcknowledgeInjection(selectedInjection.id)
+                  }
+                >
+                  Acknowledge
+                </Button>
               </CardContent>
             </Card>
           </div>

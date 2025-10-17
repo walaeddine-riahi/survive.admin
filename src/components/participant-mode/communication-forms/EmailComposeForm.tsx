@@ -25,7 +25,9 @@ export default function EmailComposeForm({
 }) {
   const { data: session } = useSession();
   const [users, setUsers] = useState<User[]>([]);
-  const [selectedRecipientIds, setSelectedRecipientIds] = useState<string[]>([]);
+  const [selectedRecipientIds, setSelectedRecipientIds] = useState<string[]>(
+    []
+  );
   const [formData, setFormData] = useState<EmailFormData>({
     to: [],
     toEmails: [],
@@ -37,18 +39,20 @@ export default function EmailComposeForm({
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await fetch('/api/users');
+        const response = await fetch("/api/users");
         if (response.ok) {
           const data = await response.json();
           // Filtrer pour ne pas afficher l'utilisateur actuel dans la liste des destinataires
-          const otherUsers = data.filter((u: User) => u.id !== session?.user?.id);
+          const otherUsers = data.filter(
+            (u: User) => u.id !== session?.user?.id
+          );
           setUsers(otherUsers);
         }
       } catch (error) {
-        console.error('Erreur lors du chargement des utilisateurs:', error);
+        console.error("Erreur lors du chargement des utilisateurs:", error);
       }
     };
-    
+
     if (session?.user?.id) {
       fetchUsers();
     }
@@ -56,11 +60,13 @@ export default function EmailComposeForm({
 
   // Mettre à jour les données du formulaire quand des destinataires sont sélectionnés
   useEffect(() => {
-    const selectedUsers = users.filter(u => selectedRecipientIds.includes(u.id));
-    setFormData(prev => ({
+    const selectedUsers = users.filter((u) =>
+      selectedRecipientIds.includes(u.id)
+    );
+    setFormData((prev) => ({
       ...prev,
-      to: selectedUsers.map(u => u.id),
-      toEmails: selectedUsers.map(u => u.email || '')
+      to: selectedUsers.map((u) => u.id),
+      toEmails: selectedUsers.map((u) => u.email || ""),
     }));
   }, [selectedRecipientIds, users]);
 
@@ -75,7 +81,7 @@ export default function EmailComposeForm({
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { id, value } = e.target;
-    setFormData(prevData => ({
+    setFormData((prevData) => ({
       ...prevData,
       [id]: value,
     }));
@@ -86,7 +92,7 @@ export default function EmailComposeForm({
     // S'assurer que les emails des destinataires sont inclus
     const formDataWithEmails = {
       ...formData,
-      toEmails: formData.toEmails || []
+      toEmails: formData.toEmails || [],
     };
     onSubmit(formDataWithEmails);
   };
@@ -106,9 +112,12 @@ export default function EmailComposeForm({
         {formData.toEmails && formData.toEmails.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-2">
             {formData.toEmails.map((email, index) => (
-              <div key={index} className="flex items-center bg-gray-100 rounded-full px-3 py-1 text-sm">
-                <Mail className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                <span>{email}</span>
+              <div
+                key={index}
+                className="flex items-center bg-red-50 border-red-200 rounded-full px-3 py-1 text-sm"
+              >
+                <Mail className="h-3.5 w-3.5 mr-1.5 text-red-500" />
+                <span className="text-red-700">{email}</span>
               </div>
             ))}
           </div>
@@ -138,7 +147,12 @@ export default function EmailComposeForm({
         <Button type="button" variant="outline" onClick={onCancel}>
           Annuler
         </Button>
-        <Button type="submit">Envoyer</Button>
+        <Button
+          type="submit"
+          className="bg-red-600 hover:bg-red-700 text-white"
+        >
+          Envoyer
+        </Button>
       </div>
     </form>
   );

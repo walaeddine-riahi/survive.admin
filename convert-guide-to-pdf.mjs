@@ -39,7 +39,7 @@ function embedImages(html) {
 async function convertMarkdownToPDF() {
   try {
     console.log("📖 Lecture du fichier Markdown...");
-    const markdown = fs.readFileSync("GUIDE-UTILISATEUR.md", "utf-8");
+    const markdown = fs.readFileSync("GUIDE-SIMULATION-UTILISATEUR.md", "utf-8");
 
     console.log("🔄 Conversion du Markdown en HTML...");
     let html = marked.parse(markdown);
@@ -522,7 +522,7 @@ async function convertMarkdownToPDF() {
     });
 
     await page.pdf({
-      path: "GUIDE-UTILISATEUR.pdf",
+      path: "GUIDE-SIMULATION-UTILISATEUR.pdf",
       format: "A4",
       printBackground: true,
       margin: {
@@ -547,10 +547,10 @@ async function convertMarkdownToPDF() {
 
     await browser.close();
 
-    console.log("✅ PDF généré avec succès : GUIDE-UTILISATEUR.pdf");
+    console.log("✅ PDF généré avec succès : GUIDE-SIMULATION-UTILISATEUR.pdf");
     console.log(
       "📊 Taille du fichier :",
-      (fs.statSync("GUIDE-UTILISATEUR.pdf").size / 1024 / 1024).toFixed(2),
+      (fs.statSync("GUIDE-SIMULATION-UTILISATEUR.pdf").size / 1024 / 1024).toFixed(2),
       "MB"
     );
   } catch (error) {

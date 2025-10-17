@@ -1476,7 +1476,7 @@ export default function ParticipantViewFixedPage() {
     const getChannelColor = (type: string) => {
       switch (type.toLowerCase()) {
         case "email":
-          return "border-l-4 border-l-blue-500";
+          return "border-l-4 border-l-red-500";
         case "sms":
           return "border-l-4 border-l-green-500";
         case "call":
@@ -1629,7 +1629,7 @@ export default function ParticipantViewFixedPage() {
   const getChannelGradient = (channelType: string) => {
     switch (channelType.toLowerCase()) {
       case "email":
-        return "from-blue-500 to-blue-600";
+        return "from-red-500 to-red-600";
       case "sms":
         return "from-green-500 to-green-600";
       case "call":
@@ -1690,7 +1690,7 @@ export default function ParticipantViewFixedPage() {
   const getInjectionGradient = (type: string) => {
     switch (type.toLowerCase()) {
       case "email":
-        return "from-blue-500 to-blue-600";
+        return "from-red-500 to-red-600";
       case "sms":
         return "from-green-500 to-green-600";
       case "call":
@@ -3023,7 +3023,7 @@ function DesktopLayout({
                   title: "Email",
                   icon: Mail,
                   className:
-                    "bg-blue-50 hover:bg-blue-100 border-blue-100 text-blue-600",
+                    "bg-red-50 hover:bg-red-100 border-red-100 text-red-600",
                 },
                 {
                   key: "sms",
