@@ -1,4 +1,0 @@
-      // Recharger les injections
-      if (selectedScenarioId) {
-        await fetchInjections(selectedScenarioId);
-      }

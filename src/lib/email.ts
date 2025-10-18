@@ -4,11 +4,13 @@ import nodemailer from "nodemailer";
 dotenv.config(); // Charge les variables depuis .env.local ou .env
 
 if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-  throw new Error('Les variables d\'environnement EMAIL_USER et EMAIL_PASS sont requises pour l\'envoi d\'emails');
+  throw new Error(
+    "Les variables d'environnement EMAIL_USER et EMAIL_PASS sont requises pour l'envoi d'emails"
+  );
 }
 
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
+  host: "smtp.gmail.com",
   port: 587,
   secure: false, // true pour le port 465, false pour les autres ports
   auth: {
@@ -17,8 +19,8 @@ const transporter = nodemailer.createTransport({
   },
   tls: {
     // Ne pas échouer sur des certificats invalides
-    rejectUnauthorized: false
-  }
+    rejectUnauthorized: false,
+  },
 });
 
 // Vérifier la configuration du transporteur
@@ -66,7 +68,7 @@ const welcomeEmailTemplate = (
                 <li>Créer des rapports et analyses</li>
               </ul>
               <div style="text-align: center; margin: 40px 0;">
-                <a href="https://survive-clsb.vercel.app/simulation/${simulationId}/participant-view"
+                <a href="https://survive-tau.vercel.app/simulation/${simulationId}/participant-view"
                    style="background-color: #6366f1; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; display: inline-block; font-weight: bold;">
                   Accéder à la simulation
                 </a>
