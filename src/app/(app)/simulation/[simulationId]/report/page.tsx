@@ -22,7 +22,7 @@ import {
   Bell,
   Download,
   Share2,
-  FileText,
+  // FileText,
   AlertCircle,
   CheckCircle2,
   Activity,
@@ -39,6 +39,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface Communication {
@@ -256,7 +257,7 @@ export default function SimulationReportPage({
       SMS: <MessageSquare className="h-4 w-4" />,
       CALL: <Phone className="h-4 w-4" />,
       ALERT: <Bell className="h-4 w-4" />,
-      MEMO: <FileText className="h-4 w-4" />,
+      MEMO: <WhatsAppIcon className="h-4 w-4" />,
       NEWSBROADCAST: <Newspaper className="h-4 w-4" />,
       NEWSPAPER: <Newspaper className="h-4 w-4" />,
       SOCIAL: <Users className="h-4 w-4" />,

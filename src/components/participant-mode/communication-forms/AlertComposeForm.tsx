@@ -21,43 +21,58 @@ export type AlertFormData = {
 export default function AlertComposeForm({
   onSubmit,
   onCancel,
+  simulationId,
 }: {
   onSubmit: (data: AlertFormData) => void;
   onCancel: () => void;
+  isParticipant?: boolean;
+  simulationId?: string;
 }) {
   const { data: session } = useSession();
   const [users, setUsers] = useState<User[]>([]);
-  const [selectedRecipientIds, setSelectedRecipientIds] = useState<string[]>([]);
-  const [selectedRecipientEmails, setSelectedRecipientEmails] = useState<string[]>([]);
-  
+  const [selectedRecipientIds, setSelectedRecipientIds] = useState<string[]>(
+    []
+  );
+  const [selectedRecipientEmails, setSelectedRecipientEmails] = useState<
+    string[]
+  >([]);
+
   const [formData, setFormData] = useState<AlertFormData>({
     subject: "",
     message: "",
     sendToAll: true,
     recipients: [],
-    recipientEmails: []
+    recipientEmails: [],
   });
-  
+
   // Charger la liste des utilisateurs
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await fetch('/api/users');
+        const endpoint = simulationId
+          ? `/api/simulations/${simulationId}/participants`
+          : "/api/users";
+        const response = await fetch(endpoint);
         if (response.ok) {
           const data = await response.json();
+          const allUsers = simulationId
+            ? data.map((assignment: { user: User }) => assignment.user)
+            : data;
           // Filtrer pour ne pas afficher l'utilisateur actuel dans la liste des destinataires
-          const otherUsers = data.filter((u: User) => u.id !== session?.user?.id);
+          const otherUsers = allUsers.filter(
+            (u: User) => u.id !== session?.user?.id
+          );
           setUsers(otherUsers);
         }
       } catch (error) {
-        console.error('Erreur lors du chargement des utilisateurs:', error);
+        console.error("Erreur lors du chargement des utilisateurs:", error);
       }
     };
-    
+
     if (session?.user?.id) {
       fetchUsers();
     }
-  }, [session]);
+  }, [session, simulationId]);
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { checked } = e.target;
@@ -65,30 +80,30 @@ export default function AlertComposeForm({
       ...prev,
       sendToAll: checked,
       recipients: checked ? [] : formData.recipients,
-      recipientEmails: checked ? [] : formData.recipientEmails
+      recipientEmails: checked ? [] : formData.recipientEmails,
     }));
-    
+
     if (checked) {
       setSelectedRecipientIds([]);
       setSelectedRecipientEmails([]);
     }
   };
-  
+
   // Gérer la sélection multiple d'utilisateurs
   const handleRecipientChange = (values: string | string[]) => {
     // S'assurer d'avoir toujours un tableau
     const selectedValues = Array.isArray(values) ? values : [values];
     setSelectedRecipientIds(selectedValues);
-    
+
     // Mettre à jour les emails des destinataires sélectionnés
-    const selectedUsers = users.filter(u => selectedValues.includes(u.id));
-    const emails = selectedUsers.map(u => u.email || '');
+    const selectedUsers = users.filter((u) => selectedValues.includes(u.id));
+    const emails = selectedUsers.map((u) => u.email || "");
     setSelectedRecipientEmails(emails);
-    
-    setFormData(prev => ({
+
+    setFormData((prev) => ({
       ...prev,
       recipients: selectedValues,
-      recipientEmails: emails
+      recipientEmails: emails,
     }));
   };
 
@@ -104,26 +119,35 @@ export default function AlertComposeForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Si l'option "envoyer à tous" n'est pas cochée, vérifier qu'il y a au moins un destinataire
-    if (!formData.sendToAll && (!formData.recipients || formData.recipients.length === 0)) {
-      alert("Veuillez sélectionner au moins un destinataire ou cocher l'option 'Envoyer à tous les participants'");
+    if (
+      !formData.sendToAll &&
+      (!formData.recipients || formData.recipients.length === 0)
+    ) {
+      alert(
+        "Veuillez sélectionner au moins un destinataire ou cocher l&apos;option 'Envoyer à tous les participants'"
+      );
       return;
     }
-    
+
     onSubmit(formData);
   };
-  
+
   const removeRecipient = (id: string, index: number) => {
-    const newRecipients = [...(formData.recipients || [])].filter((_, i) => i !== index);
-    const newEmails = [...(formData.recipientEmails || [])].filter((_, i) => i !== index);
-    
-    setFormData(prev => ({
+    const newRecipients = [...(formData.recipients || [])].filter(
+      (_, i) => i !== index
+    );
+    const newEmails = [...(formData.recipientEmails || [])].filter(
+      (_, i) => i !== index
+    );
+
+    setFormData((prev) => ({
       ...prev,
       recipients: newRecipients,
-      recipientEmails: newEmails
+      recipientEmails: newEmails,
     }));
-    
+
     setSelectedRecipientIds(newRecipients);
     setSelectedRecipientEmails(newEmails);
   };
@@ -131,7 +155,7 @@ export default function AlertComposeForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="subject">Sujet de l'alerte</Label>
+        <Label htmlFor="subject">Sujet de l&apos;alerte</Label>
         <Input
           id="subject"
           type="text"
@@ -140,7 +164,7 @@ export default function AlertComposeForm({
           required
         />
       </div>
-      
+
       <div className="space-y-4">
         <div className="flex items-center space-x-2">
           <input
@@ -148,13 +172,13 @@ export default function AlertComposeForm({
             id="sendToAll"
             checked={formData.sendToAll}
             onChange={handleCheckboxChange}
+            aria-label="Envoyer à tous les participants"
+            title="Envoyer à tous les participants"
             className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
           />
-          <Label htmlFor="sendToAll">
-            Envoyer à tous les participants
-          </Label>
+          <Label htmlFor="sendToAll">Envoyer à tous les participants</Label>
         </div>
-        
+
         {!formData.sendToAll && (
           <div className="space-y-2">
             <Label>Destinataires</Label>
@@ -164,21 +188,33 @@ export default function AlertComposeForm({
                 value={selectedRecipientIds}
                 onValueChange={handleRecipientChange}
                 placeholder="Sélectionner un ou plusieurs destinataires..."
+                aria-label="Sélectionner des destinataires"
                 className="w-full"
+                users={users}
               />
             </div>
-            
+
             {/* Affichage des destinataires sélectionnés */}
             {selectedRecipientIds.length > 0 && (
               <div className="mt-2 space-y-1">
-                <p className="text-sm font-medium text-gray-700">Destinataires sélectionnés :</p>
+                <p className="text-sm font-medium text-gray-700">
+                  Destinataires sélectionnés :
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {selectedRecipientEmails.map((email, index) => (
-                    <Badge key={selectedRecipientIds[index]} variant="secondary" className="flex items-center gap-1">
+                    <Badge
+                      key={selectedRecipientIds[index]}
+                      variant="secondary"
+                      className="flex items-center gap-1"
+                    >
                       {email}
                       <button
                         type="button"
-                        onClick={() => removeRecipient(selectedRecipientIds[index], index)}
+                        onClick={() =>
+                          removeRecipient(selectedRecipientIds[index], index)
+                        }
+                        aria-label={`Retirer ${email}`}
+                        title={`Retirer ${email}`}
                         className="ml-1 rounded-full p-0.5 hover:bg-gray-200"
                       >
                         <X className="h-3 w-3" />
@@ -191,7 +227,7 @@ export default function AlertComposeForm({
           </div>
         )}
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="message">Message</Label>
         <Textarea
@@ -203,12 +239,12 @@ export default function AlertComposeForm({
           disabled={!formData.sendToAll && selectedRecipientIds.length === 0}
         />
       </div>
-      
+
       <div className="flex justify-end space-x-2">
         <Button type="button" variant="outline" onClick={onCancel}>
           Annuler
         </Button>
-        <Button 
+        <Button
           type="submit"
           disabled={!formData.sendToAll && selectedRecipientIds.length === 0}
         >

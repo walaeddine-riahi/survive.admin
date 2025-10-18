@@ -32,7 +32,6 @@ import SocialComposeForm, {
 import { Badge } from "@/components/ui/badge";
 import {
   Bell,
-  FileText,
   Mail,
   MessageSquare,
   Newspaper,
@@ -40,6 +39,7 @@ import {
   Rss,
   Users,
 } from "lucide-react"; // Uncomment and use actual icons
+import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
 
 // Note: In a real application, you would fetch the incident data based on the ID
 const mockIncident = {
@@ -278,10 +278,10 @@ export default function IncidentParticipantViewPage({
           icon={Mail}
         />
         <CommunicationChannelCard
-          title="MEMO"
+          title="WhatsApp"
           count={mockCounts.memo}
           onClick={() => handleChannelClick("memo")}
-          icon={FileText}
+          icon={WhatsAppIcon}
         />
         <CommunicationChannelCard
           title="NEWS BROADCAST"

@@ -1,14 +1,12 @@
 "use client";
 
 import { Inter } from "next/font/google";
-import { Badge } from "@/components/ui/badge";
 import React from "react";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState, useRef } from "react";
 import AlertComposeForm from "@/components/participant-mode/communication-forms/AlertComposeForm";
@@ -20,27 +18,17 @@ import SocialComposeForm from "@/components/participant-mode/communication-forms
 import {
   Mail,
   MessageSquare,
-  Phone,
   Bell,
-  FileText,
   Newspaper,
   Users,
   ChevronLeft,
-  Loader2,
-  Inbox,
   PlusCircle,
-  Rss,
   X,
 } from "lucide-react";
+import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-// Form Data Interfaces
-import type { AlertFormData } from "@/components/participant-mode/communication-forms/AlertComposeForm";
-import type { EmailFormData } from "@/components/participant-mode/communication-forms/EmailComposeForm";
-import type { MemoFormData } from "@/components/participant-mode/communication-forms/MemoComposeForm";
-import type { NewsBroadcastFormData } from "@/components/participant-mode/communication-forms/NewsBroadcastComposeForm";
-import type { SmsFormData } from "@/components/participant-mode/communication-forms/SmsComposeForm";
-import type { SocialFormData } from "@/components/participant-mode/communication-forms/SocialComposeForm";
+// Note: form data types are not imported here to avoid unused-type warnings; handlers treat incoming data as unknown and narrow as needed.
 
 // Main Data Interfaces
 interface Communication {
@@ -162,34 +150,6 @@ const formatDate = (dateString: string) => {
   }
 };
 
-const getIconForType = (type: string): React.ReactElement => {
-  const iconProps = {
-    className: "h-5 w-5 text-white drop-shadow-sm",
-    strokeWidth: 1.75,
-  };
-
-  switch (type.toLowerCase()) {
-    case "email":
-      return <Mail {...iconProps} />;
-    case "sms":
-      return <MessageSquare {...iconProps} />;
-    case "call":
-      return <Phone {...iconProps} />;
-    case "alert":
-      return <Bell {...iconProps} />;
-    case "memo":
-      return <FileText {...iconProps} />;
-    case "newsbroadcast":
-      return <Newspaper {...iconProps} />;
-    case "newspaper":
-      return <Rss {...iconProps} />;
-    case "social":
-      return <Users {...iconProps} />;
-    default:
-      return <MessageSquare {...iconProps} />; // Default icon
-  }
-};
-
 export default function MobileParticipantViewPage() {
   const { data: session } = useSession();
   const params = useParams();
@@ -206,7 +166,7 @@ export default function MobileParticipantViewPage() {
   const [isParticipant, setIsParticipant] = useState<boolean>(false);
   const [isComposing, setIsComposing] = useState(false);
   const [composeType, setComposeType] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  // submitting state intentionally removed; we rely on UI feedback via toasts
 
   const [selectedInjection, setSelectedInjection] = useState<Injection | null>(
     null
@@ -217,10 +177,18 @@ export default function MobileParticipantViewPage() {
   const playNotification = useCallback(() => {
     try {
       if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext ||
-          (window as any).webkitAudioContext)();
+        const win = window as unknown as {
+          AudioContext?: typeof AudioContext;
+          // webkitAudioContext is present on older Safari; its type is unknown
+          webkitAudioContext?: unknown;
+        };
+        const AC = win.AudioContext ?? win.webkitAudioContext;
+        // AC may be any constructor; cast to any for construction
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        audioContextRef.current = new (AC as any)();
       }
       const audioContext = audioContextRef.current;
+      if (!audioContext) return;
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
       oscillator.type = "sine";
@@ -343,20 +311,108 @@ export default function MobileParticipantViewPage() {
     setComposeType(null);
   };
 
-  const genericSubmitHandler = async (type: string, formData: any) => {
-    setSubmitting(true);
+  const genericSubmitHandler = async (type: string, formData: unknown) => {
     try {
-      const response = await fetch(
-        `/api/simulations/${simulationId}/communications`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...formData, type }),
+      if (type === "memo") {
+        // If memo (WhatsApp) and multiple recipients, send one request per recipient like SMS
+        const fd = formData as Record<string, unknown> | null;
+        if (
+          fd &&
+          Array.isArray(fd.to as unknown) &&
+          (fd.to as unknown[]).length > 0
+        ) {
+          if (
+            !Array.isArray(fd.recipientPhones as unknown) ||
+            (fd.to as unknown[]).length !==
+              (fd.recipientPhones as unknown[]).length
+          ) {
+            throw new Error("Erreur dans la liste des destinataires");
+          }
+
+          const results = await Promise.allSettled(
+            (fd.to as unknown[]).map((recipientId: unknown, index: number) => {
+              const phone = (fd.recipientPhones as unknown[] | undefined)?.[
+                index
+              ] as string | undefined;
+              const requestBody = {
+                type: "memo",
+                subject: fd.subject as string | undefined,
+                content:
+                  (fd.content as string) ||
+                  (fd.body as string) ||
+                  (fd.message as string) ||
+                  "",
+                recipientId:
+                  typeof recipientId === "string" && recipientId !== ""
+                    ? recipientId
+                    : null,
+                payload: phone ? { phone } : null,
+              };
+
+              return fetch(`/api/simulations/${simulationId}/communications`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(requestBody),
+              });
+            })
+          );
+
+          const errors = results.filter(
+            (r): r is PromiseRejectedResult => r.status === "rejected"
+          );
+
+          if (errors.length > 0) {
+            throw new Error(
+              `Échec de l'envoi à ${errors.length} destinataire(s) sur ${
+                (fd.to as unknown[]).length
+              }`
+            );
+          }
+        } else {
+          // legacy single memo send
+          const fd2 = formData as Record<string, unknown> | null;
+          const response = await fetch(
+            `/api/simulations/${simulationId}/communications`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                type: "memo",
+                subject: fd2?.subject as string | undefined,
+                content:
+                  (fd2?.content as string) ||
+                  (fd2?.body as string) ||
+                  (fd2?.message as string) ||
+                  "",
+                payload:
+                  fd2 && (fd2.phone as string | undefined)
+                    ? { phone: fd2.phone as string }
+                    : null,
+              }),
+            }
+          );
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Failed to send memo`);
+          }
         }
-      );
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to send ${type}`);
+      } else {
+        const response = await fetch(
+          `/api/simulations/${simulationId}/communications`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ...(formData as Record<string, unknown>),
+              type,
+            }),
+          }
+        );
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Failed to send ${type}`);
+        }
       }
       toast({
         title: "Success",
@@ -373,8 +429,6 @@ export default function MobileParticipantViewPage() {
           error instanceof Error ? error.message : `An unknown error occurred`,
         variant: "destructive",
       });
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -454,7 +508,8 @@ export default function MobileParticipantViewPage() {
 
     const formProps = {
       onCancel: handleCancelCompose,
-      onSubmit: (formData: any) => genericSubmitHandler(composeType, formData),
+      onSubmit: (formData: unknown) =>
+        genericSubmitHandler(composeType, formData),
     };
 
     let formComponent;
@@ -579,10 +634,10 @@ export default function MobileParticipantViewPage() {
             iconClass="text-purple-500 bg-purple-100"
           />
           <CommunicationChannelCard
-            title="Memo"
+            title="WhatsApp"
             count={data.counts.memo}
             onClick={() => setSelectedChannel("memo")}
-            icon={FileText}
+            icon={WhatsAppIcon}
             className="border-gray-500 bg-gray-50"
             iconClass="text-gray-500 bg-gray-100"
           />
@@ -612,7 +667,7 @@ export default function MobileParticipantViewPage() {
                 variant="outline"
                 onClick={() => handleComposeClick("memo")}
               >
-                Write Memo
+                Write WhatsApp
               </Button>
             </CardContent>
           </Card>

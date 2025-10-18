@@ -105,28 +105,30 @@ export async function GET(
             where: {
               OR: [
                 // Communications spécifiquement adressées à l'utilisateur
-                { 
-                  recipientId: session.user.id 
+                {
+                  recipientId: session.user.id,
                 },
                 // Communications envoyées par l'utilisateur
-                { 
-                  senderId: session.user.id 
+                {
+                  senderId: session.user.id,
                 },
                 // Communications destinées à l'équipe de l'utilisateur (si l'utilisateur fait partie d'une équipe)
-                ...(userTeamId ? [
-                  { 
-                    AND: [
-                      { teamId: userTeamId },
-                      { teamId: { not: null } },
-                      { recipientId: null } // Pas de destinataire spécifique, c'est pour toute l'équipe
+                ...(userTeamId
+                  ? [
+                      {
+                        AND: [
+                          { teamId: userTeamId },
+                          { teamId: { not: null } },
+                          { recipientId: null }, // Pas de destinataire spécifique, c'est pour toute l'équipe
+                        ],
+                      },
                     ]
-                  }
-                ] : []),
+                  : []),
                 // Communications globales (sans équipe ni destinataire spécifique)
-                { 
+                {
                   teamId: null,
-                  recipientId: null 
-                }
+                  recipientId: null,
+                },
               ],
             },
             select: {
@@ -157,8 +159,8 @@ export async function GET(
               team: {
                 select: {
                   id: true,
-                  name: true
-                }
+                  name: true,
+                },
               },
             },
             orderBy: {
@@ -169,10 +171,7 @@ export async function GET(
             where: {
               isActive: true, // Ne récupérer que les injections actives
               // Injections globales ou destinées à l'utilisateur connecté
-              OR: [
-                { targetUserId: null },
-                { targetUserId: session.user.id }
-              ]
+              OR: [{ targetUserId: null }, { targetUserId: session.user.id }],
             },
             include: {
               scenario: {
@@ -189,36 +188,59 @@ export async function GET(
       return new NextResponse("Simulation not found", { status: 404 });
     }
 
-    const communications = simulation.communications.reduce(
-      (acc: Record<string, Communication[]>, comm: Communication) => {
-        const type = comm.type.toLowerCase();
-        if (!acc[type as keyof typeof acc]) {
-          acc[type as keyof typeof acc] = [];
-        }
-        acc[type as keyof typeof acc].push(comm);
-        return acc;
-      },
-      {
-        email: [],
-        call: [],
-        sms: [],
-        alert: [],
-        memo: [],
-        newsBroadcast: [],
-        newspaper: [],
-        social: [],
-      } as Record<string, Communication[]>
-    );
+    // Normalize communication types to canonical keys matching the frontend
+    const canonicalKeyForType = (t: string) => {
+      const normalized = (t || "").replace(/[^a-zA-Z]/g, "").toLowerCase();
+      switch (normalized) {
+        case "email":
+          return "email";
+        case "sms":
+          return "sms";
+        case "call":
+          return "call";
+        case "alert":
+          return "alert";
+        case "memo":
+          return "memo";
+        case "newsbroadcast":
+        case "news":
+          return "newsBroadcast"; // canonical camelCase used by the frontend
+        case "newspaper":
+          return "newspaper";
+        case "social":
+        case "socialmedia":
+          return "social";
+        default:
+          return normalized || "other";
+      }
+    };
+
+    const communications: Record<string, Communication[]> = {
+      email: [],
+      call: [],
+      sms: [],
+      alert: [],
+      memo: [],
+      newsBroadcast: [],
+      newspaper: [],
+      social: [],
+    };
+
+    for (const comm of simulation.communications) {
+      const key = canonicalKeyForType(comm.type || "");
+      if (!communications[key]) communications[key] = [];
+      communications[key].push(comm);
+    }
 
     const counts = {
-      email: communications.email.length,
-      call: communications.call.length,
-      sms: communications.sms.length,
-      alert: communications.alert.length,
-      memo: communications.memo.length,
-      newsBroadcast: communications.newsBroadcast.length,
-      newspaper: communications.newspaper.length,
-      social: communications.social.length,
+      email: (communications.email || []).length,
+      call: (communications.call || []).length,
+      sms: (communications.sms || []).length,
+      alert: (communications.alert || []).length,
+      memo: (communications.memo || []).length,
+      newsBroadcast: (communications.newsBroadcast || []).length,
+      newspaper: (communications.newspaper || []).length,
+      social: (communications.social || []).length,
     };
 
     const formattedInjections = simulation.injections.map(

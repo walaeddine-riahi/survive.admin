@@ -62,7 +62,8 @@ export default function InjectionComposeForm({
     type: initialData?.type || InjectionType.OTHER,
     imageUrl: initialData?.imageUrl || "",
     videoUrl: initialData?.videoUrl || "",
-    isActive: initialData?.isActive !== undefined ? initialData.isActive : false,
+    isActive:
+      initialData?.isActive !== undefined ? initialData.isActive : false,
     attachments: initialData?.attachments || [],
   });
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
@@ -83,24 +84,32 @@ export default function InjectionComposeForm({
         const data = await response.json();
 
         // Vérifier si le scénario 'workshop' existe, sinon le créer
-        const workshopExists = data.some((s: Scenario) => s.name === 'workshop');
+        const workshopExists = data.some(
+          (s: Scenario) => s.name === "workshop"
+        );
         if (!workshopExists) {
           try {
-            const createResponse = await fetch(`/api/simulations/${simulationId}/scenarios`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ name: 'workshop', description: 'Scénario par défaut pour les ateliers' }),
-            });
+            const createResponse = await fetch(
+              `/api/simulations/${simulationId}/scenarios`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  name: "workshop",
+                  description: "Scénario par défaut pour les ateliers",
+                }),
+              }
+            );
 
             if (createResponse.ok) {
               const newScenario = await createResponse.json();
               setScenarios([...data, newScenario]);
               // Mettre à jour le formulaire avec le scénario 'workshop' par défaut
-              setFormData(prev => ({
+              setFormData((prev) => ({
                 ...prev,
-                scenarioName: 'workshop'
+                scenarioName: "workshop",
               }));
               return;
             }
@@ -108,12 +117,13 @@ export default function InjectionComposeForm({
             console.error("Error creating default workshop scenario:", error);
             toast({
               title: "Erreur",
-              description: "Impossible de créer le scénario workshop par défaut.",
+              description:
+                "Impossible de créer le scénario workshop par défaut.",
               variant: "destructive",
             });
           }
         }
-        
+
         setScenarios(data);
       } catch (err) {
         console.error("Error fetching scenarios:", err);
@@ -140,7 +150,7 @@ export default function InjectionComposeForm({
     // Si aucun scénario n'est sélectionné, on utilise 'workshop' par défaut
     const submissionData = {
       ...formData,
-      scenarioName: formData.scenarioName || 'workshop'
+      scenarioName: formData.scenarioName || "workshop",
     };
     onSubmit(submissionData);
   };
@@ -199,8 +209,10 @@ export default function InjectionComposeForm({
           <input
             type="checkbox"
             id="isActive"
+            aria-label="Injection active"
+            title="Injection active"
             checked={formData.isActive}
-            onChange={(e) => 
+            onChange={(e) =>
               setFormData({ ...formData, isActive: e.target.checked })
             }
             className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
@@ -208,7 +220,8 @@ export default function InjectionComposeForm({
           <Label htmlFor="isActive">Injection active</Label>
         </div>
         <p className="text-xs text-gray-500">
-          Les injections inactives ne seront pas visibles dans la vue participant.
+          Les injections inactives ne seront pas visibles dans la vue
+          participant.
         </p>
       </div>
 
@@ -226,9 +239,11 @@ export default function InjectionComposeForm({
           <SelectContent>
             <SelectItem value={InjectionType.EMAIL}>Email</SelectItem>
             <SelectItem value={InjectionType.SMS}>SMS</SelectItem>
-            <SelectItem value={InjectionType.MEMO}>Mémo</SelectItem>
+            <SelectItem value={InjectionType.MEMO}>WhatsApp</SelectItem>
             <SelectItem value={InjectionType.ALERT}>Alerte</SelectItem>
-            <SelectItem value={InjectionType.SOCIAL_MEDIA}>Réseau social</SelectItem>
+            <SelectItem value={InjectionType.SOCIAL_MEDIA}>
+              Réseau social
+            </SelectItem>
             <SelectItem value={InjectionType.CALL}>Appel</SelectItem>
             <SelectItem value={InjectionType.NEWSBROADCAST}>
               Diffusion de Nouvelles

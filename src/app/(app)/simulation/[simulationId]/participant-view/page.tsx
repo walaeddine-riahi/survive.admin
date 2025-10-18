@@ -69,7 +69,7 @@ const ooredooTheme = {
     "2xl": "3rem",
   },
 };
-import Link from "next/link";
+// Link import removed — not used in this file
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState, useRef } from "react";
 // Import potential icons (example using lucide-react, assuming it's available)
@@ -84,22 +84,12 @@ import SocialComposeForm from "@/components/participant-mode/communication-forms
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  ArrowRight,
   Bell,
   Calendar,
   Check,
-  ChevronLeft,
   Clock,
   Download,
   FileText,
-  Lock,
   Mail,
   MessageSquare,
   Newspaper,
@@ -112,6 +102,7 @@ import {
   X,
 } from "lucide-react";
 import Image from "next/image";
+import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
 
 import type { AlertFormData } from "@/components/participant-mode/communication-forms/AlertComposeForm";
 import type { CallFormData } from "@/components/participant-mode/communication-forms/CallComposeForm";
@@ -121,38 +112,6 @@ import type { NewsBroadcastFormData } from "@/components/participant-mode/commun
 import type { NewspaperFormData } from "@/components/participant-mode/communication-forms/NewspaperComposeForm";
 import type { SmsFormData } from "@/components/participant-mode/communication-forms/SmsComposeForm";
 import type { SocialFormData } from "@/components/participant-mode/communication-forms/SocialComposeForm";
-
-interface Plan {
-  id: string;
-  name: string;
-  description: string | null;
-  startDate: string;
-  endDate: string;
-  status: string;
-  planTasks: PlanTask[];
-  type: {
-    id: string;
-    name: string;
-    description: string | null;
-  };
-}
-
-interface PlanTask {
-  id: string;
-  planId: string;
-  taskId: string;
-  task: Task;
-}
-
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  status: string;
-  priority: string;
-  dueDate: string | null;
-  role: string | null;
-}
 
 interface Assignment {
   userId: string;
@@ -233,37 +192,55 @@ interface ParticipantViewData {
     social: Communication[];
   };
   injections: Injection[];
-  tasks: Task[];
 }
 
 // Helper component for a communication channel card
 function CommunicationChannelCard({
   title,
-  count,
-  injCount = 0,
   onClick,
   icon: Icon,
   className = "",
-  iconClass = "",
+  commCount = 0,
+  injCount = 0,
 }: {
   title: string;
-  count: number;
   onClick: () => void;
   icon: React.ElementType;
   className?: string;
+  commCount?: number;
   injCount?: number;
-  iconClass?: string;
 }) {
+  const totalCount = commCount + injCount;
+
   return (
     <Card
-      className={`flex flex-col items-center justify-center p-4 rounded-xl transition-all cursor-pointer border ${className} hover:shadow-md`}
+      className={`relative flex flex-col items-center justify-center p-4 rounded-xl transition-all cursor-pointer border ${className} hover:shadow-md`}
       onClick={onClick}
     >
       <div className="flex flex-col items-center w-full">
-        <div className="p-3 mb-2">
+        <div className="relative p-3 mb-2">
           <Icon className="h-6 w-6" />
+          {totalCount > 0 && (
+            <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold text-white bg-red-500 rounded-full">
+              {totalCount}
+            </span>
+          )}
         </div>
         <span className="text-sm font-medium text-center mb-1">{title}</span>
+        {(commCount > 0 || injCount > 0) && (
+          <div className="flex gap-2 text-xs mt-1">
+            {commCount > 0 && (
+              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
+                {commCount} msg
+              </span>
+            )}
+            {injCount > 0 && (
+              <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">
+                {injCount} inj
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </Card>
   );
@@ -304,7 +281,7 @@ const getIconForType = (type: string): React.ReactElement => {
     case "alert":
       return <Bell {...iconProps} />;
     case "memo":
-      return <FileText {...iconProps} />;
+      return <WhatsAppIcon className={iconProps.className} />;
     case "newsbroadcast":
       return <Newspaper {...iconProps} />;
     case "newspaper":
@@ -327,31 +304,23 @@ export default function ParticipantViewFixedPage() {
   const [selectedChannel, setSelectedChannel] = useState<
     keyof ParticipantViewData["communications"] | null
   >(null);
-  const [selectedRole, setSelectedRole] = useState<string>("all");
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isComposing, setIsComposing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
-  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
-
   const [selectedInjection, setSelectedInjection] = useState<Injection | null>(
     null
   );
+  const [selectedCommunication, setSelectedCommunication] =
+    useState<Communication | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
 
   // Réf pour suivre les injections déjà affichées en modale pour éviter de les remontrer
   const shownInjectionIds = useRef(new Set<string>());
 
   // Fonction utilitaire pour les classes conditionnelles basées sur le thème
-  const getThemeClasses = useCallback(
-    (lightClasses: string, darkClasses: string) => {
-      return `${lightClasses} dark:${darkClasses}`;
-    },
-    []
-  );
+  // getThemeClasses removed — not used in this component
 
   // Fonction pour jouer un simple bip (solution de secours)
   const playBeep = useCallback(() => {
@@ -388,6 +357,54 @@ export default function ParticipantViewFixedPage() {
       console.error("Erreur avec le bip de secours:", error);
     }
   }, []);
+
+  // Fonction pour jouer une notification sonore pour les communications (différente des injections)
+  const playCommunicationNotification = useCallback(() => {
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext })
+            .webkitAudioContext)();
+      }
+
+      const audioContext = audioContextRef.current;
+
+      // Créer une séquence de deux notes pour différencier des injections
+      const playNote = (
+        frequency: number,
+        startTime: number,
+        duration: number
+      ) => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(frequency, startTime);
+
+        gainNode.gain.setValueAtTime(0.2, startTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.start(startTime);
+        oscillator.stop(startTime + duration);
+
+        return oscillator;
+      };
+
+      // Jouer deux notes successives (do-mi) pour créer un son distinctif
+      const currentTime = audioContext.currentTime;
+      playNote(523, currentTime, 0.15); // Do (C5)
+      playNote(659, currentTime + 0.15, 0.15); // Mi (E5)
+    } catch (error) {
+      console.error(
+        "Erreur lors de la lecture de la notification de communication:",
+        error
+      );
+      playBeep();
+    }
+  }, [playBeep]);
 
   // Fonction pour jouer une notification sonore simple
   const playNotification = useCallback(() => {
@@ -446,36 +463,6 @@ export default function ParticipantViewFixedPage() {
       playNotification();
     }
   }, [data, playNotification]);
-
-  // Fonction pour gérer le clic sur une tâche
-  const handleTaskClick = useCallback(
-    (task: Task) => {
-      toast({
-        title: task.title,
-        description: task.description,
-        variant: "default",
-        action: (
-          <Button
-            variant="outline"
-            size="sm"
-            className="border-[#0066b3] text-[#0066b3] hover:bg-[#0066b3] hover:text-white"
-            onClick={(e) => {
-              e.stopPropagation();
-              // Logique pour marquer la tâche comme terminée
-              toast({
-                title: "Tâche mise à jour",
-                description: `La tâche "${task.title}" a été marquée comme terminée`,
-                variant: "default",
-              });
-            }}
-          >
-            Marquer comme terminée
-          </Button>
-        ),
-      });
-    },
-    [toast]
-  );
 
   // Fonction pour récupérer le rôle de l'utilisateur connecté
   const getUserRole = useCallback(
@@ -563,16 +550,23 @@ export default function ParticipantViewFixedPage() {
         });
 
         // Afficher des notifications pour les nouveaux messages
-        (Object.entries(newMessages) as [string, number][]).forEach(
-          ([channel, count]) => {
-            toast({
-              title: "Nouveaux messages",
-              description: `${count} nouveau(x) message(s) dans ${channel}`,
-              variant: "default",
-              duration: 5000,
-            });
-          }
-        );
+        if (Object.keys(newMessages).length > 0) {
+          // Jouer la notification sonore pour les communications
+          playCommunicationNotification();
+
+          (Object.entries(newMessages) as [string, number][]).forEach(
+            ([channel, count]) => {
+              const displayName =
+                channel.toLowerCase() === "memo" ? "WhatsApp" : channel;
+              toast({
+                title: "Nouveaux messages",
+                description: `${count} nouveau(x) message(s) dans ${displayName}`,
+                variant: "default",
+                duration: 5000,
+              });
+            }
+          );
+        }
 
         // Vérifier les nouvelles injections
         if (newData.injections.length > (data.injections?.length || 0)) {
@@ -613,7 +607,6 @@ export default function ParticipantViewFixedPage() {
       const role = getUserRole(newData);
       if (role) {
         setUserRole(role);
-        setSelectedRole(role);
         console.log("Rôle utilisateur détecté:", role);
       } else {
         console.log("Aucun rôle trouvé pour l'utilisateur connecté");
@@ -629,7 +622,14 @@ export default function ParticipantViewFixedPage() {
     } finally {
       setLoading(false);
     }
-  }, [simulationId, toast, getUserRole, data, playNotification]);
+  }, [
+    simulationId,
+    toast,
+    getUserRole,
+    data,
+    playNotification,
+    playCommunicationNotification,
+  ]);
 
   // Nettoyage du contexte audio
   useEffect(() => {
@@ -656,28 +656,8 @@ export default function ParticipantViewFixedPage() {
     }
   }, [theme, resolvedTheme]);
 
-  const fetchPlans = useCallback(async () => {
-    try {
-      const response = await fetch("/api/plans");
-      if (!response.ok) {
-        throw new Error("Failed to fetch plans");
-      }
-      const data = await response.json();
-      setPlans(data);
-      console.log("Fetched plans:", data);
-    } catch (error: unknown) {
-      console.error("Error fetching plans:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les plans.",
-        variant: "destructive",
-      });
-    }
-  }, [toast]);
-
   useEffect(() => {
     fetchData();
-    fetchPlans();
     const intervalId = setInterval(() => {
       console.log("Mise à jour automatique des données...");
       fetchData().then(() => {
@@ -688,21 +668,11 @@ export default function ParticipantViewFixedPage() {
           duration: 3000,
         });
       });
-      fetchPlans();
     }, 30000);
 
     // Nettoyer l'intervalle lors du démontage du composant
     return () => clearInterval(intervalId);
-  }, [fetchData, fetchPlans, toast]);
-
-  useEffect(() => {
-    if (selectedPlanId) {
-      const plan = plans.find((p) => p.id === selectedPlanId);
-      setSelectedPlan(plan || null);
-    } else {
-      setSelectedPlan(null);
-    }
-  }, [selectedPlanId, plans]);
+  }, [fetchData, toast]);
 
   const handleChannelClick = (
     channel: keyof ParticipantViewData["communications"]
@@ -952,33 +922,83 @@ export default function ParticipantViewFixedPage() {
 
   const handleMemoSubmit = async (formData: MemoFormData) => {
     try {
-      const requestBody = {
-        type: "memo",
-        subject: formData.subject,
-        content: formData.content,
-        payload: null,
-      };
-
-      const response = await fetch(
-        `/api/simulations/${simulationId}/communications`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(requestBody),
+      // If formData.to exists (array of recipient IDs), send one request per recipient like SMS
+      if (formData.to && formData.to.length > 0) {
+        if (
+          !formData.recipientPhones ||
+          formData.to.length !== formData.recipientPhones.length
+        ) {
+          throw new Error("Erreur dans la liste des destinataires");
         }
-      );
 
-      if (!response.ok) throw new Error("Failed to send memo");
+        const results = await Promise.allSettled(
+          formData.to.map((recipientId, index) => {
+            const phone = formData.recipientPhones?.[index] || undefined;
+            const requestBody = {
+              type: "memo",
+              subject: formData.subject,
+              content: formData.content,
+              recipientId: recipientId === "" ? null : recipientId,
+              payload: phone ? { phone } : null,
+            };
 
-      toast({ title: "Succès", description: "Memo envoyé avec succès." });
+            return fetch(`/api/simulations/${simulationId}/communications`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(requestBody),
+            });
+          })
+        );
+
+        const errors = results.filter(
+          (r): r is PromiseRejectedResult => r.status === "rejected"
+        );
+
+        if (errors.length > 0) {
+          throw new Error(
+            `Échec de l'envoi à ${errors.length} destinataire(s) sur ${formData.to.length}`
+          );
+        }
+
+        toast({
+          title: "Succès",
+          description: `WhatsApp envoyé(s) à ${formData.to.length} destinataire(s)`,
+        });
+      } else {
+        // Legacy single send using phone field
+        const requestBody = {
+          type: "memo",
+          subject: formData.subject,
+          content: formData.content,
+          payload: formData.phone ? { phone: formData.phone } : null,
+        };
+
+        const response = await fetch(
+          `/api/simulations/${simulationId}/communications`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(requestBody),
+          }
+        );
+
+        if (!response.ok) throw new Error("Failed to send memo");
+
+        toast({ title: "Succès", description: "WhatsApp envoyé avec succès." });
+      }
+
       setIsComposing(false);
       setData(null);
       setLoading(true);
       fetchData();
-    } catch {
+    } catch (error: unknown) {
+      console.error("Erreur lors de l'envoi du WhatsApp:", error);
       toast({
         title: "Erreur",
-        description: "Impossible d'envoyer le memo.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Impossible d'envoyer le WhatsApp.",
         variant: "destructive",
       });
     }
@@ -1002,20 +1022,65 @@ export default function ParticipantViewFixedPage() {
         }
       );
 
-      if (!response.ok) throw new Error("Failed to send news broadcast");
+      if (!response.ok) throw new Error("Failed to send SITREP");
 
+      // Afficher immédiatement le succès à l'utilisateur
       toast({
         title: "Succès",
-        description: "Diffusion de nouvelles envoyée avec succès.",
+        description:
+          "SITREP créé avec succès. Les emails PDF sont en cours d'envoi...",
       });
       setIsComposing(false);
       setData(null);
       setLoading(true);
       fetchData();
+
+      // Envoyer les emails en arrière-plan (non-bloquant)
+      const recipients = [
+        "walaeddine1207@gmail.com",
+        "rriahi@grssconsulting.com",
+      ];
+
+      // Fire-and-forget: on n'attend pas la réponse
+      Promise.all(
+        recipients.map(async (recipientEmail) => {
+          const response = await fetch(
+            `/api/simulations/${simulationId}/sitrep/send-email`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                title: formData.title,
+                content: formData.content,
+                recipientEmail,
+              }),
+            }
+          );
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(
+              errorData.details ||
+                errorData.error ||
+                `Erreur HTTP ${response.status}`
+            );
+          }
+
+          return response.json();
+        })
+      )
+        .then(() => {
+          // Email envoyé silencieusement en arrière-plan (pas de notification)
+          console.log("✅ Emails SITREP envoyés avec succès");
+        })
+        .catch((emailError) => {
+          // Log l'erreur sans afficher de notification à l'utilisateur
+          console.error("❌ Erreur d'envoi email SITREP:", emailError);
+        });
     } catch {
       toast({
         title: "Erreur",
-        description: "Impossible d'envoyer la diffusion de nouvelles.",
+        description: "Impossible d'envoyer le SITREP.",
         variant: "destructive",
       });
     }
@@ -1478,16 +1543,10 @@ export default function ParticipantViewFixedPage() {
                 item.isInjection ? "hover:bg-amber-50/50" : "hover:bg-gray-50"
               }`}
             tabIndex={0}
-            role="button"
             aria-label={
               item.isInjection
                 ? `Injection : ${item.title}`
                 : `Communication : ${item.subject || "Sans sujet"}`
-            }
-            onClick={() =>
-              item.isInjection
-                ? setSelectedInjection(item as Injection)
-                : undefined
             }
           >
             {/* En-tête avec icône, titre et date */}
@@ -1529,20 +1588,50 @@ export default function ParticipantViewFixedPage() {
                 </div>
               </div>
 
-              {item.isInjection && !item.acknowledged && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="ml-2 bg-white hover:bg-amber-50 text-amber-600 border-amber-200 hover:border-amber-300 hover:text-amber-700"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAcknowledgeInjection(item.id);
-                  }}
-                >
-                  <Check className="h-4 w-4 mr-1" />
-                  <span className="text-xs">Marquer comme lu</span>
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                {item.isInjection && (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="ml-2 bg-white hover:bg-amber-50 text-amber-600 border-amber-200 hover:border-amber-300 hover:text-amber-700"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedInjection(item as Injection);
+                      }}
+                    >
+                      <span className="text-xs">Voir</span>
+                    </Button>
+                    {!item.acknowledged && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="ml-2 bg-white hover:bg-amber-50 text-amber-600 border-amber-200 hover:border-amber-300 hover:text-amber-700"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAcknowledgeInjection(item.id);
+                        }}
+                      >
+                        <Check className="h-4 w-4 mr-1" />
+                        <span className="text-xs">Marquer comme lu</span>
+                      </Button>
+                    )}
+                  </>
+                )}
+                {!item.isInjection && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="ml-2 bg-white hover:bg-blue-50 text-blue-600 border-blue-200 hover:border-blue-300 hover:text-blue-700"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedCommunication(item as Communication);
+                    }}
+                  >
+                    <span className="text-xs">Voir</span>
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Contenu du message */}
@@ -1767,16 +1856,6 @@ export default function ParticipantViewFixedPage() {
     );
   }
 
-  // Filtrer les tâches en fonction du rôle de l'utilisateur
-  const planTasks: Task[] = selectedPlan
-    ? selectedPlan.planTasks
-        .map((pt) => pt.task)
-        // Filtrer les tâches qui correspondent au rôle de l'utilisateur
-        .filter(
-          (task) => !userRole || task.role === null || task.role === userRole
-        )
-    : [];
-
   if (loading) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
@@ -1792,38 +1871,6 @@ export default function ParticipantViewFixedPage() {
       </div>
     );
   }
-
-  // Fonction pour obtenir la classe de badge en fonction de la priorité
-  const getPriorityBadgeClass = (priority: string) => {
-    switch (priority?.toLowerCase()) {
-      case "haute":
-        return "bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-400 border border-red-200 dark:border-red-800";
-      case "moyenne":
-        return "bg-amber-100 dark:bg-amber-900/20 text-amber-800 dark:text-amber-400 border border-amber-200 dark:border-amber-800";
-      case "basse":
-        return "bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400 border border-green-200 dark:border-green-800";
-      default:
-        return "bg-muted dark:bg-muted text-foreground dark:text-foreground border border-border dark:border-border";
-    }
-  };
-
-  // Fonction pour obtenir la classe de badge en fonction du statut
-  const getStatusBadgeClass = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case "en_cours":
-        return "bg-red-50 dark:bg-red-900/20 text-[#ED1C24] dark:text-red-400 border border-red-100 dark:border-red-800";
-      case "termine":
-      case "complété":
-        return "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-100 dark:border-green-800";
-      case "en_attente":
-        return "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-800";
-      case "annulé":
-      case "refusé":
-        return "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-800";
-      default:
-        return "bg-muted dark:bg-muted text-foreground dark:text-foreground border border-border dark:border-border";
-    }
-  };
 
   return (
     <div
@@ -1911,8 +1958,7 @@ export default function ParticipantViewFixedPage() {
                 className="object-contain"
                 priority
                 onError={(e) => {
-                  console.error("Erreur de chargement du logo:", e);
-                  // Remplacer par un logo de secours
+                  // Remplacer par un logo de secours si échec de chargement
                   const target = e.currentTarget;
                   target.style.display = "none";
                   const parent = target.parentElement;
@@ -1920,9 +1966,6 @@ export default function ParticipantViewFixedPage() {
                     parent.innerHTML =
                       '<div class="flex items-center justify-center w-full h-full"><span class="text-red-600 text-xs font-bold bg-white px-1 rounded">OOREDOO</span></div>';
                   }
-                }}
-                onLoad={() => {
-                  console.log("Logo chargé avec succès");
                 }}
               />
             </div>
@@ -2008,181 +2051,7 @@ export default function ParticipantViewFixedPage() {
               </div>
             </CardContent>
           </Card>
-          {/* Plans et Tâches */}
-          <Card className="bg-card dark:bg-card shadow-md rounded-lg border border-border dark:border-border hover:shadow-lg transition-shadow">
-            <CardHeader className="bg-muted/50 dark:bg-muted/50 border-b border-border dark:border-border rounded-t-lg p-4">
-              <CardTitle className="text-lg font-semibold text-foreground dark:text-foreground">
-                Plans et Tâches Associées
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {/* Sélecteur de plan */}
-              {plans && (
-                <div className="mb-4">
-                  <Select
-                    value={selectedPlanId ?? undefined}
-                    onValueChange={setSelectedPlanId}
-                  >
-                    <SelectTrigger className="w-full md:w-[300px] bg-background dark:bg-background border-border dark:border-border hover:border-[#ED1C24] focus:ring-2 focus:ring-[#ED1C24] focus:border-[#ED1C24] transition-colors">
-                      <SelectValue
-                        placeholder="Sélectionner un plan"
-                        className="text-foreground dark:text-foreground"
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {plans.map((plan) => (
-                        <SelectItem key={plan.id} value={plan.id}>
-                          {plan.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              {/* Affichage du rôle utilisateur, seulement si un plan est sélectionné */}
-              {selectedPlan &&
-                planTasks.length > 0 &&
-                selectedRole &&
-                selectedRole !== "all" && (
-                  <div className="space-y-4">
-                    <div className="prose max-w-none break-words">
-                      <label className="text-sm font-medium text-foreground dark:text-foreground">
-                        Votre rôle
-                      </label>
-                      <div className="relative">
-                        <Select
-                          value={selectedRole}
-                          onValueChange={() => {}} // Désactive la modification
-                          disabled={true}
-                        >
-                          <SelectTrigger className="w-full md:w-[200px] bg-muted dark:bg-muted border-border dark:border-border text-foreground dark:text-foreground cursor-default">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={selectedRole}>
-                              {selectedRole}
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                          <Lock className="h-4 w-4 text-muted-foreground dark:text-muted-foreground" />
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground dark:text-muted-foreground">
-                        Votre rôle est déterminé automatiquement
-                      </p>
-                    </div>
-                  </div>
-                )}
-              {/* Liste dynamique des tâches filtrées par rôle */}
-              {selectedPlan ? (
-                planTasks.filter(
-                  (task) => selectedRole === "all" || task.role === selectedRole
-                ).length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {planTasks
-                      .filter(
-                        (task) =>
-                          selectedRole === "all" || task.role === selectedRole
-                      )
-                      .map((task) => (
-                        <div
-                          key={task.id}
-                          className="group bg-card dark:bg-card rounded-xl border border-border dark:border-border overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 cursor-pointer"
-                          onClick={() => handleTaskClick(task)}
-                        >
-                          <CardHeader className="p-4 border-b border-border dark:border-border bg-muted/50 dark:bg-muted/50">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex-1 min-w-0">
-                                <h3 className="text-base font-semibold text-foreground dark:text-foreground truncate">
-                                  {task.title}
-                                </h3>
-                                {task.role && (
-                                  <div className="mt-1 flex items-center">
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                      {task.role}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                              <div className="flex-shrink-0">
-                                <span
-                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityBadgeClass(
-                                    task.priority
-                                  )}`}
-                                >
-                                  {task.priority}
-                                </span>
-                              </div>
-                            </div>
-                            {task.dueDate && (
-                              <div className="mt-2 flex items-center text-xs text-muted-foreground dark:text-muted-foreground">
-                                <Calendar className="h-3.5 w-3.5 mr-1.5 text-muted-foreground dark:text-muted-foreground" />
-                                <span>
-                                  Échéance: {formatDate(task.dueDate)}
-                                </span>
-                              </div>
-                            )}
-                          </CardHeader>
-                          <CardContent className="p-4">
-                            <p className="text-sm text-muted-foreground dark:text-muted-foreground line-clamp-3 mb-4">
-                              {task.description || "Aucune description fournie"}
-                            </p>
-                            <div className="flex items-center justify-between pt-3 border-t border-border dark:border-border">
-                              <span
-                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(
-                                  task.status
-                                )}`}
-                              >
-                                {task.status}
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-[#ED1C24] hover:bg-red-50 dark:hover:bg-red-950/20 flex items-center gap-1.5 text-sm font-medium"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleTaskClick(task);
-                                }}
-                              >
-                                <span>Voir détails</span>
-                                <ArrowRight className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          </CardContent>
-                        </div>
-                      ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center p-8 text-center">
-                    <div className="w-16 h-16 bg-muted dark:bg-muted rounded-full flex items-center justify-center mb-4">
-                      <FileText className="h-8 w-8 text-muted-foreground dark:text-muted-foreground" />
-                    </div>
-                    <h3 className="text-lg font-medium text-foreground dark:text-foreground mb-2">
-                      Aucune tâche trouvée
-                    </h3>
-                    <p className="text-muted-foreground dark:text-muted-foreground max-w-md">
-                      Ce plan ne contient aucune tâche pour votre rôle ou le
-                      plan est vide.
-                    </p>
-                  </div>
-                )
-              ) : (
-                <div className="flex flex-col items-center justify-center p-8 text-center">
-                  <div className="w-16 h-16 bg-muted dark:bg-muted rounded-full flex items-center justify-center mb-4">
-                    <FileText className="h-8 w-8 text-muted-foreground dark:text-muted-foreground" />
-                  </div>
-                  <h3 className="text-lg font-medium text-foreground dark:text-foreground mb-2">
-                    Aucun plan sélectionné
-                  </h3>
-                  <p className="text-muted-foreground dark:text-muted-foreground max-w-md">
-                    Sélectionnez un plan dans la liste déroulante ci-dessus pour
-                    voir les tâches associées.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          {/* Plans et Tâches - Section masquée */}
         </div>
 
         {/* Colonne de droite : Communications & Injections */}
@@ -2201,134 +2070,112 @@ export default function ParticipantViewFixedPage() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <CommunicationChannelCard
                   title="Email"
-                  count={data?.counts?.email || 0}
-                  injCount={
-                    data
-                      ? data.injections?.filter(
-                          (inj) => inj.type?.toLowerCase() === "email"
-                        ).length || 0
-                      : 0
-                  }
                   onClick={() => handleChannelClick("email")}
                   icon={Mail}
                   className="bg-red-50 dark:bg-red-950/20 hover:bg-red-100 dark:hover:bg-red-900/30 border-red-100 dark:border-red-800 text-red-600 dark:text-red-400"
-                  iconClass="text-red-500 dark:text-red-400 bg-red-500"
+                  commCount={data?.communications.email?.length || 0}
+                  injCount={
+                    data?.injections.filter(
+                      (inj) =>
+                        inj.type.toUpperCase().replace(/_/g, "") === "EMAIL"
+                    ).length || 0
+                  }
                 />
                 <CommunicationChannelCard
                   title="SMS"
-                  count={data?.counts?.sms || 0}
-                  injCount={
-                    data
-                      ? data.injections?.filter(
-                          (inj) => inj.type?.toLowerCase() === "sms"
-                        ).length || 0
-                      : 0
-                  }
                   onClick={() => handleChannelClick("sms")}
                   icon={MessageSquare}
                   className="bg-green-50 dark:bg-green-950/20 hover:bg-green-100 dark:hover:bg-green-900/30 border-green-100 dark:border-green-800 text-green-600 dark:text-green-400"
-                  iconClass="text-green-500 dark:text-green-400 bg-green-500"
+                  commCount={data?.communications.sms?.length || 0}
+                  injCount={
+                    data?.injections.filter(
+                      (inj) =>
+                        inj.type.toUpperCase().replace(/_/g, "") === "SMS"
+                    ).length || 0
+                  }
                 />
                 <CommunicationChannelCard
                   title="Appel"
-                  count={data?.counts?.call || 0}
-                  injCount={
-                    data
-                      ? data.injections?.filter(
-                          (inj) => inj.type?.toLowerCase() === "call"
-                        ).length || 0
-                      : 0
-                  }
                   onClick={() => handleChannelClick("call")}
                   icon={Phone}
                   className="bg-purple-50 dark:bg-purple-950/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 border-purple-100 dark:border-purple-800 text-purple-600 dark:text-purple-400"
-                  iconClass="text-purple-500 dark:text-purple-400 bg-purple-500"
+                  commCount={data?.communications.call?.length || 0}
+                  injCount={
+                    data?.injections.filter(
+                      (inj) =>
+                        inj.type.toUpperCase().replace(/_/g, "") === "CALL"
+                    ).length || 0
+                  }
                 />
                 <CommunicationChannelCard
                   title="Alerte"
-                  count={data?.counts?.alert || 0}
-                  injCount={
-                    data
-                      ? data.injections?.filter(
-                          (inj) => inj.type?.toLowerCase() === "alert"
-                        ).length || 0
-                      : 0
-                  }
                   onClick={() => handleChannelClick("alert")}
                   icon={Bell}
                   className="bg-amber-50 dark:bg-amber-950/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 border-amber-100 dark:border-amber-800 text-amber-600 dark:text-amber-400"
-                  iconClass="text-amber-500 dark:text-amber-400 bg-amber-500"
+                  commCount={data?.communications.alert?.length || 0}
+                  injCount={
+                    data?.injections.filter(
+                      (inj) =>
+                        inj.type.toUpperCase().replace(/_/g, "") === "ALERT"
+                    ).length || 0
+                  }
                 />
                 <CommunicationChannelCard
-                  title="Memo"
-                  count={data?.counts?.memo || 0}
-                  injCount={
-                    data
-                      ? data.injections?.filter(
-                          (inj) => inj.type?.toLowerCase() === "memo"
-                        ).length || 0
-                      : 0
-                  }
+                  title="WhatsApp"
                   onClick={() => handleChannelClick("memo")}
-                  icon={FileText}
+                  icon={WhatsAppIcon}
                   className="bg-indigo-50 dark:bg-indigo-950/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 border-indigo-100 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400"
-                  iconClass="text-indigo-500 dark:text-indigo-400"
+                  commCount={data?.communications.memo?.length || 0}
+                  injCount={
+                    data?.injections.filter(
+                      (inj) =>
+                        inj.type.toUpperCase().replace(/_/g, "") === "MEMO"
+                    ).length || 0
+                  }
                 />
                 <CommunicationChannelCard
-                  title="Diffusion de Nouvelles"
-                  count={data?.counts?.newsBroadcast || 0}
-                  injCount={
-                    data
-                      ? data.injections?.filter((inj) => {
-                          if (!inj.type) return false;
-                          const normalizedType = inj.type
-                            .toUpperCase()
-                            .replace(/_/g, "");
-                          return normalizedType === "NEWSBROADCAST";
-                        }).length || 0
-                      : 0
-                  }
+                  title="SITREP"
                   onClick={() => handleChannelClick("newsBroadcast")}
                   icon={Newspaper}
                   className="bg-pink-50 dark:bg-pink-950/20 hover:bg-pink-100 dark:hover:bg-pink-900/30 border-pink-100 dark:border-pink-800 text-pink-600 dark:text-pink-400"
-                  iconClass="text-pink-500 dark:text-pink-400"
+                  commCount={data?.communications.newsBroadcast?.length || 0}
+                  injCount={
+                    data?.injections.filter(
+                      (inj) =>
+                        inj.type.toUpperCase().replace(/_/g, "") ===
+                        "NEWSBROADCAST"
+                    ).length || 0
+                  }
                 />
                 <CommunicationChannelCard
                   title="Journal"
-                  count={data?.counts?.newspaper || 0}
-                  injCount={
-                    data
-                      ? data.injections?.filter(
-                          (inj) => inj.type?.toLowerCase() === "newspaper"
-                        ).length || 0
-                      : 0
-                  }
                   onClick={() => handleChannelClick("newspaper")}
                   icon={Rss}
                   className="bg-rose-50 dark:bg-rose-950/20 hover:bg-rose-100 dark:hover:bg-rose-900/30 border-rose-100 dark:border-rose-800 text-rose-600 dark:text-rose-400"
-                  iconClass="text-rose-500 dark:text-rose-400"
+                  commCount={data?.communications.newspaper?.length || 0}
+                  injCount={
+                    data?.injections.filter(
+                      (inj) =>
+                        inj.type.toUpperCase().replace(/_/g, "") === "NEWSPAPER"
+                    ).length || 0
+                  }
                 />
                 <CommunicationChannelCard
                   title="Social"
                   className="bg-teal-50 dark:bg-teal-950/20 hover:bg-teal-100 dark:hover:bg-teal-900/30 border-teal-100 dark:border-teal-800 text-teal-600 dark:text-teal-400"
-                  iconClass="text-teal-500 dark:text-teal-400"
-                  count={data?.counts?.social || 0}
-                  injCount={
-                    data
-                      ? data.injections?.filter((inj) => {
-                          if (!inj.type) return false;
-                          const normalizedType = inj.type
-                            .toUpperCase()
-                            .replace(/_/g, "");
-                          return (
-                            normalizedType === "SOCIAL" ||
-                            normalizedType === "SOCIALMEDIA"
-                          );
-                        }).length || 0
-                      : 0
-                  }
                   onClick={() => handleChannelClick("social")}
                   icon={Users}
+                  commCount={data?.communications.social?.length || 0}
+                  injCount={
+                    data?.injections.filter((inj) => {
+                      const normalized = inj.type
+                        .toUpperCase()
+                        .replace(/_/g, "");
+                      return (
+                        normalized === "SOCIAL" || normalized === "SOCIALMEDIA"
+                      );
+                    }).length || 0
+                  }
                 />
               </div>
             </CardContent>
@@ -2356,7 +2203,9 @@ export default function ParticipantViewFixedPage() {
                   <h2 className="text-2xl font-bold text-white drop-shadow-sm">
                     {selectedChannel
                       ? selectedChannel === "newsBroadcast"
-                        ? "Diffusion de Nouvelles"
+                        ? "SITREP"
+                        : selectedChannel === "memo"
+                        ? "WhatsApp"
                         : selectedChannel.charAt(0).toUpperCase() +
                           selectedChannel.slice(1)
                       : "Sélectionnez un canal"}
@@ -2405,30 +2254,35 @@ export default function ParticipantViewFixedPage() {
                           <EmailComposeForm
                             onSubmit={handleEmailSubmit}
                             onCancel={() => setIsComposing(false)}
+                            simulationId={simulationId}
                           />
                         )}
                         {selectedChannel === "sms" && (
                           <SmsComposeForm
                             onSubmit={handleSmsSubmit}
                             onCancel={() => setIsComposing(false)}
+                            simulationId={simulationId}
                           />
                         )}
                         {selectedChannel === "call" && (
                           <CallComposeForm
                             onSubmit={handleCallSubmit}
                             onCancel={() => setIsComposing(false)}
+                            simulationId={simulationId}
                           />
                         )}
                         {selectedChannel === "alert" && (
                           <AlertComposeForm
                             onSubmit={handleAlertSubmit}
                             onCancel={() => setIsComposing(false)}
+                            simulationId={simulationId}
                           />
                         )}
                         {selectedChannel === "memo" && (
                           <MemoComposeForm
                             onSubmit={handleMemoSubmit}
                             onCancel={() => setIsComposing(false)}
+                            simulationId={simulationId}
                           />
                         )}
                         {selectedChannel === "newsBroadcast" && (
@@ -2540,7 +2394,7 @@ export default function ParticipantViewFixedPage() {
                             ?.split("&")[0]
                         }`}
                         frameBorder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        /* Omit `allow` to improve compatibility (e.g. Firefox for Android) */
                         allowFullScreen
                         title="Vidéo YouTube"
                       />
@@ -2615,6 +2469,83 @@ export default function ParticipantViewFixedPage() {
                   </Button>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Modale pour afficher les détails d'une communication */}
+      {selectedCommunication && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+          <Card className="w-full max-w-3xl max-h-[90vh] bg-card dark:bg-card shadow-xl rounded-2xl border border-border dark:border-border overflow-hidden flex flex-col">
+            {/* En-tête avec dégradé de couleur */}
+            <div
+              className={`bg-gradient-to-r ${getChannelGradient(
+                selectedCommunication.type
+              )} px-6 py-4 border-b border-border dark:border-border`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-lg">
+                    {getIconForType(selectedCommunication.type)}
+                  </div>
+                  <h2 className="text-xl font-bold text-white truncate max-w-[70%]">
+                    {selectedCommunication.subject || "Communication"}
+                  </h2>
+                </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="text-white/80 hover:bg-white/20 hover:text-white"
+                  aria-label="Fermer"
+                  onClick={() => setSelectedCommunication(null)}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+
+              {/* Métadonnées */}
+              <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-white/90">
+                <div className="flex items-center bg-white/20 px-2.5 py-1 rounded-full">
+                  <Calendar className="h-3.5 w-3.5 mr-1.5" />
+                  <span>{formatDate(selectedCommunication.createdAt)}</span>
+                </div>
+                {selectedCommunication.sender && (
+                  <div className="flex items-center bg-white/20 px-2.5 py-1 rounded-full">
+                    <User className="h-3.5 w-3.5 mr-1.5" />
+                    <span>
+                      De: {selectedCommunication.sender.firstName}{" "}
+                      {selectedCommunication.sender.lastName}
+                    </span>
+                  </div>
+                )}
+                {selectedCommunication.recipient && (
+                  <div className="flex items-center bg-white/20 px-2.5 py-1 rounded-full">
+                    <Mail className="h-3.5 w-3.5 mr-1.5" />
+                    <span>
+                      À: {selectedCommunication.recipient.firstName}{" "}
+                      {selectedCommunication.recipient.lastName}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <CardContent className="p-6 overflow-y-auto flex-1">
+              {/* Contenu principal */}
+              <div className="prose prose-sm max-w-none text-gray-700 mb-6 whitespace-pre-line break-words">
+                {selectedCommunication.content}
+              </div>
+
+              {/* Bouton de fermeture */}
+              <div className="flex justify-end pt-4 border-t border-gray-100">
+                <Button
+                  variant="outline"
+                  className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                  onClick={() => setSelectedCommunication(null)}
+                >
+                  Fermer
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>

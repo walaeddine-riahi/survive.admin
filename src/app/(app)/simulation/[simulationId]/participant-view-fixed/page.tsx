@@ -37,6 +37,7 @@ import {
   Users,
 } from "lucide-react";
 import Image from "next/image";
+import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
 
 import type { AlertFormData } from "@/components/participant-mode/communication-forms/AlertComposeForm";
 import type { CallFormData } from "@/components/participant-mode/communication-forms/CallComposeForm";
@@ -205,7 +206,7 @@ const getIconForType = (type: string) => {
     case "alert":
       return <Bell className="mr-2 h-4 w-4" />;
     case "memo":
-      return <FileText className="mr-2 h-4 w-4" />;
+      return <WhatsAppIcon className="mr-2 h-4 w-4" />;
     case "newsbroadcast":
       return <Newspaper className="mr-2 h-4 w-4" />;
     case "newspaper":
@@ -357,13 +358,20 @@ export default function ParticipantViewFixedPage() {
     setIsComposing(true);
   };
 
+  // Helper to normalize recipient id (handles string or string[])
+  const normalizeRecipientId = (to: string | string[] | undefined | null) => {
+    if (!to) return null;
+    if (Array.isArray(to)) return to.length === 0 ? null : to[0];
+    return to === "" ? null : to;
+  };
+
   const handleEmailSubmit = async (formData: EmailFormData) => {
     try {
       const requestBody = {
         type: "email",
         subject: formData.subject,
         content: formData.body,
-        recipientId: formData.to === "" ? null : formData.to,
+        recipientId: normalizeRecipientId(formData.to),
         payload: null,
       };
 
@@ -397,7 +405,7 @@ export default function ParticipantViewFixedPage() {
       const requestBody = {
         type: "sms",
         content: formData.body,
-        recipientId: formData.to === "" ? null : formData.to,
+        recipientId: normalizeRecipientId(formData.to),
         payload: null,
       };
 
@@ -465,33 +473,81 @@ export default function ParticipantViewFixedPage() {
 
   const handleMemoSubmit = async (formData: MemoFormData) => {
     try {
-      const requestBody = {
-        type: "memo",
-        subject: formData.subject,
-        content: formData.content,
-        payload: null,
-      };
-
-      const response = await fetch(
-        `/api/simulations/${simulationId}/communications`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(requestBody),
+      if (formData.to && formData.to.length > 0) {
+        if (
+          !formData.recipientPhones ||
+          formData.to.length !== formData.recipientPhones.length
+        ) {
+          throw new Error("Erreur dans la liste des destinataires");
         }
-      );
 
-      if (!response.ok) throw new Error("Failed to send memo");
+        const results = await Promise.allSettled(
+          formData.to.map((recipientId, index) => {
+            const phone = formData.recipientPhones?.[index] || undefined;
+            const requestBody = {
+              type: "memo",
+              subject: formData.subject,
+              content: formData.content,
+              recipientId: recipientId === "" ? null : recipientId,
+              payload: phone ? { phone } : null,
+            };
 
-      toast({ title: "Succès", description: "Memo envoyé avec succès." });
+            return fetch(`/api/simulations/${simulationId}/communications`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(requestBody),
+            });
+          })
+        );
+
+        const errors = results.filter(
+          (r): r is PromiseRejectedResult => r.status === "rejected"
+        );
+
+        if (errors.length > 0) {
+          throw new Error(
+            `Échec de l'envoi à ${errors.length} destinataire(s) sur ${formData.to.length}`
+          );
+        }
+
+        toast({
+          title: "Succès",
+          description: `WhatsApp envoyé(s) à ${formData.to.length} destinataire(s)`,
+        });
+      } else {
+        const requestBody = {
+          type: "memo",
+          subject: formData.subject,
+          content: formData.content,
+          payload: formData.phone ? { phone: formData.phone } : null,
+        };
+
+        const response = await fetch(
+          `/api/simulations/${simulationId}/communications`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(requestBody),
+          }
+        );
+
+        if (!response.ok) throw new Error("Failed to send memo");
+
+        toast({ title: "Succès", description: "WhatsApp envoyé avec succès." });
+      }
+
       setIsComposing(false);
       setData(null);
       setLoading(true);
       fetchData();
-    } catch {
+    } catch (error: unknown) {
+      console.error("Erreur lors de l'envoi du WhatsApp:", error);
       toast({
         title: "Erreur",
-        description: "Impossible d'envoyer le memo.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Impossible d'envoyer le WhatsApp.",
         variant: "destructive",
       });
     }
@@ -573,7 +629,7 @@ export default function ParticipantViewFixedPage() {
       const requestBody = {
         type: "call",
         content: formData.notes,
-        recipientId: formData.to === "" ? null : formData.to,
+        recipientId: normalizeRecipientId(formData.to),
         senderId: formData.from === "" ? null : formData.from,
         payload: null,
       };
@@ -1071,7 +1127,7 @@ export default function ParticipantViewFixedPage() {
                   icon={Bell}
                 />
                 <CommunicationChannelCard
-                  title="Memo"
+                  title="WhatsApp"
                   count={
                     (data?.counts?.memo || 0) +
                     (data?.injections.filter(
@@ -1079,7 +1135,7 @@ export default function ParticipantViewFixedPage() {
                     ).length || 0)
                   }
                   onClick={() => handleChannelClick("memo")}
-                  icon={FileText}
+                  icon={WhatsAppIcon}
                 />
                 <CommunicationChannelCard
                   title="Diffusion de Nouvelles"
@@ -1257,7 +1313,7 @@ export default function ParticipantViewFixedPage() {
                         selectedInjection.videoUrl.split("v=")[1]?.split("&")[0]
                       }`}
                       frameBorder="0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      /* Omit `allow` to improve compatibility (e.g. Firefox for Android) */
                       allowFullScreen
                       title="YouTube video player"
                     ></iframe>

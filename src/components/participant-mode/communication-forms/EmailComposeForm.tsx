@@ -19,9 +19,11 @@ export type EmailFormData = {
 export default function EmailComposeForm({
   onSubmit,
   onCancel,
+  simulationId,
 }: {
   onSubmit: (data: EmailFormData) => void | Promise<void>;
   onCancel: () => void;
+  simulationId?: string;
 }) {
   const { data: session } = useSession();
   const [users, setUsers] = useState<User[]>([]);
@@ -35,15 +37,26 @@ export default function EmailComposeForm({
     body: "",
   });
 
-  // Charger la liste des utilisateurs
+  // Charger la liste des utilisateurs assignés à la simulation
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await fetch("/api/users");
+        // Si simulationId est fourni, charger uniquement les participants de cette simulation
+        const url = simulationId 
+          ? `/api/simulations/${simulationId}/participants`
+          : "/api/users";
+        
+        const response = await fetch(url);
         if (response.ok) {
           const data = await response.json();
+          
+          // Extraire les utilisateurs depuis les assignments si c'est une simulation
+          const usersList = simulationId && Array.isArray(data)
+            ? data.map((assignment: { user: User }) => assignment.user).filter(Boolean)
+            : data;
+          
           // Filtrer pour ne pas afficher l'utilisateur actuel dans la liste des destinataires
-          const otherUsers = data.filter(
+          const otherUsers = usersList.filter(
             (u: User) => u.id !== session?.user?.id
           );
           setUsers(otherUsers);
@@ -56,7 +69,7 @@ export default function EmailComposeForm({
     if (session?.user?.id) {
       fetchUsers();
     }
-  }, [session]);
+  }, [session, simulationId]);
 
   // Mettre à jour les données du formulaire quand des destinataires sont sélectionnés
   useEffect(() => {
@@ -107,6 +120,7 @@ export default function EmailComposeForm({
             value={selectedRecipientIds}
             onValueChange={handleRecipientChange}
             placeholder="Sélectionner un ou plusieurs destinataires..."
+            users={users}
           />
         </div>
         {formData.toEmails && formData.toEmails.length > 0 && (

@@ -1,44 +1,45 @@
 "use client";
 
-import * as React from 'react';
+import * as React from "react";
 import InjectionComposeForm, {
-  InjectionFormData as ImportedInjectionFormData,
   InjectionType,
+  InjectionFormData,
 } from "@/components/admin-mode/InjectionComposeForm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { 
-  ChevronLeft, 
-  FileText, 
-  Loader2, 
-  CheckSquare, 
-  Square, 
-  Trash2, 
+import {
+  ChevronLeft,
+  Loader2,
+  Trash2,
   Plus,
-  Check,
   X,
   MoreHorizontal,
   Edit,
+  RefreshCw,
+  CheckSquare,
+  Square,
   Inbox,
-  RefreshCw
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
 
-type InjectionFormData = {
-  title: string;
-  content: string;
-  scenarioName: string;
-  type: InjectionType;
-  imageUrl?: string;
-  videoUrl?: string;
-  isActive?: boolean;
-  attachments?: { type: string; url: string; name: string }[];
-}
+// Use the type exported from the InjectionComposeForm if needed; local alias removed
 
 interface Injection {
   id: string;
@@ -54,8 +55,8 @@ interface Injection {
   type: InjectionType;
   imageUrl?: string | null;
   videoUrl?: string | null;
-  payload?: Record<string, any> | null;
-  attachments?: Array<Record<string, any>> | null;
+  payload?: Record<string, unknown> | null;
+  attachments?: Array<Record<string, unknown>> | null;
 }
 
 interface Simulation {
@@ -96,71 +97,85 @@ export default function AdminInjectionsPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isComposing, setIsComposing] = useState(false);
-  const [editingInjection, setEditingInjection] = useState<Injection | null>(null);
-  const [selectedInjectionIds, setSelectedInjectionIds] = useState<Set<string>>(new Set());
+  const [editingInjection, setEditingInjection] = useState<Injection | null>(
+    null
+  );
+  const [selectedInjectionIds, setSelectedInjectionIds] = useState<Set<string>>(
+    new Set()
+  );
   const [isSelecting, setIsSelecting] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState<Set<string>>(new Set());
 
-  const handleToggleStatus = async (injectionId: string, currentStatus: boolean) => {
+  const handleToggleStatus = async (
+    injectionId: string,
+    currentStatus: boolean
+  ) => {
     try {
       // Mise à jour optimiste de l'interface
-      setUpdatingStatus(prev => new Set(prev).add(injectionId));
-      
+      setUpdatingStatus((prev) => new Set(prev).add(injectionId));
+
       const newStatus = !currentStatus;
-      
+
       // Mise à jour locale immédiate pour un retour visuel instantané
-      setInjections(prev => 
-        prev.map(inj => 
+      setInjections((prev) =>
+        prev.map((inj) =>
           inj.id === injectionId ? { ...inj, isActive: newStatus } : inj
         )
       );
 
       // Appel API pour mettre à jour le statut
       const response = await fetch(`/api/injections/${injectionId}`, {
-        method: 'PATCH',
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ isActive: newStatus }),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Échec de la mise à jour du statut');
+        throw new Error(
+          errorData.message || "Échec de la mise à jour du statut"
+        );
       }
 
       // Récupérer les données mises à jour du serveur
       const updatedInjection = await response.json();
-      
+
       // Mise à jour de la liste avec les données fraîches du serveur
-      setInjections(prev => 
-        prev.map(inj => 
+      setInjections((prev) =>
+        prev.map((inj) =>
           inj.id === injectionId ? { ...inj, ...updatedInjection } : inj
         )
       );
 
       toast({
         title: "Statut mis à jour",
-        description: `L'injection est maintenant ${newStatus ? 'active' : 'inactive'}`,
+        description: `L'injection est maintenant ${
+          newStatus ? "active" : "inactive"
+        }`,
       });
     } catch (error) {
-      console.error('Erreur lors de la mise à jour du statut:', error);
-      
+      console.error("Erreur lors de la mise à jour du statut:", error);
+
       // Annuler la mise à jour optimiste en cas d'erreur
-      setInjections(prev => 
-        prev.map(inj => 
+      setInjections((prev) =>
+        prev.map((inj) =>
           inj.id === injectionId ? { ...inj, isActive: currentStatus } : inj
         )
       );
-      
+
       toast({
         title: "Erreur",
-        description: error instanceof Error ? error.message : "Une erreur est survenue lors de la mise à jour du statut",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Une erreur est survenue lors de la mise à jour du statut",
         variant: "destructive",
       });
     } finally {
       // Retirer l'ID du set de mise à jour
-      setUpdatingStatus(prev => {
+      setUpdatingStatus((prev) => {
         const newSet = new Set(prev);
         newSet.delete(injectionId);
         return newSet;
@@ -169,8 +184,9 @@ export default function AdminInjectionsPage({
   };
   const { toast } = useToast();
 
-  const fetchSimulationAndInjections = async () => {
+  const fetchSimulationAndInjections = React.useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const simulationRes = await fetch(`/api/simulations/${simulationId}`);
       const simulationData = await simulationRes.json();
@@ -187,8 +203,12 @@ export default function AdminInjectionsPage({
       );
       const injectionsData = await injectionsRes.json();
       setInjections(injectionsData);
-    } catch (error) {
-      console.error("Failed to fetch data:", error);
+      setError(null);
+    } catch (err) {
+      console.error("Failed to fetch data:", err);
+      const message =
+        err instanceof Error ? err.message : "Échec du chargement des données.";
+      setError(message);
       toast({
         title: "Erreur",
         description: "Échec du chargement des données.",
@@ -197,14 +217,14 @@ export default function AdminInjectionsPage({
     } finally {
       setLoading(false);
     }
-  };
+  }, [simulationId, toast]);
 
   useEffect(() => {
     // S'assurer que simulationId est disponible avant d'appeler fetchSimulationAndInjections
     if (simulationId) {
       fetchSimulationAndInjections();
     }
-  }, [simulationId, toast]);
+  }, [simulationId, fetchSimulationAndInjections]);
 
   // Fonctions pour la sélection multiple
   const toggleInjectionSelection = (injectionId: string) => {
@@ -221,33 +241,38 @@ export default function AdminInjectionsPage({
     if (selectedInjectionIds.size === injections.length) {
       setSelectedInjectionIds(new Set());
     } else {
-      setSelectedInjectionIds(new Set(injections.map(i => i.id)));
+      setSelectedInjectionIds(new Set(injections.map((i) => i.id)));
     }
   };
 
   // Suppression multiple
   const handleDeleteSelected = async () => {
     if (selectedInjectionIds.size === 0) return;
-    
-    if (!confirm(`Êtes-vous sûr de vouloir supprimer les ${selectedInjectionIds.size} injections sélectionnées ?`)) {
+
+    if (
+      !confirm(
+        `Êtes-vous sûr de vouloir supprimer les ${selectedInjectionIds.size} injections sélectionnées ?`
+      )
+    ) {
       return;
     }
-    
+
     await deleteInjections(Array.from(selectedInjectionIds));
   };
 
   const deleteInjections = async (ids: string[]) => {
     try {
       const results = await Promise.allSettled(
-        ids.map(id => 
-          fetch(`/api/simulations/${simulationId}/injections/${id}`, { 
-            method: 'DELETE' 
+        ids.map((id) =>
+          fetch(`/api/simulations/${simulationId}/injections/${id}`, {
+            method: "DELETE",
           })
         )
       );
 
       const errors = results.filter(
-        (result): result is PromiseRejectedResult => result.status === 'rejected'
+        (result): result is PromiseRejectedResult =>
+          result.status === "rejected"
       );
 
       if (errors.length > 0) {
@@ -267,13 +292,15 @@ export default function AdminInjectionsPage({
       console.error("Error deleting injections:", error);
       toast({
         title: "Erreur",
-        description: `Une erreur est survenue lors de la suppression : ${error instanceof Error ? error.message : 'Erreur inconnue'}`,
+        description: `Une erreur est survenue lors de la suppression : ${
+          error instanceof Error ? error.message : "Erreur inconnue"
+        }`,
         variant: "destructive",
       });
     }
   };
 
-  const handleInjectionSubmit = async (formData: ImportedInjectionFormData) => {
+  const handleInjectionSubmit = async (formData: InjectionFormData) => {
     try {
       // Validation des champs obligatoires
       if (!formData.title?.trim()) {
@@ -287,7 +314,7 @@ export default function AdminInjectionsPage({
       }
 
       const isUpdate = !!editingInjection;
-      const url = isUpdate 
+      const url = isUpdate
         ? `/api/simulations/${simulationId}/injections/${editingInjection.id}`
         : `/api/simulations/${simulationId}/injections`;
 
@@ -296,9 +323,9 @@ export default function AdminInjectionsPage({
         title: formData.title.trim(),
         content: formData.content.trim(),
         type: formData.type,
-        triggerType: 'MANUAL',
+        triggerType: "MANUAL",
         isActive: formData.isActive ?? true,
-        scenarioName: formData.scenarioName || 'default',
+        scenarioName: formData.scenarioName || "default",
         simulationId: simulationId,
         timeOffset: 0,
         isRepeating: false,
@@ -306,24 +333,30 @@ export default function AdminInjectionsPage({
         // Champs optionnels
         ...(formData.imageUrl && { imageUrl: formData.imageUrl }),
         ...(formData.videoUrl && { videoUrl: formData.videoUrl }),
-        ...(formData.attachments?.length && { attachments: formData.attachments })
+        ...(formData.attachments?.length && {
+          attachments: formData.attachments,
+        }),
       };
 
-      console.log('Envoi des données:', { 
-        url, 
-        method: isUpdate ? 'PUT' : 'POST', 
-        payload: { 
-          ...apiPayload, 
+      console.log("Envoi des données:", {
+        url,
+        method: isUpdate ? "PUT" : "POST",
+        payload: {
+          ...apiPayload,
           // Masquer les données sensibles dans les logs
-          attachments: apiPayload.attachments ? `[${apiPayload.attachments.length} pièces jointes]` : 'aucune',
-          content: apiPayload.content.substring(0, 50) + (apiPayload.content.length > 50 ? '...' : '')
-        } 
+          attachments: apiPayload.attachments
+            ? `[${apiPayload.attachments.length} pièces jointes]`
+            : "aucune",
+          content:
+            apiPayload.content.substring(0, 50) +
+            (apiPayload.content.length > 50 ? "..." : ""),
+        },
       });
 
       const response = await fetch(url, {
-        method: isUpdate ? 'PUT' : 'POST',
+        method: isUpdate ? "PUT" : "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(apiPayload),
       });
@@ -332,29 +365,32 @@ export default function AdminInjectionsPage({
       try {
         responseData = await response.json();
       } catch (e) {
-        console.error('Erreur lors de l\'analyse de la réponse JSON:', e);
-        throw new Error('Réserve du serveur invalide');
+        console.error("Erreur lors de l'analyse de la réponse JSON:", e);
+        throw new Error("Réserve du serveur invalide");
       }
 
-      console.log('Réponse du serveur:', { 
-        status: response.status, 
-        data: responseData 
+      console.log("Réponse du serveur:", {
+        status: response.status,
+        data: responseData,
       });
 
       if (!response.ok) {
-        const errorMessage = responseData?.message || 
-          responseData?.error?.message || 
+        const errorMessage =
+          responseData?.message ||
+          responseData?.error?.message ||
           response.statusText ||
-          `Échec de la ${isUpdate ? 'mise à jour' : 'création'} de l'injection`;
-        
+          `Échec de la ${isUpdate ? "mise à jour" : "création"} de l'injection`;
+
         throw new Error(errorMessage);
       }
 
       toast({
         title: "Succès",
-        description: `Injection ${isUpdate ? "mise à jour" : "ajoutée"} avec succès.`,
+        description: `Injection ${
+          isUpdate ? "mise à jour" : "ajoutée"
+        } avec succès.`,
       });
-      
+
       setIsComposing(false);
       setEditingInjection(null);
       // Recharger les données après une création/mise à jour réussie
@@ -384,35 +420,40 @@ export default function AdminInjectionsPage({
       ...injection,
       imageUrl: injection.imageUrl || undefined,
       videoUrl: injection.videoUrl || undefined,
-      attachments: injection.attachments?.map(att => ({
-        type: att.type || 'file',
-        url: att.url,
-        name: att.name || 'Fichier joint'
-      })) || []
+      attachments:
+        injection.attachments?.map((att) => ({
+          type: (att.type as string) || "file",
+          url: String(att.url),
+          name: (att.name as string) || "Fichier joint",
+        })) || [],
     });
     setIsComposing(true);
   };
 
   const handleDeleteInjection = async (injectionId: string) => {
-    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette injection ?")) {
+    if (
+      !window.confirm("Êtes-vous sûr de vouloir supprimer cette injection ?")
+    ) {
       return;
     }
 
     try {
       const response = await fetch(`/api/injections/${injectionId}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Échec de la suppression de l\'injection');
+        throw new Error(
+          errorData.message || "Échec de la suppression de l'injection"
+        );
       }
 
       // Mise à jour optimiste de l'interface
-      setInjections(prev => prev.filter(inj => inj.id !== injectionId));
-      
+      setInjections((prev) => prev.filter((inj) => inj.id !== injectionId));
+
       // Désélectionner l'élément supprimé s'il était sélectionné
-      setSelectedInjectionIds(prev => {
+      setSelectedInjectionIds((prev) => {
         const newSet = new Set(prev);
         newSet.delete(injectionId);
         return newSet;
@@ -428,14 +469,17 @@ export default function AdminInjectionsPage({
         setIsComposing(false);
         setEditingInjection(null);
       }
-      
+
       // Rafraîchir la liste complète pour être sûr
       await fetchSimulationAndInjections();
     } catch (error) {
       console.error("Erreur lors de la suppression de l'injection:", error);
       toast({
         title: "Erreur",
-        description: error instanceof Error ? error.message : "Une erreur est survenue lors de la suppression.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Une erreur est survenue lors de la suppression.",
         variant: "destructive",
       });
     }
@@ -481,8 +525,8 @@ export default function AdminInjectionsPage({
         <div className="flex items-center gap-2">
           {isSelecting ? (
             <>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => {
                   setSelectedInjectionIds(new Set());
                   setIsSelecting(false);
@@ -490,8 +534,8 @@ export default function AdminInjectionsPage({
               >
                 Annuler
               </Button>
-              <Button 
-                variant="destructive" 
+              <Button
+                variant="destructive"
                 onClick={handleDeleteSelected}
                 disabled={selectedInjectionIds.size === 0}
               >
@@ -501,17 +545,16 @@ export default function AdminInjectionsPage({
             </>
           ) : (
             <>
-              <Button 
-                variant="outline" 
-                onClick={() => setIsSelecting(true)}
-              >
+              <Button variant="outline" onClick={() => setIsSelecting(true)}>
                 <CheckSquare className="mr-2 h-4 w-4" />
                 Sélection multiple
               </Button>
-              <Button onClick={() => {
-                setEditingInjection(null);
-                setIsComposing(true);
-              }}>
+              <Button
+                onClick={() => {
+                  setEditingInjection(null);
+                  setIsComposing(true);
+                }}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Nouvelle injection
               </Button>
@@ -536,20 +579,29 @@ export default function AdminInjectionsPage({
           <CardContent>
             <InjectionComposeForm
               simulationId={simulationId}
-              initialData={editingInjection ? {
-                title: editingInjection.title,
-                content: editingInjection.content,
-                scenarioName: editingInjection.scenarioName,
-                type: editingInjection.type,
-                imageUrl: editingInjection.imageUrl || '',
-                videoUrl: editingInjection.videoUrl || '',
-                isActive: editingInjection.isActive,
-                attachments: editingInjection.attachments?.map(att => ({
-                  type: att.type || 'file',
-                  url: att.url,
-                  name: att.name || 'Fichier joint'
-                })) || []
-              } : undefined}
+              initialData={
+                editingInjection
+                  ? {
+                      title: editingInjection.title,
+                      content: editingInjection.content,
+                      scenarioName: editingInjection.scenarioName,
+                      type: editingInjection.type,
+                      imageUrl: editingInjection.imageUrl || "",
+                      videoUrl: editingInjection.videoUrl || "",
+                      isActive: editingInjection.isActive,
+                      attachments:
+                        editingInjection.attachments?.map((att) => ({
+                          type:
+                            String((att as Record<string, unknown>).type) ||
+                            "file",
+                          url: String((att as Record<string, unknown>).url),
+                          name:
+                            String((att as Record<string, unknown>).name) ||
+                            "Fichier joint",
+                        })) || [],
+                    }
+                  : undefined
+              }
               onSubmit={handleInjectionSubmit}
               onCancel={() => {
                 setIsComposing(false);
@@ -569,8 +621,8 @@ export default function AdminInjectionsPage({
             <X className="h-5 w-5 mr-2" />
             <span>Erreur lors du chargement des injections: {error}</span>
           </div>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="mt-2"
             onClick={fetchSimulationAndInjections}
           >
@@ -586,8 +638,8 @@ export default function AdminInjectionsPage({
                 <TableRow>
                   <TableHead className="w-12">
                     {isSelecting && (
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="icon"
                         className="h-8 w-8 p-0"
                         onClick={toggleSelectAll}
@@ -605,7 +657,9 @@ export default function AdminInjectionsPage({
                   <TableHead className="min-w-[100px]">Type</TableHead>
                   <TableHead>Contenu</TableHead>
                   <TableHead className="w-[120px]">Statut</TableHead>
-                  <TableHead className="w-[150px] text-right">Actions</TableHead>
+                  <TableHead className="w-[150px] text-right">
+                    Actions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -614,9 +668,11 @@ export default function AdminInjectionsPage({
                     <TableRow key={injection.id} className="hover:bg-muted/50">
                       <TableCell>
                         {isSelecting && (
-                          <div 
+                          <div
                             className="flex items-center justify-center h-10 cursor-pointer"
-                            onClick={() => toggleInjectionSelection(injection.id)}
+                            onClick={() =>
+                              toggleInjectionSelection(injection.id)
+                            }
                           >
                             {selectedInjectionIds.has(injection.id) ? (
                               <CheckSquare className="h-5 w-5 text-primary" />
@@ -630,24 +686,25 @@ export default function AdminInjectionsPage({
                         <div className="font-semibold">{injection.title}</div>
                       </TableCell>
                       <TableCell className="py-3">
-                        <Badge variant="outline">
-                          {injection.type}
-                        </Badge>
+                        <Badge variant="outline">{injection.type}</Badge>
                       </TableCell>
                       <TableCell className="py-3">
-                        <div className="line-clamp-2" title={injection.content || undefined}>
+                        <div
+                          className="line-clamp-2"
+                          title={injection.content || undefined}
+                        >
                           {injection.content || "-"}
                         </div>
                       </TableCell>
                       <TableCell className="py-3">
-                        <span 
+                        <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            injection.isActive 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-gray-100 text-gray-800'
+                            injection.isActive
+                              ? "bg-green-100 text-green-800"
+                              : "bg-gray-100 text-gray-800"
                           }`}
                         >
-                          {injection.isActive ? 'Actif' : 'Inactif'}
+                          {injection.isActive ? "Actif" : "Inactif"}
                         </span>
                       </TableCell>
                       <TableCell className="py-3">
@@ -656,19 +713,30 @@ export default function AdminInjectionsPage({
                             variant="ghost"
                             size="sm"
                             className="h-8 px-2"
-                            onClick={() => handleToggleStatus(injection.id, injection.isActive ?? false)}
+                            onClick={() =>
+                              handleToggleStatus(
+                                injection.id,
+                                injection.isActive ?? false
+                              )
+                            }
                             disabled={updatingStatus.has(injection.id)}
                           >
                             {updatingStatus.has(injection.id) ? (
                               <Loader2 className="h-4 w-4 animate-spin mr-2" />
                             ) : (
-                              <span className={`h-2 w-2 rounded-full mr-2 ${injection.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
+                              <span
+                                className={`h-2 w-2 rounded-full mr-2 ${
+                                  injection.isActive
+                                    ? "bg-green-500"
+                                    : "bg-gray-400"
+                                }`}
+                              />
                             )}
-                            {updatingStatus.has(injection.id) 
-                              ? 'Mise à jour...' 
-                              : injection.isActive 
-                                ? 'Désactiver' 
-                                : 'Activer'}
+                            {updatingStatus.has(injection.id)
+                              ? "Mise à jour..."
+                              : injection.isActive
+                              ? "Désactiver"
+                              : "Activer"}
                           </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -686,7 +754,9 @@ export default function AdminInjectionsPage({
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-destructive focus:text-destructive"
-                                onClick={() => handleDeleteInjection(injection.id)}
+                                onClick={() =>
+                                  handleDeleteInjection(injection.id)
+                                }
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Supprimer
@@ -703,9 +773,9 @@ export default function AdminInjectionsPage({
                       <div className="flex flex-col items-center justify-center p-4">
                         <Inbox className="h-8 w-8 mb-2 text-muted-foreground" />
                         <p>Aucune injection trouvée</p>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           className="mt-2"
                           onClick={() => {
                             setEditingInjection(null);
@@ -724,15 +794,15 @@ export default function AdminInjectionsPage({
           </div>
         </div>
       )}
-      
+
       {/* Section des communications */}
       <div className="mt-8">
-        <h2 className="text-xl font-bold mb-4">Communications des participants</h2>
+        <h2 className="text-xl font-bold mb-4">
+          Communications des participants
+        </h2>
         <Card>
           <CardHeader>
-            <CardTitle>
-              Communications ({communications.length})
-            </CardTitle>
+            <CardTitle>Communications ({communications.length})</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {communications.length === 0 ? (
@@ -763,10 +833,10 @@ export default function AdminInjectionsPage({
                       <div key={comm.id} className="border-t pt-2 mt-2">
                         <p className="text-sm text-muted-foreground">
                           Type:{" "}
-                          {comm.type.charAt(0).toUpperCase() + comm.type.slice(1)}
+                          {comm.type.charAt(0).toUpperCase() +
+                            comm.type.slice(1)}
                           {comm.recipient &&
-                            ` - À: ${comm.recipient.firstName} ${comm.recipient.lastName} (${comm.recipient.email})`
-                          }
+                            ` - À: ${comm.recipient.firstName} ${comm.recipient.lastName} (${comm.recipient.email})`}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           Date: {new Date(comm.createdAt).toLocaleString()}
@@ -784,7 +854,7 @@ export default function AdminInjectionsPage({
                           comm.payload &&
                           (comm.payload as { subject?: string }).subject && (
                             <p className="text-sm text-muted-foreground mt-1">
-                              Sujet du mémo:{" "}
+                              Sujet WhatsApp:{" "}
                               {(comm.payload as { subject: string }).subject}
                             </p>
                           )}

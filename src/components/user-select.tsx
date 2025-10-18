@@ -2,7 +2,6 @@
 
 import { Button } from "@/components/ui/button";
 import {
-  FormControl,
   FormField,
   FormItem,
   FormLabel,
@@ -14,7 +13,6 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
-  CommandList,
 } from "@/components/ui/command";
 import {
   Popover,
@@ -38,11 +36,13 @@ interface UserSelectProps {
   value: string | string[];
   onValueChange: (value: string | string[]) => void;
   placeholder?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   form?: any;
   name?: string;
   label?: string;
   multiple?: boolean;
   className?: string;
+  users?: User[]; // Accepter une liste d'utilisateurs externe
 }
 
 export function UserSelect({
@@ -54,6 +54,7 @@ export function UserSelect({
   label,
   multiple = false,
   className,
+  users: externalUsers,
 }: UserSelectProps) {
   // Assurez-vous que value est toujours défini
   const safeValue = value || (multiple ? [] : '');
@@ -65,7 +66,8 @@ export function UserSelect({
     }
   };
   
-  const [users, setUsers] = useState<User[]>([]);
+  const [internalUsers, setInternalUsers] = useState<User[]>([]);
+  const users = externalUsers || internalUsers;
   const [open, setOpen] = useState(false);
   
   // Valeur sélectionnée pour l'affichage
@@ -100,19 +102,22 @@ export function UserSelect({
   };
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await fetch("/api/users");
-        if (!response.ok) throw new Error("Échec de la récupération des utilisateurs");
-        const data = await response.json();
-        setUsers(data);
-      } catch (error) {
-        console.error("Erreur lors de la récupération des utilisateurs:", error);
-      }
-    };
+    // Ne charger les utilisateurs que si aucune liste externe n'est fournie
+    if (!externalUsers) {
+      const fetchUsers = async () => {
+        try {
+          const response = await fetch("/api/users");
+          if (!response.ok) throw new Error("Échec de la récupération des utilisateurs");
+          const data = await response.json();
+          setInternalUsers(data);
+        } catch (error) {
+          console.error("Erreur lors de la récupération des utilisateurs:", error);
+        }
+      };
 
-    fetchUsers();
-  }, []);
+      fetchUsers();
+    }
+  }, [externalUsers]);
 
   if (form && name) {
     return (
