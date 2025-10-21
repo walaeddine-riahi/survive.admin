@@ -10,6 +10,7 @@ import {
   Calendar,
   CheckSquare,
   ChevronDown,
+  Eye,
   LayoutDashboard,
   LineChart,
   LogOut,
@@ -19,7 +20,7 @@ import {
   User,
   Users,
   UserCircle,
-  FileText
+  FileText,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -122,6 +123,11 @@ const routes: Route[] = [
     title: "Simulations",
     icon: LineChart,
     href: "/simulation",
+  },
+  {
+    title: "Vue Instructeur",
+    icon: Eye,
+    href: "/instructor-simulations",
   },
   {
     title: "Scénarios",

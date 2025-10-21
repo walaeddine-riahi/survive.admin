@@ -155,8 +155,8 @@ export function SimulationForm({
       ...data,
       assignments: selectedUsers.map((user) => ({
         userId: user.id,
-        role: user.role,
-        status: "pending",
+        role: user.role as "participant" | "observer" | "facilitator",
+        status: "pending" as const,
         teamId: user.teamId,
       })),
     };
@@ -360,7 +360,7 @@ export function SimulationForm({
                       </SelectItem>
                     ) : (
                       users
-                      .filter(
+                        .filter(
                           (user) =>
                             user.id !== "" &&
                             !selectedUsers.some(
@@ -371,8 +371,8 @@ export function SimulationForm({
                           if (!user.id || String(user.id) === "") return null;
                           return (
                             <SelectItem key={user.id} value={String(user.id)}>
-                          {user.firstName} {user.lastName} ({user.email})
-                        </SelectItem>
+                              {user.firstName} {user.lastName} ({user.email})
+                            </SelectItem>
                           );
                         })
                     )}
@@ -386,37 +386,37 @@ export function SimulationForm({
                     const user = users.find((u) => u.id === assignment.id);
                     return (
                       user && (
-                      <div
-                        key={user.id}
+                        <div
+                          key={user.id}
                           className="flex items-center justify-between rounded-md border p-3"
-                      >
+                        >
                           <div className="flex flex-col">
-                          <span>
+                            <span>
                               {user.firstName} {user.lastName} ({user.email})
-                          </span>
+                            </span>
                           </div>
                           <div className="flex items-center space-x-2">
-                          <Select
+                            <Select
                               onValueChange={(value) =>
                                 updateUserRole(user.id, value)
-                            }
+                              }
                               value={assignment.role}
-                          >
+                            >
                               <SelectTrigger className="w-[140px]">
                                 <SelectValue placeholder="Sélectionner un rôle" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="participant">
-                                Participant
-                              </SelectItem>
-                              <SelectItem value="observer">
-                                Observateur
-                              </SelectItem>
-                              <SelectItem value="facilitator">
-                                Facilitateur
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="participant">
+                                  Participant
+                                </SelectItem>
+                                <SelectItem value="observer">
+                                  Observateur
+                                </SelectItem>
+                                <SelectItem value="facilitator">
+                                  Facilitateur
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
 
                             <Select
                               onValueChange={(value) =>
@@ -456,14 +456,14 @@ export function SimulationForm({
                               </SelectContent>
                             </Select>
 
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeUser(user.id)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeUser(user.id)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       )
                     );

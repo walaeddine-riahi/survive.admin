@@ -11,6 +11,7 @@
 ### 1. Modification du composant UserSelect (`src/components/user-select.tsx`)
 
 #### Ajout de la prop `users`
+
 ```typescript
 interface UserSelectProps {
   value: string | string[];
@@ -26,6 +27,7 @@ interface UserSelectProps {
 ```
 
 #### Gestion des utilisateurs internes vs externes
+
 ```typescript
 export function UserSelect({
   value,
@@ -44,18 +46,24 @@ export function UserSelect({
 ```
 
 #### Fetch conditionnel
+
 ```typescript
 useEffect(() => {
   // Ne charger les utilisateurs que si aucune liste externe n'est fournie
-  if (!externalUsers) { // ✅ AJOUTÉ - Condition
+  if (!externalUsers) {
+    // ✅ AJOUTÉ - Condition
     const fetchUsers = async () => {
       try {
         const response = await fetch("/api/users");
-        if (!response.ok) throw new Error("Échec de la récupération des utilisateurs");
+        if (!response.ok)
+          throw new Error("Échec de la récupération des utilisateurs");
         const data = await response.json();
         setInternalUsers(data); // ✅ MODIFIÉ - Utiliser setInternalUsers
       } catch (error) {
-        console.error("Erreur lors de la récupération des utilisateurs:", error);
+        console.error(
+          "Erreur lors de la récupération des utilisateurs:",
+          error
+        );
       }
     };
 
@@ -69,6 +77,7 @@ useEffect(() => {
 Chaque formulaire de communication passe maintenant sa liste d'utilisateurs filtrés au `UserSelect`:
 
 #### EmailComposeForm.tsx
+
 ```typescript
 <UserSelect
   multiple
@@ -80,6 +89,7 @@ Chaque formulaire de communication passe maintenant sa liste d'utilisateurs filt
 ```
 
 #### SmsComposeForm.tsx
+
 ```typescript
 <UserSelect
   multiple
@@ -92,6 +102,7 @@ Chaque formulaire de communication passe maintenant sa liste d'utilisateurs filt
 ```
 
 #### CallComposeForm.tsx
+
 ```typescript
 <UserSelect
   multiple
@@ -103,6 +114,7 @@ Chaque formulaire de communication passe maintenant sa liste d'utilisateurs filt
 ```
 
 #### MemoComposeForm.tsx
+
 ```typescript
 <UserSelect
   multiple
@@ -115,6 +127,7 @@ Chaque formulaire de communication passe maintenant sa liste d'utilisateurs filt
 ```
 
 #### AlertComposeForm.tsx
+
 ```typescript
 <UserSelect
   multiple
@@ -130,6 +143,7 @@ Chaque formulaire de communication passe maintenant sa liste d'utilisateurs filt
 ## Flux de données corrigé
 
 ### AVANT (❌ Problème)
+
 ```
 Formulaire                    UserSelect
     |                            |
@@ -144,6 +158,7 @@ Formulaire                    UserSelect
 ```
 
 ### APRÈS (✅ Solution)
+
 ```
 Formulaire                    UserSelect
     |                            |
@@ -160,6 +175,7 @@ Formulaire                    UserSelect
 ## Comportement
 
 ### Avec `simulationId` fourni (mode simulation)
+
 1. Formulaire charge `/api/simulations/${simulationId}/participants`
 2. Extrait `assignment.user` de chaque participant
 3. Filtre l'utilisateur actuel
@@ -168,6 +184,7 @@ Formulaire                    UserSelect
 6. **Résultat:** Seuls les participants de la simulation apparaissent
 
 ### Sans `simulationId` (mode fallback)
+
 1. Formulaire charge `/api/users`
 2. Filtre l'utilisateur actuel
 3. Passe la liste à `UserSelect` via prop `users`
@@ -175,6 +192,7 @@ Formulaire                    UserSelect
 5. **Résultat:** Tous les utilisateurs apparaissent (comportement par défaut)
 
 ### Sans prop `users` (ancien comportement préservé)
+
 1. `UserSelect` détecte que `externalUsers` est undefined
 2. `UserSelect` charge `/api/users` lui-même
 3. **Résultat:** Compatibilité ascendante maintenue
@@ -182,44 +200,53 @@ Formulaire                    UserSelect
 ## Avantages de cette approche
 
 ### ✅ Séparation des préoccupations
+
 - Les formulaires gèrent la **logique de filtrage**
 - `UserSelect` gère uniquement l'**affichage et la sélection**
 
 ### ✅ Réutilisabilité
+
 - `UserSelect` peut être utilisé avec n'importe quelle source de données
 - Pas de logique métier dans le composant UI
 
 ### ✅ Testabilité
+
 - Facile de tester `UserSelect` avec différentes listes d'utilisateurs
 - Pas besoin de mocker les appels API dans les tests du composant
 
 ### ✅ Performance
+
 - Un seul fetch par formulaire (dans le parent)
 - Pas de fetch redondant dans `UserSelect`
 
 ### ✅ Compatibilité ascendante
+
 - Les anciens usages de `UserSelect` sans prop `users` continuent de fonctionner
 - Migration progressive possible
 
 ## Tests recommandés
 
 ### ✅ Test 1: Simulation avec participants
+
 1. Créer une simulation avec 3 participants: Alice, Bob, Charlie
 2. Se connecter en tant qu'Alice
 3. Ouvrir un formulaire de communication (Email/SMS/Call/Memo/Alert)
 4. **Vérifier:** Seuls Bob et Charlie apparaissent (Alice filtrée)
 
 ### ✅ Test 2: Utilisateur non participant
+
 1. Avoir un utilisateur David qui n'est PAS dans la simulation
 2. Depuis le formulaire de communication de la simulation
 3. **Vérifier:** David n'apparaît PAS dans la liste
 
 ### ✅ Test 3: Multi-sélection
+
 1. Dans un formulaire, sélectionner plusieurs participants
 2. **Vérifier:** Tous les participants sélectionnés sont correctement affichés
 3. **Vérifier:** Les IDs et contacts sont correctement mappés
 
 ### ✅ Test 4: Fallback sans simulationId
+
 1. Utiliser un formulaire sans passer `simulationId`
 2. **Vérifier:** Tous les utilisateurs de la plateforme apparaissent
 3. **Vérifier:** Utilisateur actuel est toujours filtré
@@ -236,18 +263,22 @@ Formulaire                    UserSelect
 ## Validation
 
 ### ✅ Compilation TypeScript
+
 ```bash
 # Aucune erreur de compilation
 ```
 
 ### ✅ ESLint
+
 - Imports inutilisés nettoyés (FormControl, CommandList)
 - Warning `any` traité avec eslint-disable-next-line
 
 ### ✅ Logique métier
+
 - Filtrage par simulation fonctionnel
 - Utilisateur actuel toujours filtré
 - Fallback aux utilisateurs globaux si pas de simulationId
 
 ## Date de modification
+
 **19 octobre 2025** - Correction du problème de filtrage UserSelect

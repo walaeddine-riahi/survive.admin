@@ -1,7 +1,6 @@
 "use client";
 
 import { SimulationForm } from "@/components/simulation-form";
-import { TaskPlan } from "@/components/TaskPlan";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,8 +35,10 @@ import {
   Plus,
   Search,
   Trash2,
+  Eye,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 // Assuming Scenario and Injection types based on prisma schema
 interface Scenario {
@@ -127,6 +128,7 @@ const getStatusBadge = (status: string) => {
 };
 
 export default function SimulationPage() {
+  const router = useRouter();
   // Initialize state with empty arrays
   const [simulations, setSimulations] = useState<Simulation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -509,7 +511,7 @@ export default function SimulationPage() {
                     {(filteredSimulations ?? []).map((simulation) => (
                       <TableRow
                         key={simulation.id}
-                        onClick={() => setSelectedSimulation(simulation)}
+                        onClick={() => router.push(`/simulation/${simulation.id}/instructor-view`)}
                         className="cursor-pointer hover:bg-muted/50"
                       >
                         <TableCell className="font-mono text-xs">
@@ -539,7 +541,19 @@ export default function SimulationPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  router.push(
+                                    `/simulation/${simulation.id}/instructor-view`
+                                  );
+                                }}
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                Vue Instructeur
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   setSelectedSimulation(simulation);
                                   setIsSimulationFormOpen(true);
                                 }}
@@ -548,9 +562,10 @@ export default function SimulationPage() {
                                 Modifier
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                onClick={() =>
-                                  handleDeleteSimulation(simulation.id)
-                                }
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteSimulation(simulation.id);
+                                }}
                                 className="text-red-600"
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
@@ -595,7 +610,7 @@ export default function SimulationPage() {
                     {(ongoingSimulations ?? []).map((simulation) => (
                       <TableRow
                         key={simulation.id}
-                        onClick={() => setSelectedSimulation(simulation)}
+                        onClick={() => router.push(`/simulation/${simulation.id}/instructor-view`)}
                         className="cursor-pointer hover:bg-muted/50"
                       >
                         <TableCell className="font-mono text-xs">
@@ -625,7 +640,19 @@ export default function SimulationPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  router.push(
+                                    `/simulation/${simulation.id}/instructor-view`
+                                  );
+                                }}
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                Vue Instructeur
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   setSelectedSimulation(simulation);
                                   setIsSimulationFormOpen(true);
                                 }}
@@ -634,9 +661,10 @@ export default function SimulationPage() {
                                 Modifier
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                onClick={() =>
-                                  handleDeleteSimulation(simulation.id)
-                                }
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteSimulation(simulation.id);
+                                }}
                                 className="text-red-600"
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
@@ -681,7 +709,7 @@ export default function SimulationPage() {
                     {(plannedSimulations ?? []).map((simulation) => (
                       <TableRow
                         key={simulation.id}
-                        onClick={() => setSelectedSimulation(simulation)}
+                        onClick={() => router.push(`/simulation/${simulation.id}/instructor-view`)}
                         className="cursor-pointer hover:bg-muted/50"
                       >
                         <TableCell className="font-mono text-xs">
@@ -711,7 +739,19 @@ export default function SimulationPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  router.push(
+                                    `/simulation/${simulation.id}/instructor-view`
+                                  );
+                                }}
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                Vue Instructeur
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   setSelectedSimulation(simulation);
                                   setIsSimulationFormOpen(true);
                                 }}
@@ -720,9 +760,10 @@ export default function SimulationPage() {
                                 Modifier
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                onClick={() =>
-                                  handleDeleteSimulation(simulation.id)
-                                }
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteSimulation(simulation.id);
+                                }}
                                 className="text-red-600"
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
@@ -767,7 +808,7 @@ export default function SimulationPage() {
                     {(completedSimulations ?? []).map((simulation) => (
                       <TableRow
                         key={simulation.id}
-                        onClick={() => setSelectedSimulation(simulation)}
+                        onClick={() => router.push(`/simulation/${simulation.id}/instructor-view`)}
                         className="cursor-pointer hover:bg-muted/50"
                       >
                         <TableCell className="font-mono text-xs">
@@ -797,7 +838,19 @@ export default function SimulationPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  router.push(
+                                    `/simulation/${simulation.id}/instructor-view`
+                                  );
+                                }}
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                Vue Instructeur
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   setSelectedSimulation(simulation);
                                   setIsSimulationFormOpen(true);
                                 }}
@@ -806,9 +859,10 @@ export default function SimulationPage() {
                                 Modifier
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                onClick={() =>
-                                  handleDeleteSimulation(simulation.id)
-                                }
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteSimulation(simulation.id);
+                                }}
                                 className="text-red-600"
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
@@ -828,13 +882,9 @@ export default function SimulationPage() {
           <TabsContent value="plan">
             <Card>
               <CardContent className="pt-6">
-                <TaskPlan
-                  simulationId={selectedSimulation?.id || ""}
-                  onPlanUpdate={(plan) => {
-                    // Ici, vous pouvez ajouter la logique pour sauvegarder le plan
-                    console.log("Plan mis à jour:", plan);
-                  }}
-                />
+                <p className="text-muted-foreground text-center">
+                  Sélectionnez une simulation pour voir son plan de tâches.
+                </p>
               </CardContent>
             </Card>
           </TabsContent>
@@ -852,7 +902,7 @@ export default function SimulationPage() {
         onSubmit={
           selectedSimulation ? handleUpdateSimulation : handleCreateSimulation
         }
-        initialData={selectedSimulation}
+        initialData={selectedSimulation || undefined}
       />
     </div>
   );

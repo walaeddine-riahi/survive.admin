@@ -50,19 +50,22 @@ export default function CallComposeForm({
     const fetchUsers = async () => {
       try {
         // Si simulationId est fourni, charger uniquement les participants de cette simulation
-        const url = simulationId 
+        const url = simulationId
           ? `/api/simulations/${simulationId}/participants`
           : "/api/users";
-        
+
         const response = await fetch(url);
         if (response.ok) {
           const data = await response.json();
-          
+
           // Extraire les utilisateurs depuis les assignments si c'est une simulation
-          const usersList = simulationId && Array.isArray(data)
-            ? data.map((assignment: { user: User }) => assignment.user).filter(Boolean)
-            : data;
-          
+          const usersList =
+            simulationId && Array.isArray(data)
+              ? data
+                  .map((assignment: { user: User }) => assignment.user)
+                  .filter(Boolean)
+              : data;
+
           // Filtrer pour ne pas afficher l'utilisateur actuel dans la liste des destinataires
           const otherUsers = usersList.filter(
             (u: User) => u.id !== session?.user?.id

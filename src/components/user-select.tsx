@@ -57,43 +57,45 @@ export function UserSelect({
   users: externalUsers,
 }: UserSelectProps) {
   // Assurez-vous que value est toujours défini
-  const safeValue = value || (multiple ? [] : '');
-  
+  const safeValue = value || (multiple ? [] : "");
+
   // Fonction de rappel qui appelle à la fois onValueChange et met à jour le formulaire si nécessaire
   const safeOnValueChange = (value: string | string[]) => {
     if (onValueChange) {
       onValueChange(value);
     }
   };
-  
+
   const [internalUsers, setInternalUsers] = useState<User[]>([]);
   const users = externalUsers || internalUsers;
   const [open, setOpen] = useState(false);
-  
+
   // Valeur sélectionnée pour l'affichage
-  const selectedUsers = users.filter((user) => 
-    Array.isArray(safeValue) ? safeValue.includes(user.id) : safeValue === user.id
+  const selectedUsers = users.filter((user) =>
+    Array.isArray(safeValue)
+      ? safeValue.includes(user.id)
+      : safeValue === user.id
   );
-  
+
   // Fonction utilitaire pour vérifier si un utilisateur est sélectionné
   const isSelected = (userId: string) => {
     return multiple
       ? Array.isArray(safeValue) && safeValue.includes(userId)
       : safeValue === userId;
   };
-  
+
   // Gestion de la sélection d'un utilisateur
   const handleSelect = (user: User) => {
     if (multiple) {
       const newValue = Array.isArray(safeValue) ? [...safeValue] : [];
       const index = newValue.findIndex((id) => id === user.id);
-      
+
       if (index === -1) {
         newValue.push(user.id);
       } else {
         newValue.splice(index, 1);
       }
-      
+
       safeOnValueChange(newValue);
     } else {
       safeOnValueChange(user.id);
@@ -107,11 +109,15 @@ export function UserSelect({
       const fetchUsers = async () => {
         try {
           const response = await fetch("/api/users");
-          if (!response.ok) throw new Error("Échec de la récupération des utilisateurs");
+          if (!response.ok)
+            throw new Error("Échec de la récupération des utilisateurs");
           const data = await response.json();
           setInternalUsers(data);
         } catch (error) {
-          console.error("Erreur lors de la récupération des utilisateurs:", error);
+          console.error(
+            "Erreur lors de la récupération des utilisateurs:",
+            error
+          );
         }
       };
 
@@ -137,20 +143,20 @@ export function UserSelect({
             if (multiple) {
               const newValue = Array.isArray(safeValue) ? [...safeValue] : [];
               const index = newValue.findIndex((id) => id === user.id);
-              
+
               if (index === -1) {
                 newValue.push(user.id);
               } else {
                 newValue.splice(index, 1);
               }
-              
+
               handleValueChange(newValue);
             } else {
               handleValueChange(user.id);
               setOpen(false);
             }
           };
-          
+
           // Créer une version locale de isSelected pour le formulaire
           const formIsSelected = (userId: string) => isSelected(userId);
 
@@ -169,13 +175,18 @@ export function UserSelect({
                       <User className="mr-2 h-4 w-4" />
                       {selectedUsers.length > 0 ? (
                         <span className="truncate">
-                          {multiple 
-                            ? `${selectedUsers.length} utilisateur${selectedUsers.length > 1 ? 's' : ''} sélectionné${selectedUsers.length > 1 ? 's' : ''}`
-                            : `${selectedUsers[0].firstName} ${selectedUsers[0].lastName}`
-                          }
+                          {multiple
+                            ? `${selectedUsers.length} utilisateur${
+                                selectedUsers.length > 1 ? "s" : ""
+                              } sélectionné${
+                                selectedUsers.length > 1 ? "s" : ""
+                              }`
+                            : `${selectedUsers[0].firstName} ${selectedUsers[0].lastName}`}
                         </span>
                       ) : (
-                        <span className="text-muted-foreground">{placeholder}</span>
+                        <span className="text-muted-foreground">
+                          {placeholder}
+                        </span>
                       )}
                     </div>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -251,10 +262,11 @@ export function UserSelect({
                 <User className="mr-2 h-4 w-4" />
                 {selectedUsers.length > 0 ? (
                   <span className="truncate">
-                    {multiple 
-                      ? `${selectedUsers.length} utilisateur${selectedUsers.length > 1 ? 's' : ''} sélectionné${selectedUsers.length > 1 ? 's' : ''}`
-                      : `${selectedUsers[0].firstName} ${selectedUsers[0].lastName}`
-                    }
+                    {multiple
+                      ? `${selectedUsers.length} utilisateur${
+                          selectedUsers.length > 1 ? "s" : ""
+                        } sélectionné${selectedUsers.length > 1 ? "s" : ""}`
+                      : `${selectedUsers[0].firstName} ${selectedUsers[0].lastName}`}
                   </span>
                 ) : (
                   <span className="text-muted-foreground">{placeholder}</span>
@@ -305,6 +317,6 @@ export function UserSelect({
       </div>
     );
   }
-  
+
   return null;
 }

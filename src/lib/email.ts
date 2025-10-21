@@ -35,6 +35,7 @@ transporter.verify(function (error) {
 const welcomeEmailTemplate = (
   firstName: string,
   userEmail: string,
+  password: string,
   simulationTitle: string,
   simulationId: string
 ) => `
@@ -43,48 +44,125 @@ const welcomeEmailTemplate = (
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bienvenue - ${simulationTitle}</title>
+  <title>Invitation à la Simulation </title>
 </head>
-<body style="margin:0; padding:0; font-family: Arial, sans-serif; background-color: #f4f4f7;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f4f4f7; padding: 40px 0;">
+<body style="margin:0; padding:0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f5f5f5; padding: 40px 20px;">
     <tr>
       <td align="center">
-        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);">
+          <!-- Header Survive / Ooredoo -->
           <tr>
-            <td align="center" style="background-color: #6366f1; padding: 30px;">
-              <h1 style="margin: 0; font-size: 24px; color: #ffffff;">Bienvenue dans la simulation</h1>
+            <td align="center" style="background: linear-gradient(135deg, #E2001A 0%, #C40016 100%); padding: 40px 30px;">
+              <h1 style="margin: 0; font-size: 28px; color: #ffffff; font-weight: 600; letter-spacing: 0.5px;">Bienvenue sur Survive</h1>
+              <p style="margin: 10px 0 0 0; font-size: 16px; color: #ffffff; opacity: 0.95;">Plateforme de Simulation de Gestion de Crise - Ooredoo</p>
             </td>
           </tr>
+          
+          <!-- Content -->
           <tr>
-            <td style="padding: 30px; color: #111827; font-size: 16px; line-height: 1.6;">
-              <p>Bonjour <strong>${firstName}</strong>,</p>
-              <p>Bienvenue dans l’expérience immersive <strong>"${simulationTitle}"</strong> !</p>
-              <p>Votre identifiant de connexion est : <strong>${userEmail}</strong></p>
-              <p>Au cours de cette simulation, vous pourrez :</p>
-              <ul style="padding-left: 20px;">
-                <li>Envoyer des mémos et messages confidentiels</li>
-                <li>Publier des bulletins pour votre équipe</li>
-                <li>Gérer des incidents et envoyer des alertes</li>
-                <li>Créer des rapports et analyses</li>
-              </ul>
+            <td style="padding: 40px 30px; color: #333333; font-size: 16px; line-height: 1.7;">
+              <p style="margin: 0 0 20px 0;">Bonjour <strong style="color: #E2001A;">${firstName}</strong>,</p>
+              
+              <p style="margin: 0 0 25px 0;">Vous êtes invité(e) à participer à la simulation . Cette simulation vous permettra de développer vos compétences en gestion de crise dans un environnement sécurisé et réaliste.</p>
+              
+              <!-- Credentials Box -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: linear-gradient(135deg, #FFF5F5 0%, #FFE8EA 100%); border-left: 4px solid #E2001A; border-radius: 8px; margin: 30px 0;">
+                <tr>
+                  <td style="padding: 25px;">
+                    <h2 style="margin: 0 0 15px 0; font-size: 18px; color: #E2001A; font-weight: 600;">🔐 Vos identifiants de connexion</h2>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td style="padding: 8px 0;">
+                          <strong style="color: #666666; font-size: 14px;">Adresse e-mail :</strong>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 5px 15px; background-color: #ffffff; border-radius: 6px; font-family: 'Courier New', monospace; color: #E2001A; font-weight: bold; font-size: 15px;">
+                          ${userEmail}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 15px 0 8px 0;">
+                          <strong style="color: #666666; font-size: 14px;">Mot de passe :</strong>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 5px 15px; background-color: #ffffff; border-radius: 6px; font-family: 'Courier New', monospace; color: #E2001A; font-weight: bold; font-size: 15px;">
+                          ooredoo
+                        </td>
+                      </tr>
+                    </table>
+                    <p style="margin: 15px 0 0 0; font-size: 13px; color: #999999; font-style: italic;">⚠️ Veuillez conserver ces informations en lieu sûr</p>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Features -->
+              <h3 style="margin: 30px 0 15px 0; font-size: 18px; color: #333333; font-weight: 600;">Au cours de cette simulation, vous pourrez :</h3>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="padding: 8px 0;">
+                    <span style="color: #E2001A; font-weight: bold;">✓</span> Envoyer des mémos et messages confidentiels
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0;">
+                    <span style="color: #E2001A; font-weight: bold;">✓</span> Publier des bulletins pour votre équipe
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0;">
+                    <span style="color: #E2001A; font-weight: bold;">✓</span> Gérer des incidents et envoyer des alertes
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0;">
+                    <span style="color: #E2001A; font-weight: bold;">✓</span> Créer des rapports et analyses en temps réel
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- CTA Button -->
               <div style="text-align: center; margin: 40px 0;">
                 <a href="https://survive-tau.vercel.app/simulation/${simulationId}/participant-view"
-                   style="background-color: #6366f1; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; display: inline-block; font-weight: bold;">
-                  Accéder à la simulation
+                   style="background: linear-gradient(135deg, #E2001A 0%, #C40016 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(226, 0, 26, 0.3); transition: all 0.3s;">
+                  🚀 Accéder à la Simulation
                 </a>
               </div>
-              <p>Pour toute question, notre équipe reste à votre disposition.</p>
-              <p style="margin-top: 40px; font-style: italic; color: #6b7280;">Cordialement,<br>L’équipe de Simulation</p>
+              
+              <p style="margin: 30px 0 0 0; font-size: 15px; color: #666666;">Pour toute question ou assistance technique, n'hésitez pas à contacter notre équipe support.</p>
+              
+              <p style="margin-top: 30px; padding-top: 25px; border-top: 1px solid #eeeeee; font-size: 15px; color: #666666;">
+                Cordialement,<br>
+                <strong style="color: #E2001A;">L'équipe Survive - Gestion de Crise</strong>
+              </p>
             </td>
           </tr>
+          
+          <!-- Footer -->
           <tr>
-            <td align="center" style="background-color: #f9fafb; padding: 20px; font-size: 13px; color: #6b7280;">
-              <p>Ce message a été généré automatiquement. Merci de ne pas y répondre.</p>
-              <p>
-                <a href="#" style="color: #6b7280; text-decoration: none;">Politique de confidentialité</a> |
-                <a href="#" style="color: #6b7280; text-decoration: none;">Conditions d’utilisation</a>
-              </p>
-              <p style="margin-top: 10px;">&copy; ${new Date().getFullYear()} Votre Organisation. Tous droits réservés.</p>
+            <td align="center" style="background-color: #f9f9f9; padding: 25px 30px; border-top: 1px solid #eeeeee;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td align="center" style="padding-bottom: 15px;">
+                    <span style="font-size: 24px; font-weight: bold; color: #E2001A;">Survive</span>
+                    <span style="font-size: 16px; color: #999999; margin: 0 8px;">×</span>
+                    <span style="font-size: 20px; font-weight: bold; color: #E2001A;">Ooredoo</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="font-size: 13px; color: #999999; line-height: 1.6;">
+                    <p style="margin: 5px 0;">Ce message a été généré automatiquement. Merci de ne pas y répondre.</p>
+                    <p style="margin: 15px 0 5px 0;">
+                      <a href="#" style="color: #E2001A; text-decoration: none; margin: 0 10px;">Politique de confidentialité</a> |
+                      <a href="#" style="color: #E2001A; text-decoration: none; margin: 0 10px;">Conditions d'utilisation</a> |
+                      <a href="#" style="color: #E2001A; text-decoration: none; margin: 0 10px;">Support</a>
+                    </p>
+                    <p style="margin: 15px 0 0 0; color: #cccccc;">&copy; ${new Date().getFullYear()} Survive - Plateforme Ooredoo de Gestion de Crise. Tous droits réservés.</p>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
         </table>
@@ -99,6 +177,7 @@ const welcomeEmailTemplate = (
 export const sendWelcomeEmail = async (
   email: string,
   firstName: string,
+  password: string,
   simulationTitle: string,
   simulationId: string
 ) => {
@@ -110,14 +189,15 @@ export const sendWelcomeEmail = async (
 
     const mailOptions = {
       from: {
-        name: "Équipe de Simulation",
+        name: "Ooredoo - Équipe de Simulation",
         address: process.env.EMAIL_USER || "prenetflix99@gmail.com",
       },
       to: email,
-      subject: `Bienvenue dans la simulation "${simulationTitle}"`,
+      subject: `Invitation à la simulation "${simulationTitle}" - Ooredoo`,
       html: welcomeEmailTemplate(
         firstName,
         email,
+        password,
         simulationTitle,
         simulationId
       ),
