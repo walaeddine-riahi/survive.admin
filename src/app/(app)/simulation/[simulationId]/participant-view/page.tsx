@@ -2371,13 +2371,23 @@ export default function ParticipantViewFixedPage() {
               {/* Image */}
               {selectedInjection.imageUrl && (
                 <div className="mb-6 rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
-                  <Image
-                    src={selectedInjection.imageUrl}
-                    alt={selectedInjection.title ?? "Image d'injection"}
-                    width={800}
-                    height={450}
-                    className="w-full h-auto object-cover"
-                  />
+                  {selectedInjection.imageUrl.startsWith("/media/") ? (
+                    // Utiliser <img> natif pour les images locales du dossier media
+                    <img
+                      src={selectedInjection.imageUrl}
+                      alt={selectedInjection.title ?? "Image d'injection"}
+                      className="w-full h-auto object-cover"
+                    />
+                  ) : (
+                    // Utiliser Next.js Image pour les URLs externes
+                    <Image
+                      src={selectedInjection.imageUrl}
+                      alt={selectedInjection.title ?? "Image d'injection"}
+                      width={800}
+                      height={450}
+                      className="w-full h-auto object-cover"
+                    />
+                  )}
                 </div>
               )}
 

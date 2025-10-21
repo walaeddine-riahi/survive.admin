@@ -22,6 +22,8 @@ const nextConfig: NextConfig = {
         hostname: "drive.google.com",
       },
     ],
+    // Désactiver l'optimisation pour toutes les images (recommandé pour /media/)
+    unoptimized: true,
   },
 };
 
