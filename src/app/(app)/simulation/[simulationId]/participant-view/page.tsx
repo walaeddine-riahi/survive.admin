@@ -2373,6 +2373,7 @@ export default function ParticipantViewFixedPage() {
                 <div className="mb-6 rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
                   {selectedInjection.imageUrl.startsWith("/media/") ? (
                     // Utiliser <img> natif pour les images locales du dossier media
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={selectedInjection.imageUrl}
                       alt={selectedInjection.title ?? "Image d'injection"}

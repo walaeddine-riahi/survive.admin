@@ -251,6 +251,7 @@ export function MediaSelector({
                       {file.type === "image" ? (
                         <div className="aspect-square relative mb-2 bg-muted rounded overflow-hidden">
                           {file.url.startsWith("/media/") ? (
+                            // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={file.url}
                               alt={file.name}

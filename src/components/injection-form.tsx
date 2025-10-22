@@ -50,8 +50,6 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
-import { MediaSelector } from "@/components/MediaSelector";
 
 // Correspond aux enums de Prisma
 export enum InjectionTriggerTypeEnum {
@@ -88,23 +86,8 @@ const injectionFormSchema = z.object({
   type: z.nativeEnum(InjectionTypeEnum, {
     required_error: "Le type d'injection est requis",
   }),
-  // Accepter les URLs complètes (http/https) OU les chemins locaux (/media/)
-  imageUrl: z
-    .union([
-      z.string().url(), // URL complète
-      z.string().startsWith("/"), // Chemin local
-      z.literal(""),
-      z.null(),
-    ])
-    .optional(),
-  videoUrl: z
-    .union([
-      z.string().url(), // URL complète
-      z.string().startsWith("/"), // Chemin local
-      z.literal(""),
-      z.null(),
-    ])
-    .optional(),
+  imageUrl: z.union([z.string().url().nullable(), z.literal("")]).optional(),
+  videoUrl: z.union([z.string().url().nullable(), z.literal("")]).optional(),
   targetUserId: z.union([z.string().nullable(), z.undefined()]).optional(),
   attachments: z.string().default("[]"),
   payload: z.string().default("{}"),
@@ -197,14 +180,10 @@ export function InjectionForm({
     },
   });
 
-  const { control, watch, setValue } = methods;
+  const { control, watch } = methods;
   const triggerType = watch("triggerType");
   const isRepeating = watch("isRepeating");
   const selectedSimulationId = watch("simulationId");
-
-  // État pour les sélecteurs de médias
-  const [imageSelectOpen, setImageSelectOpen] = useState(false);
-  const [videoSelectOpen, setVideoSelectOpen] = useState(false);
 
   // Filtrer les scénarios en fonction de la simulation sélectionnée
   const filteredScenarios: ScenarioOption[] = selectedSimulationId
@@ -319,7 +298,7 @@ export function InjectionForm({
                         </FormControl>
                         <SelectContent>
                           <SelectItem value={InjectionTypeEnum.EMAIL}>
-                            📧 E-mail
+                            📧 Email
                           </SelectItem>
                           <SelectItem value={InjectionTypeEnum.SMS}>
                             💬 SMS
@@ -331,16 +310,16 @@ export function InjectionForm({
                             🚨 Alerte
                           </SelectItem>
                           <SelectItem value={InjectionTypeEnum.MEMO}>
-                            📝 Note
+                            📝 WhatsApp
                           </SelectItem>
                           <SelectItem value={InjectionTypeEnum.NEWS_BROADCAST}>
-                            📰 Diffusion de Nouvelles
+                            � SITREP
                           </SelectItem>
                           <SelectItem value={InjectionTypeEnum.NEWSPAPER}>
                             📰 Journal
                           </SelectItem>
                           <SelectItem value={InjectionTypeEnum.SOCIAL}>
-                            📱 Réseau social
+                            📱 Réseau Social
                           </SelectItem>
                           <SelectItem value={InjectionTypeEnum.OTHER}>
                             🎭 Autre
@@ -479,37 +458,15 @@ export function InjectionForm({
                   name="imageUrl"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Image</FormLabel>
+                      <FormLabel>URL de l&apos;image</FormLabel>
                       <FormControl>
-                        <div className="space-y-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="w-full"
-                            onClick={() => setImageSelectOpen(true)}
-                          >
-                            {field.value
-                              ? "Changer l&apos;image"
-                              : "Sélectionner une image"}
-                          </Button>
-                          {field.value && (
-                            <p className="text-xs text-muted-foreground truncate">
-                              {field.value}
-                            </p>
-                          )}
-                        </div>
+                        <Input
+                          placeholder="https://example.com/image.jpg"
+                          {...field}
+                          value={field.value || ""}
+                        />
                       </FormControl>
                       <FormMessage />
-                      <MediaSelector
-                        open={imageSelectOpen}
-                        onOpenChange={setImageSelectOpen}
-                        onSelect={(url) => {
-                          setValue("imageUrl", url);
-                          setImageSelectOpen(false);
-                        }}
-                        mediaType="image"
-                        currentValue={field.value || ""}
-                      />
                     </FormItem>
                   )}
                 />
@@ -519,37 +476,15 @@ export function InjectionForm({
                   name="videoUrl"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Vidéo</FormLabel>
+                      <FormLabel>URL de la vidéo</FormLabel>
                       <FormControl>
-                        <div className="space-y-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="w-full"
-                            onClick={() => setVideoSelectOpen(true)}
-                          >
-                            {field.value
-                              ? "Changer la vidéo"
-                              : "Sélectionner une vidéo"}
-                          </Button>
-                          {field.value && (
-                            <p className="text-xs text-muted-foreground truncate">
-                              {field.value}
-                            </p>
-                          )}
-                        </div>
+                        <Input
+                          placeholder="https://example.com/video.mp4"
+                          {...field}
+                          value={field.value || ""}
+                        />
                       </FormControl>
                       <FormMessage />
-                      <MediaSelector
-                        open={videoSelectOpen}
-                        onOpenChange={setVideoSelectOpen}
-                        onSelect={(url) => {
-                          setValue("videoUrl", url);
-                          setVideoSelectOpen(false);
-                        }}
-                        mediaType="video"
-                        currentValue={field.value || ""}
-                      />
                     </FormItem>
                   )}
                 />
@@ -685,7 +620,8 @@ export function InjectionForm({
 
                 <Controller
                   name="attachments"
-                  control={control}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  control={control as any}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Pièces jointes (JSON)</FormLabel>
