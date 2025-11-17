@@ -5,20 +5,25 @@ import { cn } from "@/lib/utils";
 import {
   AlertTriangle,
   BarChart3,
+  BookOpen,
   ClipboardList,
   CreditCard,
   FileText,
+  GraduationCap,
   LayoutDashboard,
   LucideIcon,
   Mail,
   Menu,
   MessageSquare,
   PlayCircle,
+  Presentation,
   Settings,
   Shield,
   ShieldAlert,
+  Target,
   UserCircle,
   Users,
+  Workflow,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -36,13 +41,99 @@ export const navigation: NavigationItem[] = [
     href: "/dashboard",
     icon: LayoutDashboard,
   },
+
+  // =====================================================
+  // MODULE 1: SIMULATION
+  // =====================================================
   {
-    title: "Mode Participant",
-    href: "/app/participant-mode",
-    icon: UserCircle,
+    title: "🎮 Simulation",
+    href: "/simulation",
+    icon: PlayCircle,
+    children: [
+      {
+        title: "Liste des simulations",
+        href: "/simulation",
+        icon: PlayCircle,
+      },
+      {
+        title: "Créer simulation",
+        href: "/simulation/create",
+        icon: PlayCircle,
+      },
+      {
+        title: "Scénarios",
+        href: "/scenario",
+        icon: Target,
+      },
+      {
+        title: "Injections",
+        href: "/app/injections",
+        icon: Workflow,
+      },
+      {
+        title: "Mode Participant",
+        href: "/app/participant-mode",
+        icon: UserCircle,
+      },
+      {
+        title: "Participations",
+        href: "/app/participations",
+        icon: Users,
+      },
+    ],
   },
+
+  // =====================================================
+  // MODULE 2: INSTRUCTEUR
+  // =====================================================
   {
-    title: "BIA - Analyse d'Impact",
+    title: "🎓 Instructeur",
+    href: "/instructor",
+    icon: Presentation,
+    children: [
+      {
+        title: "Vue Instructeur",
+        href: "/instructor-simulations",
+        icon: Presentation,
+      },
+      {
+        title: "Gestion d'équipes",
+        href: "/team",
+        icon: Users,
+      },
+      {
+        title: "Membres d'équipe",
+        href: "/team-member",
+        icon: Users,
+      },
+      {
+        title: "Chat d'équipe",
+        href: "/team-chat",
+        icon: MessageSquare,
+      },
+      {
+        title: "Gestion des tâches",
+        href: "/task",
+        icon: ClipboardList,
+      },
+      {
+        title: "Incidents",
+        href: "/incident",
+        icon: AlertTriangle,
+      },
+      {
+        title: "Rapports",
+        href: "/report",
+        icon: FileText,
+      },
+    ],
+  },
+
+  // =====================================================
+  // MODULE 3: BIA (Business Impact Analysis)
+  // =====================================================
+  {
+    title: "📊 BIA - Analyse d'Impact",
     href: "/bia",
     icon: BarChart3,
     children: [
@@ -62,156 +153,101 @@ export const navigation: NavigationItem[] = [
         icon: FileText,
       },
       {
+        title: "Usines / Factories",
+        href: "/bia/factories",
+        icon: Settings,
+      },
+      {
         title: "Rapports BIA",
         href: "/bia/reports",
         icon: FileText,
       },
+      {
+        title: "Conformité",
+        href: "/compliance",
+        icon: Shield,
+      },
+      {
+        title: "Gestion des risques",
+        href: "/risk",
+        icon: AlertTriangle,
+      },
     ],
   },
+
+  // =====================================================
+  // MODULE 4: WORKSHOP (Formation & Développement)
+  // =====================================================
   {
-    title: "Simulations",
-    href: "/simulation",
-    icon: PlayCircle,
+    title: "📚 Workshop",
+    href: "/workshop",
+    icon: GraduationCap,
     children: [
       {
-        title: "Liste des simulations",
-        href: "/simulation",
-        icon: PlayCircle,
+        title: "Formations",
+        href: "/training",
+        icon: BookOpen,
       },
       {
-        title: "Scénarios",
-        href: "/scenario",
-        icon: PlayCircle,
+        title: "Plans d'action",
+        href: "/plan",
+        icon: ClipboardList,
       },
       {
-        title: "Injections",
-        href: "/app/injections",
-        icon: PlayCircle,
+        title: "Types de plans",
+        href: "/plan-type",
+        icon: Workflow,
       },
       {
-        title: "Participations",
-        href: "/app/participations",
+        title: "Événements",
+        href: "/participations",
         icon: Users,
+      },
+      {
+        title: "Notifications",
+        href: "/notifications",
+        icon: Mail,
       },
     ],
   },
+
+  // =====================================================
+  // AUTRES SECTIONS (Profil, Admin, Paramètres)
+  // =====================================================
   {
-    title: "Authentication",
-    href: "/auth",
+    title: "Profil & Compte",
+    href: "/profile",
     icon: UserCircle,
     children: [
       {
-        title: "Login",
-        href: "/connection",
-        icon: UserCircle,
-      },
-      {
-        title: "Sign Up",
-        href: "/signup",
-        icon: UserCircle,
-      },
-      {
-        title: "Password Reset",
-        href: "/password-reset",
-        icon: UserCircle,
-      },
-      {
-        title: "Profile",
+        title: "Mon Profil",
         href: "/profile",
         icon: UserCircle,
       },
-    ],
-  },
-  {
-    title: "Team Management",
-    href: "/team",
-    icon: Users,
-    children: [
       {
-        title: "Teams",
-        href: "/team",
-        icon: Users,
+        title: "Paramètres",
+        href: "/settings",
+        icon: Settings,
       },
       {
-        title: "Team Members",
-        href: "/team-member",
-        icon: Users,
-      },
-      {
-        title: "Team Chat",
-        href: "/team-chat",
-        icon: MessageSquare,
-      },
-    ],
-  },
-  {
-    title: "Task Management",
-    href: "/task",
-    icon: ClipboardList,
-    children: [
-      {
-        title: "Tasks Overview",
-        href: "/task",
-        icon: ClipboardList,
-      },
-      {
-        title: "Task Editor",
-        href: "/task/edit",
-        icon: ClipboardList,
-      },
-    ],
-  },
-  {
-    title: "Incident Management",
-    href: "/incident",
-    icon: AlertTriangle,
-    children: [
-      {
-        title: "Incidents List",
-        href: "/incident",
-        icon: AlertTriangle,
-      },
-      {
-        title: "Create Incident",
-        href: "/incident/create",
-        icon: AlertTriangle,
-      },
-      {
-        title: "Incident Reports",
-        href: "/incident/report",
-        icon: FileText,
-      },
-    ],
-  },
-  {
-    title: "Reports",
-    href: "/report",
-    icon: FileText,
-    children: [
-      {
-        title: "Reports List",
-        href: "/report",
-        icon: FileText,
-      },
-      {
-        title: "Create Report",
-        href: "/report/create",
-        icon: FileText,
+        title: "Plans & Abonnements",
+        href: "/plan",
+        icon: CreditCard,
       },
     ],
   },
   {
     title: "Administration",
     href: "/admin",
-    icon: Settings,
+    icon: Shield,
     children: [
       {
-        title: "Admin Panel",
+        title: "Panel Admin",
         href: "/admin",
         icon: Shield,
       },
       {
-        title: "Users",
+        title: "Utilisateurs",
         href: "/users",
         icon: Users,
       },
@@ -220,38 +256,9 @@ export const navigation: NavigationItem[] = [
         href: "/super-admin",
         icon: ShieldAlert,
       },
-    ],
-  },
-  {
-    title: "Plans & Billing",
-    href: "/plan",
-    icon: CreditCard,
-    children: [
       {
-        title: "Plans",
-        href: "/plan",
-        icon: CreditCard,
-      },
-      {
-        title: "Subscriptions",
-        href: "/plan/subscriptions",
-        icon: CreditCard,
-      },
-    ],
-  },
-  {
-    title: "Email Diagnostics",
-    href: "/email-diagnostic",
-    icon: Mail,
-    children: [
-      {
-        title: "Diagnostics",
+        title: "Email Diagnostics",
         href: "/email-diagnostic",
-        icon: Mail,
-      },
-      {
-        title: "Templates",
-        href: "/email-diagnostic/templates",
         icon: Mail,
       },
     ],

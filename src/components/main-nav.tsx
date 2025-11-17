@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 
@@ -37,12 +38,12 @@ export function MainNav() {
         <SidebarMenuItem key={item.href}>
           <SidebarMenuButton
             isActive={active}
-            className="text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            className="text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-lg px-3 py-2"
           >
-            <Icon className="h-4 w-4" />
+            <Icon className="h-5 w-5" />
             <span>{item.title}</span>
           </SidebarMenuButton>
-          <SidebarMenuSub>
+          <SidebarMenuSub className="ml-6 mt-1 space-y-1">
             {item.children.map((child) => {
               const childActive = isActive(child.href);
               const ChildIcon = child.icon;
@@ -51,7 +52,7 @@ export function MainNav() {
                   <Link href={child.href} passHref legacyBehavior>
                     <SidebarMenuSubButton
                       isActive={childActive}
-                      className="text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      className="text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md px-3 py-1.5"
                     >
                       <ChildIcon className="h-4 w-4" />
                       <span>{child.title}</span>
@@ -70,9 +71,9 @@ export function MainNav() {
         <Link href={item.href} passHref legacyBehavior>
           <SidebarMenuButton
             isActive={active}
-            className="text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            className="text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-lg px-3 py-2"
           >
-            <Icon className="h-4 w-4" />
+            <Icon className="h-5 w-5" />
             <span>{item.title}</span>
           </SidebarMenuButton>
         </Link>
@@ -82,17 +83,26 @@ export function MainNav() {
 
   return (
     <SidebarProvider defaultOpen>
-      <Sidebar>
-        <SidebarHeader className="border-b px-6 py-3">
+      <Sidebar className="border-r bg-background">
+        <SidebarHeader className="border-b px-4 py-4">
           <Link
-            href="/"
-            className="flex items-center gap-2 font-semibold text-muted-foreground"
+            href="/dashboard"
+            className="flex items-center gap-3 font-bold text-foreground hover:opacity-80 transition-opacity"
           >
-            Your Logo
+            <Image
+              src="/logo.svg"
+              alt="SURVIVE Logo"
+              width={32}
+              height={32}
+              className="h-8 w-8"
+            />
+            <span className="text-lg">SURVIVE.ADMIN</span>
           </Link>
         </SidebarHeader>
-        <SidebarContent>
-          <SidebarMenu>{navigation.map(renderMenuItem)}</SidebarMenu>
+        <SidebarContent className="px-3 py-4">
+          <SidebarMenu className="space-y-1">
+            {navigation.map(renderMenuItem)}
+          </SidebarMenu>
         </SidebarContent>
       </Sidebar>
     </SidebarProvider>

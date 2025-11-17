@@ -1,0 +1,296 @@
+// ============================================
+// PROPOSITION DE SCHÉMA PRISMA
+// Architecture Factory → Process
+// ============================================
+// Ce fichier contient les modifications à apporter au schéma Prisma
+// pour implémenter la hiérarchie Usines (Factories) → Processus
+
+// ============================================
+// 1. NOUVEAU MODÈLE FACTORY
+// ============================================
+
+model Factory {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // Identification
+  name            String    // Nom de l'usine (ex: "Usine A", "Site Principal")
+  code            String    @unique // Code unique (ex: "USA", "SITE_MAIN")
+  description     String?   // Description de l'usine
+  
+  // Informations géographiques
+  address         String?   // Adresse complète
+  city            String?   // Ville
+  postalCode      String?   // Code postal
+  country         String?   // Pays
+  region          String?   // Région/Province
+  coordinates     Json?     // { lat: number, lng: number } pour géolocalisation
+  
+  // Informations organisationnelles
+  managerId       String?   @db.ObjectId
+  manager         User?     @relation("ManagedFactories", fields: [managerId], references: [id])
+  
+  department      String?   // Département principal
+  division        String?   // Division de l'entreprise
+  phoneNumber     String?   // Téléphone principal
+  email           String?   // Email de contact
+  website         String?   // Site web de l'usine
+  
+  // Métadonnées opérationnelles
+  surfaceArea     Float?    // Surface en m²
+  employeeCount   Int?      // Nombre d'employés
+  operatingHours  Json?     // { open: "08:00", close: "18:00", days: ["Mon", "Tue", ...] }
+  timezone        String?   // Fuseau horaire (ex: "Europe/Paris")
+  
+  // Statut et criticité
+  isActive        Boolean   @default(true)
+  criticalityLevel String?  // "critique", "élevé", "moyen", "faible"
+  
+  // Certifications et conformité
+  certifications  String[]  @default([]) // ["ISO 9001", "ISO 27001", etc.]
+  complianceStandards String[] @default([]) // ["RGPD", "SOX", etc.]
+  
+  // Informations financières (optionnel)
+  annualRevenue   Float?    // Revenu annuel
+  budget          Float?    // Budget annuel
+  
+  // Relations
+  processes       Process[] @relation("FactoryProcesses")
+  reports         BiaReport[] @relation("FactoryReports")
+  
+  // Métadonnées système
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdById     String    @db.ObjectId
+  createdBy       User      @relation("CreatedFactories", fields: [createdById], references: [id])
+  
+  @@map("factories")
+  @@index([code])
+  @@index([isActive])
+  @@index([managerId])
+  @@index([city])
+  @@index([country])
+}
+
+// ============================================
+// 2. MODIFICATION DU MODÈLE PROCESS
+// ============================================
+
+model Process {
+  id                     String          @id @default(auto()) @map("_id") @db.ObjectId
+  name                   String
+  description            String?
+  department             String
+  
+  // ✅ NOUVEAU : Relation avec Factory
+  factoryId              String?         @db.ObjectId
+  factory                Factory?        @relation("FactoryProcesses", fields: [factoryId], references: [id], onDelete: SetNull)
+  
+  // Location devient optionnel et représente l'emplacement DANS l'usine
+  location               String?         // Ex: "Bâtiment B, Étage 2, Bureau 205"
+  
+  // ... TOUS LES CHAMPS EXISTANTS RESTENT INCHANGÉS ...
+  
+  // Criticité et métrique
+  criticality            String?
+  criticalityScore       Int             @default(0)
+  rto                    Int?            // Recovery Time Objective (heures)
+  rpo                    Int?            // Recovery Point Objective (heures)
+  mtpd                   Int?            // Maximum Tolerable Period of Disruption
+  mbco                   Int?            // Minimum Business Continuity Objective
+  
+  // Personnel
+  responsibles           User[]          @relation("ProcessResponsibles", fields: [responsibleIds], references: [id])
+  responsibleIds         String[]        @db.ObjectId
+  teamSize               Int?
+  
+  // Données opérationnelles
+  activities             Activity[]      @relation("ProcessActivities")
+  impacts                Impact[]        @relation("ProcessImpacts")
+  dependencies           Dependency[]    @relation("ProcessDependencies")
+  recoveryStrategies     RecoveryStrategy[] @relation("ProcessRecoveryStrategies")
+  applications           Application[]   @relation("ProcessApplications")
+  
+  // ... Tous les autres champs existants (100+ champs) ...
+  
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+  createdById            String          @db.ObjectId
+  createdBy              User            @relation("CreatedProcesses", fields: [createdById], references: [id])
+  
+  @@map("processes")
+  @@index([factoryId])  // ✅ NOUVEL INDEX
+  @@index([department])
+  @@index([criticality])
+  @@index([createdById])
+}
+
+// ============================================
+// 3. MODIFICATION DU MODÈLE BIAREPORT
+// ============================================
+
+model BiaReport {
+  id                  String           @id @default(auto()) @map("_id") @db.ObjectId
+  name                String
+  description         String?
+  format              BiaReportFormat
+  status              BiaReportStatus  @default(GENERATED)
+  
+  // ✅ NOUVEAU : Relation avec Factory
+  factoryId           String?          @db.ObjectId
+  factory             Factory?         @relation("FactoryReports", fields: [factoryId], references: [id], onDelete: SetNull)
+  
+  // category reste pour compatibilité ascendante (peut être supprimé après migration)
+  category            String?          // @deprecated - Utiliser factoryId à la place
+  
+  // Métadonnées du rapport
+  totalProcesses      Int              @default(0)
+  continuityLevel     Int              @default(0)
+  continuityLevelText String?
+  riskCount           Int              @default(0)
+  recommendationCount Int              @default(0)
+  
+  // Contenu
+  reportData          Json
+  content             String?
+  
+  // Fichier
+  fileName            String?
+  filePath            String?
+  fileSize            Int              @default(0)
+  mimeType            String?
+  
+  // Paramètres
+  generationParams    Json?
+  includedProcessIds  String[]
+  
+  // Partage
+  isPublic            Boolean          @default(false)
+  shareToken          String?          @unique
+  expiresAt           DateTime?
+  downloadCount       Int              @default(0)
+  
+  // Tags
+  tags                String[]         @default([])
+  
+  // Relations
+  authorId            String           @db.ObjectId
+  author              User             @relation("AuthoredBiaReports", fields: [authorId], references: [id])
+  
+  // Métadonnées
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  
+  @@map("bia_reports")
+  @@index([factoryId])  // ✅ NOUVEL INDEX
+  @@index([authorId])
+  @@index([status])
+  @@index([category])   // Garder pour compatibilité migration
+}
+
+// ============================================
+// 4. MODIFICATION DU MODÈLE USER
+// ============================================
+
+model User {
+  id                     String          @id @default(auto()) @map("_id") @db.ObjectId
+  name                   String?
+  email                  String          @unique
+  emailVerified          DateTime?
+  image                  String?
+  password               String?
+  role                   UserRole        @default(USER)
+  
+  // ... TOUS LES CHAMPS EXISTANTS ...
+  
+  // ✅ NOUVELLES RELATIONS FACTORY
+  createdFactories       Factory[]       @relation("CreatedFactories")
+  managedFactories       Factory[]       @relation("ManagedFactories")
+  
+  // Relations existantes (inchangées)
+  biaReports             BiaReport[]     @relation("AuthoredBiaReports")
+  createdProcesses       Process[]       @relation("CreatedProcesses")
+  responsibleProcesses   Process[]       @relation("ProcessResponsibles")
+  
+  // ... Toutes les autres relations existantes ...
+  
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+  
+  @@map("users")
+}
+
+// ============================================
+// NOTES D'IMPLÉMENTATION
+// ============================================
+
+/*
+ÉTAPES DE MIGRATION :
+
+1. BACKUP DE LA BASE DE DONNÉES
+   mongodump --uri="<votre_connection_string>" --out=./backup
+
+2. AJOUTER LE MODÈLE FACTORY
+   - Copier le modèle Factory dans schema.prisma
+   
+3. MODIFIER PROCESS
+   - Ajouter factoryId String? @db.ObjectId
+   - Ajouter factory Factory? @relation(...)
+   - Ajouter @@index([factoryId])
+   
+4. MODIFIER BIAREPORT
+   - Ajouter factoryId String? @db.ObjectId
+   - Ajouter factory Factory? @relation(...)
+   - Ajouter @@index([factoryId])
+   
+5. MODIFIER USER
+   - Ajouter createdFactories Factory[] @relation(...)
+   - Ajouter managedFactories Factory[] @relation(...)
+   
+6. GÉNÉRER LA MIGRATION
+   npx prisma migrate dev --name add_factory_model
+   
+7. EXÉCUTER LE SCRIPT DE MIGRATION DES DONNÉES
+   npx tsx scripts/migrate-categories-to-factories.ts
+   
+8. VÉRIFIER L'INTÉGRITÉ DES DONNÉES
+   npx prisma studio
+   
+9. METTRE À JOUR LE FRONTEND
+   - Créer /bia/factories page
+   - Adapter les formulaires
+   - Modifier les APIs
+   
+10. DÉPLOYER EN PRODUCTION
+    - Test en staging
+    - Migration production
+    - Monitoring
+
+COMPATIBILITÉ ASCENDANTE :
+
+Le champ 'category' dans BiaReport est marqué @deprecated mais conservé
+pour permettre une migration progressive. Il peut être supprimé après
+vérification que toutes les données ont été migrées vers factoryId.
+
+SUPPRESSION EN CASCADE :
+
+onDelete: SetNull sur les relations Factory permet de :
+- Supprimer une Factory sans supprimer les Process/Reports associés
+- Les Process/Reports deviennent "sans usine" (factoryId = null)
+- Alternative : onDelete: Cascade pour suppression totale (plus dangereux)
+
+PERFORMANCES :
+
+Les index suivants optimisent les requêtes :
+- @@index([factoryId]) sur Process
+- @@index([factoryId]) sur BiaReport
+- @@index([code]) sur Factory (recherche par code)
+- @@index([isActive]) sur Factory (filtrage actif/inactif)
+
+VALIDATION :
+
+Ajouter des validations côté application :
+- factory.code : unique, alphanumeric, uppercase
+- factory.name : requis, min 3 caractères
+- factory.email : format email valide
+- factory.employeeCount : >= 0
+*/

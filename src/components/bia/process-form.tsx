@@ -12,6 +12,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Upload, FileText, Loader2, AlertCircle, CheckCircle2, Sparkles } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { analyzeProcessPdf } from '@/actions/bia/analyze-process-pdf';
+import { toast } from 'sonner';
 
 // Définition du type Process pour éviter la dépendance à @prisma/client
 export interface Process {
@@ -703,6 +709,10 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
     }
   };
 
+  // État pour l'upload de PDF
+  const [uploadingPdf, setUploadingPdf] = React.useState(false);
+  const [pdfAnalysisResult, setPdfAnalysisResult] = React.useState<any>(null);
+
   return (
     <Form {...form}>
       <form 
@@ -726,6 +736,176 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
             <TabsTrigger value="suppliers">Fournisseurs</TabsTrigger>
             <TabsTrigger value="legal">Exigences légales</TabsTrigger>
           </TabsList>
+
+          {/* Section d'upload et analyse de PDF */}
+          <Card className="border-2 border-dashed border-blue-200 bg-blue-50/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-blue-700">
+                <Sparkles className="h-5 w-5" />
+                Remplissage automatique depuis PDF
+              </CardTitle>
+              <CardDescription>
+                Uploadez un rapport BIA au format PDF (ex: Rapport BIA - RH - SBC - V1.0.pdf) pour remplir automatiquement les champs du formulaire
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Zone d'upload */}
+              <div className="flex items-center gap-4">
+                <Input
+                  type="file"
+                  accept=".pdf"
+                  id="pdf-upload"
+                  disabled={uploadingPdf}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+
+                    setUploadingPdf(true);
+                    setPdfAnalysisResult(null);
+
+                    try {
+                      const formData = new FormData();
+                      formData.append('file', file);
+
+                      toast.info('📄 Analyse du PDF en cours...');
+                      const result = await analyzeProcessPdf(formData);
+
+                      if (result.success && result.data) {
+                        setPdfAnalysisResult(result);
+                        toast.success(result.message || 'PDF analysé avec succès !');
+
+                        // Remplir les champs du formulaire
+                        const data = result.data;
+                        
+                        if (data.name) form.setValue('name', data.name);
+                        if (data.description) form.setValue('description', data.description);
+                        if (data.department) form.setValue('department', data.department);
+                        if (data.location) form.setValue('location', data.location);
+                        if (data.manager) form.setValue('manager', data.manager);
+                        
+                        // Métriques
+                        if (data.criticality) form.setValue('criticality', data.criticality);
+                        if (data.rto !== undefined) form.setValue('rto', data.rto);
+                        if (data.mtpd !== undefined) form.setValue('mtpd', data.mtpd);
+                        if (data.rpo !== undefined) form.setValue('rpo', data.rpo);
+                        if (data.mbco) form.setValue('mbco', data.mbco);
+                        if (data.impact) form.setValue('impact', data.impact);
+                        
+                        // Impacts
+                        if (data.financialImpact) form.setValue('financialImpact', data.financialImpact);
+                        if (data.operationalImpact) form.setValue('operationalImpact', data.operationalImpact);
+                        if (data.reputationImpact) form.setValue('reputationImpact', data.reputationImpact);
+                        
+                        // Périmètre
+                        if (data.mainFunctionality) form.setValue('mainFunctionality', data.mainFunctionality);
+                        if (data.productDependencies) form.setValue('productDependencies', data.productDependencies);
+                        if (data.interServiceDependencies) form.setValue('interServiceDependencies', data.interServiceDependencies);
+                        
+                        // Fournisseurs
+                        if (data.externalSuppliers) form.setValue('externalSuppliers', data.externalSuppliers);
+                        if (data.keySuppliers) form.setValue('keySuppliers', data.keySuppliers);
+                        
+                        // Personnel
+                        if (data.staffRoles) form.setValue('staffRoles', data.staffRoles);
+                        if (data.staffCount !== undefined) form.setValue('staffCount', data.staffCount);
+                        
+                        // IT
+                        if (data.itSystems) form.setValue('itSystems', data.itSystems);
+                        if (data.systemCriticality) form.setValue('systemCriticality', data.systemCriticality);
+                        
+                        // Infrastructure
+                        if (data.dependsOnPhysicalInfra !== undefined) form.setValue('dependsOnPhysicalInfra', data.dependsOnPhysicalInfra);
+                        if (data.infrastructureType) form.setValue('infrastructureType', data.infrastructureType);
+                        
+                        // Documentation et équipements
+                        if (data.requiredDocumentation) form.setValue('requiredDocumentation', data.requiredDocumentation);
+                        if (data.industrialEquipment) form.setValue('industrialEquipment', data.industrialEquipment);
+                        if (data.officeEquipment) form.setValue('officeEquipment', data.officeEquipment);
+
+                        toast.success('✅ Formulaire rempli automatiquement !', {
+                          description: `Confiance: ${data.confidence || 0}% - Vérifiez et complétez les informations`
+                        });
+                      } else {
+                        toast.error(result.error || 'Erreur lors de l\'analyse');
+                        setPdfAnalysisResult(result);
+                      }
+                    } catch (error) {
+                      console.error('Erreur:', error);
+                      toast.error('Erreur lors de l\'analyse du PDF');
+                    } finally {
+                      setUploadingPdf(false);
+                      // Réinitialiser l'input file
+                      e.target.value = '';
+                    }
+                  }}
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  disabled={uploadingPdf}
+                  onClick={() => {
+                    const input = document.getElementById('pdf-upload') as HTMLInputElement;
+                    input?.click();
+                  }}
+                >
+                  {uploadingPdf ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+
+              {/* Résultat de l'analyse */}
+              {pdfAnalysisResult && (
+                <Alert className={pdfAnalysisResult.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
+                  {pdfAnalysisResult.success ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 text-red-600" />
+                  )}
+                  <AlertDescription className="ml-2">
+                    {pdfAnalysisResult.success ? (
+                      <div className="space-y-2">
+                        <p className="font-medium text-green-800">
+                          ✅ Analyse réussie
+                        </p>
+                        <div className="flex flex-wrap gap-2 text-xs">
+                          {pdfAnalysisResult.data?.name && (
+                            <Badge variant="outline">
+                              <FileText className="h-3 w-3 mr-1" />
+                              {pdfAnalysisResult.data.name}
+                            </Badge>
+                          )}
+                          {pdfAnalysisResult.data?.confidence && (
+                            <Badge variant="secondary">
+                              Confiance: {pdfAnalysisResult.data.confidence}%
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-green-700 mt-2">
+                          Les champs ont été remplis automatiquement. Vérifiez et complétez les informations manquantes.
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-red-800">
+                        ❌ {pdfAnalysisResult.error || 'Erreur lors de l\'analyse'}
+                      </p>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {uploadingPdf && (
+                <div className="flex items-center gap-2 text-sm text-blue-600">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Analyse du PDF en cours avec IA...</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           <TabsContent value="general" className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

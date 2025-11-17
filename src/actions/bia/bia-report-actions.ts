@@ -29,6 +29,7 @@ export interface BiaReportData {
   isPublic?: boolean;
   tags?: string[];
   category?: string;
+  factoryId?: string;
 }
 
 // Créer un nouveau rapport BIA
@@ -53,17 +54,20 @@ export async function createBiaReport(data: BiaReportData) {
         continuityLevelText: data.continuityLevelText,
         riskCount: data.riskCount,
         recommendationCount: data.recommendationCount,
-        reportData: data.reportData,
+        reportData:
+          data.reportData as import("@prisma/client").Prisma.InputJsonValue,
         content: data.content || "",
         fileName: data.fileName,
         filePath: data.filePath,
         fileSize: data.fileSize,
         mimeType: data.mimeType,
-        generationParams: data.generationParams,
+        generationParams:
+          data.generationParams as import("@prisma/client").Prisma.InputJsonValue,
         includedProcessIds: data.includedProcessIds,
         isPublic: data.isPublic || false,
         tags: data.tags || [],
         category: data.category,
+        factoryId: data.factoryId,
         authorId: session.user.id,
         // Générer un shareToken unique pour éviter les conflits
         shareToken: crypto.randomBytes(32).toString("hex"),
@@ -259,13 +263,15 @@ export async function updateBiaReport(
         continuityLevelText: updates.continuityLevelText,
         riskCount: updates.riskCount,
         recommendationCount: updates.recommendationCount,
-        reportData: updates.reportData,
+        reportData:
+          updates.reportData as import("@prisma/client").Prisma.InputJsonValue,
         content: updates.content,
         fileName: updates.fileName,
         filePath: updates.filePath,
         fileSize: updates.fileSize,
         mimeType: updates.mimeType,
-        generationParams: updates.generationParams,
+        generationParams:
+          updates.generationParams as import("@prisma/client").Prisma.InputJsonValue,
         includedProcessIds: updates.includedProcessIds,
         isPublic: updates.isPublic,
         tags: updates.tags,
@@ -529,4 +535,372 @@ export async function getBiaReportsStats() {
       error: "Erreur lors de la récupération des statistiques",
     };
   }
+}
+
+// Créer un rapport BIA à partir d'un processus
+export async function createBiaReportFromProcess(
+  processId: string,
+  reportName: string,
+  reportDescription?: string
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return {
+        success: false,
+        error: "Utilisateur non authentifié",
+      };
+    }
+
+    // Récupérer le processus avec toutes ses données
+    const process = await prisma.process.findUnique({
+      where: { id: processId },
+      include: {
+        factory: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
+      },
+    });
+
+    if (!process) {
+      return {
+        success: false,
+        error: "Processus introuvable",
+      };
+    }
+
+    // Parser les données JSON - accès aux champs JSON Prisma
+    type ProcessWithJsonFields = typeof process & {
+      activitesCritiques?: string;
+      fournisseursExternes?: string;
+      obligationsLegales?: string;
+      systemesInformatiques?: string;
+      infrastructuresPhysiques?: string;
+      rolesPersonnel?: string;
+      equipementsIndustriels?: string;
+      equipementsBureautiques?: string;
+      documentationsCritiques?: string;
+    };
+
+    const processData = process as ProcessWithJsonFields;
+    const activitesCritiques = processData.activitesCritiques
+      ? JSON.parse(processData.activitesCritiques)
+      : [];
+    const fournisseursExternes = processData.fournisseursExternes
+      ? JSON.parse(processData.fournisseursExternes)
+      : [];
+    const obligationsLegales = processData.obligationsLegales
+      ? JSON.parse(processData.obligationsLegales)
+      : [];
+    const systemesInformatiques = processData.systemesInformatiques
+      ? JSON.parse(processData.systemesInformatiques)
+      : [];
+    const infrastructuresPhysiques = processData.infrastructuresPhysiques
+      ? JSON.parse(processData.infrastructuresPhysiques)
+      : [];
+    const rolesPersonnel = processData.rolesPersonnel
+      ? JSON.parse(processData.rolesPersonnel)
+      : [];
+    const equipementsIndustriels = processData.equipementsIndustriels
+      ? JSON.parse(processData.equipementsIndustriels)
+      : [];
+    const equipementsBureautiques = processData.equipementsBureautiques
+      ? JSON.parse(processData.equipementsBureautiques)
+      : [];
+    const documentationsCritiques = processData.documentationsCritiques
+      ? JSON.parse(processData.documentationsCritiques)
+      : [];
+
+    // Calculer les métriques du rapport
+    const riskCount = activitesCritiques.filter(
+      (a: { criticite: string }) =>
+        a.criticite === "critical" || a.criticite === "high"
+    ).length;
+
+    // Calculer le niveau de continuité basé sur RTO et criticité
+    let continuityLevel = 50;
+    if (process.criticality === "critical" && process.rto <= 4) {
+      continuityLevel = 90;
+    } else if (process.criticality === "high" && process.rto <= 8) {
+      continuityLevel = 75;
+    } else if (process.criticality === "medium") {
+      continuityLevel = 60;
+    }
+
+    const continuityLevelText =
+      continuityLevel >= 80
+        ? "Excellent"
+        : continuityLevel >= 60
+        ? "Bon"
+        : continuityLevel >= 40
+        ? "Moyen"
+        : "Faible";
+
+    // Compter les recommandations
+    const recommendationCount =
+      (process.hasBackupSystems ? 0 : 1) +
+      (process.canWorkRemotely ? 0 : 1) +
+      (process.canUseOtherInfra ? 0 : 1) +
+      (fournisseursExternes.filter(
+        (f: { planContinuiteActivite: string }) =>
+          f.planContinuiteActivite !== "oui"
+      ).length > 0
+        ? 1
+        : 0);
+
+    // Construire les données du rapport
+    const reportData = {
+      process: {
+        id: process.id,
+        name: process.name,
+        description: process.description,
+        department: process.department,
+        location: process.location,
+        criticality: process.criticality,
+        processOwner: process.processOwner,
+        ownerRole: process.ownerRole,
+        ownerEmail: process.ownerEmail,
+        ownerPhone: process.ownerPhone,
+        factory: process.factory,
+      },
+      metrics: {
+        rto: process.rto,
+        mtpd: process.mtpd,
+        rpo: process.rpo,
+        mbco: process.mbco,
+        continuityLevel,
+        continuityLevelText,
+      },
+      impacts: {
+        financial: process.financialImpact,
+        operational: process.operationalImpact,
+        reputation: process.reputationImpact,
+        operationalCapacity: process.operationalCapacityImpact,
+      },
+      scope: {
+        mainFunctionality: process.mainFunctionality,
+        productDependencies: process.productDependencies,
+        interServiceDependencies: process.interServiceDependencies,
+      },
+      resources: {
+        activitesCritiques,
+        fournisseursExternes,
+        obligationsLegales,
+        systemesInformatiques,
+        infrastructuresPhysiques,
+        rolesPersonnel,
+        equipementsIndustriels,
+        equipementsBureautiques,
+        documentationsCritiques,
+      },
+      analysis: {
+        riskCount,
+        recommendationCount,
+        criticalActivities: activitesCritiques.length,
+        criticalSuppliers: fournisseursExternes.length,
+        criticalSystems: systemesInformatiques.length,
+        criticalInfrastructure: infrastructuresPhysiques.length,
+      },
+      recommendations: generateRecommendations(process, {
+        activitesCritiques,
+        fournisseursExternes,
+        systemesInformatiques,
+      }),
+    };
+
+    // Créer le rapport
+    const report = await prisma.biaReport.create({
+      data: {
+        name: reportName,
+        description:
+          reportDescription || `Rapport BIA généré pour ${process.name}`,
+        format: "HTML",
+        status: "GENERATED",
+        totalProcesses: 1,
+        continuityLevel,
+        continuityLevelText,
+        riskCount,
+        recommendationCount,
+        reportData:
+          reportData as import("@prisma/client").Prisma.InputJsonValue,
+        content: "", // Sera généré plus tard si nécessaire
+        fileName: `${process.name.replace(/\s+/g, "_")}_BIA_Report.html`,
+        filePath: null,
+        fileSize: 0,
+        mimeType: "text/html",
+        generationParams: {
+          processId: process.id,
+          generatedAt: new Date().toISOString(),
+        } as import("@prisma/client").Prisma.InputJsonValue,
+        includedProcessIds: [process.id],
+        isPublic: false,
+        tags: [
+          process.department,
+          process.criticality,
+          process.factory?.name || "Sans usine",
+        ],
+        category: "Rapport de processus",
+        factoryId: process.factoryId,
+        authorId: session.user.id,
+        shareToken: crypto.randomBytes(32).toString("hex"),
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    revalidatePath("/bia/reports");
+    revalidatePath("/bia/dashboard");
+
+    return {
+      success: true,
+      data: report,
+    };
+  } catch (error) {
+    console.error(
+      "Erreur lors de la création du rapport depuis le processus:",
+      error
+    );
+    return {
+      success: false,
+      error: "Erreur lors de la création du rapport",
+    };
+  }
+}
+
+// Générer des recommandations basées sur l'analyse du processus
+function generateRecommendations(
+  process: {
+    criticality: string;
+    rto: number;
+    mtpd: number;
+    hasBackupSystems: boolean;
+    canWorkRemotely: boolean;
+    canUseOtherInfra: boolean;
+    supplierContinuityPlan: boolean;
+  },
+  resources: {
+    activitesCritiques: Array<{ criticite: string; nom: string }>;
+    fournisseursExternes: Array<{
+      nom: string;
+      planContinuiteActivite: string;
+    }>;
+    systemesInformatiques: Array<{
+      nom: string;
+      sauvegardesEnPlace: string;
+    }>;
+  }
+) {
+  const recommendations: Array<{
+    priority: "high" | "medium" | "low";
+    category: string;
+    title: string;
+    description: string;
+  }> = [];
+
+  // Recommandations basées sur la criticité
+  if (process.criticality === "critical" || process.criticality === "high") {
+    if (!process.hasBackupSystems) {
+      recommendations.push({
+        priority: "high",
+        category: "Systèmes de secours",
+        title: "Mettre en place des systèmes de sauvegarde",
+        description:
+          "Pour un processus de criticité élevée, il est essentiel de disposer de systèmes de sauvegarde redondants.",
+      });
+    }
+
+    if (process.rto > 4) {
+      recommendations.push({
+        priority: "high",
+        category: "Temps de reprise",
+        title: "Réduire le RTO",
+        description:
+          "Le RTO actuel est trop élevé pour un processus critique. Envisager des solutions pour réduire le temps de reprise.",
+      });
+    }
+  }
+
+  // Recommandations sur le télétravail
+  if (!process.canWorkRemotely && process.criticality !== "low") {
+    recommendations.push({
+      priority: "medium",
+      category: "Continuité d'activité",
+      title: "Évaluer la possibilité de travail à distance",
+      description:
+        "Explorer les options de travail à distance pour assurer la continuité en cas d'indisponibilité du site.",
+    });
+  }
+
+  // Recommandations sur les fournisseurs
+  const suppliersWithoutBCP = resources.fournisseursExternes.filter(
+    (f) => f.planContinuiteActivite !== "oui"
+  );
+  if (suppliersWithoutBCP.length > 0) {
+    recommendations.push({
+      priority: "high",
+      category: "Fournisseurs",
+      title: "Exiger des plans de continuité des fournisseurs",
+      description: `${
+        suppliersWithoutBCP.length
+      } fournisseur(s) n'ont pas de plan de continuité d'activité documenté : ${suppliersWithoutBCP
+        .map((f) => f.nom)
+        .join(", ")}`,
+    });
+  }
+
+  // Recommandations sur les systèmes IT
+  const systemsWithoutBackup = resources.systemesInformatiques.filter(
+    (s) => s.sauvegardesEnPlace !== "oui"
+  );
+  if (systemsWithoutBackup.length > 0) {
+    recommendations.push({
+      priority: "high",
+      category: "Systèmes informatiques",
+      title: "Mettre en place des sauvegardes pour tous les systèmes critiques",
+      description: `${
+        systemsWithoutBackup.length
+      } système(s) n'ont pas de sauvegardes en place : ${systemsWithoutBackup
+        .map((s) => s.nom)
+        .join(", ")}`,
+    });
+  }
+
+  // Recommandations sur les activités critiques
+  const criticalActivities = resources.activitesCritiques.filter(
+    (a) => a.criticite === "critical"
+  );
+  if (criticalActivities.length > 3) {
+    recommendations.push({
+      priority: "medium",
+      category: "Activités critiques",
+      title: "Revoir la classification des activités critiques",
+      description:
+        "Un nombre élevé d'activités critiques peut indiquer un besoin de revoir la classification ou de mettre en place des redondances.",
+    });
+  }
+
+  // Recommandation sur l'infrastructure alternative
+  if (!process.canUseOtherInfra && process.criticality !== "low") {
+    recommendations.push({
+      priority: "medium",
+      category: "Infrastructure",
+      title: "Identifier des infrastructures alternatives",
+      description:
+        "Documenter et tester des infrastructures alternatives pour assurer la continuité en cas d'indisponibilité du site principal.",
+    });
+  }
+
+  return recommendations;
 }

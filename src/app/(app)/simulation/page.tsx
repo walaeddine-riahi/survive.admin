@@ -504,6 +504,7 @@ export default function SimulationPage() {
                       <TableHead>Nom</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead>Dates</TableHead>
+                      <TableHead>Actions</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -511,8 +512,7 @@ export default function SimulationPage() {
                     {(filteredSimulations ?? []).map((simulation) => (
                       <TableRow
                         key={simulation.id}
-                        onClick={() => router.push(`/simulation/${simulation.id}/instructor-view`)}
-                        className="cursor-pointer hover:bg-muted/50"
+                        className="hover:bg-muted/50"
                       >
                         <TableCell className="font-mono text-xs">
                           {simulation.id}
@@ -530,6 +530,36 @@ export default function SimulationPage() {
                               {formatDate(simulation.startDate)} -{" "}
                               {formatDate(simulation.endDate)}
                             </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(
+                                  `/simulation/${simulation.id}/edit`
+                                );
+                              }}
+                            >
+                              <Edit className="mr-2 h-4 w-4" />
+                              Modifier
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(
+                                  `/simulation/${simulation.id}/instructor-view`
+                                );
+                              }}
+                            >
+                              <Eye className="mr-2 h-4 w-4" />
+                              Voir
+                            </Button>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -603,6 +633,7 @@ export default function SimulationPage() {
                       <TableHead>Nom</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead>Dates</TableHead>
+                      <TableHead>Actions</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -610,8 +641,7 @@ export default function SimulationPage() {
                     {(ongoingSimulations ?? []).map((simulation) => (
                       <TableRow
                         key={simulation.id}
-                        onClick={() => router.push(`/simulation/${simulation.id}/instructor-view`)}
-                        className="cursor-pointer hover:bg-muted/50"
+                        className="hover:bg-muted/50"
                       >
                         <TableCell className="font-mono text-xs">
                           {simulation.id}
@@ -629,6 +659,36 @@ export default function SimulationPage() {
                               {formatDate(simulation.startDate)} -{" "}
                               {formatDate(simulation.endDate)}
                             </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(
+                                  `/simulation/${simulation.id}/edit`
+                                );
+                              }}
+                            >
+                              <Edit className="mr-2 h-4 w-4" />
+                              Modifier
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(
+                                  `/simulation/${simulation.id}/instructor-view`
+                                );
+                              }}
+                            >
+                              <Eye className="mr-2 h-4 w-4" />
+                              Voir
+                            </Button>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -702,6 +762,7 @@ export default function SimulationPage() {
                       <TableHead>Nom</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead>Dates</TableHead>
+                      <TableHead>Actions</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -709,8 +770,7 @@ export default function SimulationPage() {
                     {(plannedSimulations ?? []).map((simulation) => (
                       <TableRow
                         key={simulation.id}
-                        onClick={() => router.push(`/simulation/${simulation.id}/instructor-view`)}
-                        className="cursor-pointer hover:bg-muted/50"
+                        className="hover:bg-muted/50"
                       >
                         <TableCell className="font-mono text-xs">
                           {simulation.id}
@@ -728,6 +788,36 @@ export default function SimulationPage() {
                               {formatDate(simulation.startDate)} -{" "}
                               {formatDate(simulation.endDate)}
                             </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(
+                                  `/simulation/${simulation.id}/edit`
+                                );
+                              }}
+                            >
+                              <Edit className="mr-2 h-4 w-4" />
+                              Modifier
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(
+                                  `/simulation/${simulation.id}/instructor-view`
+                                );
+                              }}
+                            >
+                              <Eye className="mr-2 h-4 w-4" />
+                              Voir
+                            </Button>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -801,6 +891,7 @@ export default function SimulationPage() {
                       <TableHead>Nom</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead>Dates</TableHead>
+                      <TableHead>Actions</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -808,8 +899,7 @@ export default function SimulationPage() {
                     {(completedSimulations ?? []).map((simulation) => (
                       <TableRow
                         key={simulation.id}
-                        onClick={() => router.push(`/simulation/${simulation.id}/instructor-view`)}
-                        className="cursor-pointer hover:bg-muted/50"
+                        className="hover:bg-muted/50"
                       >
                         <TableCell className="font-mono text-xs">
                           {simulation.id}
@@ -827,6 +917,36 @@ export default function SimulationPage() {
                               {formatDate(simulation.startDate)} -{" "}
                               {formatDate(simulation.endDate)}
                             </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(
+                                  `/simulation/${simulation.id}/edit`
+                                );
+                              }}
+                            >
+                              <Edit className="mr-2 h-4 w-4" />
+                              Modifier
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(
+                                  `/simulation/${simulation.id}/instructor-view`
+                                );
+                              }}
+                            >
+                              <Eye className="mr-2 h-4 w-4" />
+                              Voir
+                            </Button>
                           </div>
                         </TableCell>
                         <TableCell>

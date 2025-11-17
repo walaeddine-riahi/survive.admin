@@ -28,6 +28,7 @@ import {
   Brain,
   Loader2,
 } from "lucide-react";
+import { FactorySelect } from "@/components/bia/factory-select";
 import {
   Dialog,
   DialogContent,
@@ -74,6 +75,7 @@ export type BiaReport = {
   downloadCount: number;
   tags: string[];
   category?: string | null;
+  factoryId?: string | null;
   authorId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -90,11 +92,21 @@ export type BiaReportWithAuthor = BiaReport & {
   author: UserType;
 };
 
+type Factory = {
+  id: string;
+  name: string;
+  code: string;
+};
+
 interface BiaReportListProps {
   initialReports?: BiaReportWithAuthor[];
+  factories?: Factory[];
 }
 
-export function BiaReportList({ initialReports = [] }: BiaReportListProps) {
+export function BiaReportList({
+  initialReports = [],
+  factories = [],
+}: BiaReportListProps) {
   const router = useRouter();
   const [reports, setReports] = useState<BiaReportWithAuthor[]>(initialReports);
   const [loading] = useState(false);
@@ -102,6 +114,7 @@ export function BiaReportList({ initialReports = [] }: BiaReportListProps) {
   const [selectedFormat, setSelectedFormat] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedFactoryId, setSelectedFactoryId] = useState<string>("all");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [selectedReport, setSelectedReport] =
@@ -126,7 +139,16 @@ export function BiaReportList({ initialReports = [] }: BiaReportListProps) {
     const matchesCategory =
       selectedCategory === "all" || reportCategory === selectedCategory;
 
-    return matchesSearch && matchesFormat && matchesStatus && matchesCategory;
+    const matchesFactory =
+      selectedFactoryId === "all" || report.factoryId === selectedFactoryId;
+
+    return (
+      matchesSearch &&
+      matchesFormat &&
+      matchesStatus &&
+      matchesCategory &&
+      matchesFactory
+    );
   });
 
   // Grouper les rapports par usine
@@ -448,6 +470,14 @@ export function BiaReportList({ initialReports = [] }: BiaReportListProps) {
                 ))}
               </SelectContent>
             </Select>
+
+            {factories.length > 0 && (
+              <FactorySelect
+                factories={factories}
+                value={selectedFactoryId}
+                onValueChange={setSelectedFactoryId}
+              />
+            )}
           </div>
 
           <div className="flex flex-wrap gap-2 mt-4">
@@ -468,6 +498,13 @@ export function BiaReportList({ initialReports = [] }: BiaReportListProps) {
             )}
             {selectedCategory !== "all" && (
               <Badge variant="secondary">Catégorie: {selectedCategory}</Badge>
+            )}
+            {selectedFactoryId !== "all" && (
+              <Badge variant="secondary">
+                Usine:{" "}
+                {factories.find((f) => f.id === selectedFactoryId)?.name ||
+                  selectedFactoryId}
+              </Badge>
             )}
           </div>
         </CardContent>
@@ -523,6 +560,7 @@ export function BiaReportList({ initialReports = [] }: BiaReportListProps) {
                     setSelectedFormat("all");
                     setSelectedStatus("all");
                     setSelectedCategory("all");
+                    setSelectedFactoryId("all");
                   }}
                   variant="outline"
                   className="mt-4"

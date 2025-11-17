@@ -6,6 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -49,10 +56,18 @@ interface UploadResult {
   data?: unknown;
 }
 
+type Factory = {
+  id: string;
+  name: string;
+  code: string;
+};
+
 export function SimpleFileUpload({
   onUploadSuccess,
+  factories = [],
 }: {
   onUploadSuccess?: () => void;
+  factories?: Factory[];
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -61,7 +76,7 @@ export function SimpleFileUpload({
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    category: "",
+    factoryId: "",
     tags: "",
   });
 
@@ -113,7 +128,7 @@ export function SimpleFileUpload({
       submitFormData.append("file", file);
       submitFormData.append("name", formData.name);
       submitFormData.append("description", formData.description);
-      submitFormData.append("category", formData.category);
+      submitFormData.append("factoryId", formData.factoryId);
       submitFormData.append("tags", formData.tags);
 
       // Simuler le progrès
@@ -135,7 +150,7 @@ export function SimpleFileUpload({
       if (result.success) {
         // Réinitialiser le formulaire
         setFile(null);
-        setFormData({ name: "", description: "", category: "", tags: "" });
+        setFormData({ name: "", description: "", factoryId: "", tags: "" });
         onUploadSuccess?.();
       }
     } catch (err) {
@@ -253,15 +268,29 @@ export function SimpleFileUpload({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="category">Catégorie</Label>
-              <Input
-                id="category"
-                value={formData.category}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, category: e.target.value }))
+              <Label htmlFor="factoryId">Usine</Label>
+              <Select
+                value={formData.factoryId}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({ ...prev, factoryId: value }))
                 }
-                placeholder="ex: Audit, Analyse"
-              />
+              >
+                <SelectTrigger id="factoryId">
+                  <SelectValue placeholder="Sélectionner une usine (optionnel)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {factories.map((factory) => (
+                    <SelectItem key={factory.id} value={factory.id}>
+                      {factory.name} {factory.code ? `(${factory.code})` : ""}
+                    </SelectItem>
+                  ))}
+                  {factories.length === 0 && (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                      Aucune usine disponible
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">

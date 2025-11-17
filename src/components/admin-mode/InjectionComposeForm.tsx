@@ -71,6 +71,35 @@ export default function InjectionComposeForm({
   const [errorScenarios, setErrorScenarios] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // Mettre à jour le formulaire quand initialData change
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        title: initialData.title || "",
+        content: initialData.content || "",
+        scenarioName: initialData.scenarioName || "workshop",
+        type: initialData.type || InjectionType.OTHER,
+        imageUrl: initialData.imageUrl || "",
+        videoUrl: initialData.videoUrl || "",
+        isActive:
+          initialData.isActive !== undefined ? initialData.isActive : false,
+        attachments: initialData.attachments || [],
+      });
+    } else {
+      // Réinitialiser le formulaire pour la création
+      setFormData({
+        title: "",
+        content: "",
+        scenarioName: "workshop",
+        type: InjectionType.OTHER,
+        imageUrl: "",
+        videoUrl: "",
+        isActive: false,
+        attachments: [],
+      });
+    }
+  }, [initialData]);
+
   useEffect(() => {
     const fetchScenarios = async () => {
       try {
@@ -303,7 +332,7 @@ export default function InjectionComposeForm({
           type="submit"
           disabled={loadingScenarios || scenarios.length === 0}
         >
-          Créer Injection
+          {initialData ? "Modifier Injection" : "Créer Injection"}
         </Button>
       </div>
     </form>

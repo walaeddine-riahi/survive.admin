@@ -134,7 +134,7 @@ export async function uploadBiaReportSimple(formData: FormData) {
     const file = formData.get("file") as File;
     const name = formData.get("name") as string;
     const description = formData.get("description") as string;
-    const category = formData.get("category") as string;
+    const factoryId = formData.get("factoryId") as string;
     const tagsString = formData.get("tags") as string;
 
     if (!file || !name) {
@@ -201,10 +201,25 @@ export async function uploadBiaReportSimple(formData: FormData) {
           .map((tag) => tag.trim())
           .filter((tag) => tag)
       : [];
-    if (category) tags.push(category);
+
     const formatTag =
       format.toLowerCase() === "json" ? "text" : format.toLowerCase();
     tags.push("upload", formatTag, "basic-analysis");
+
+    // Récupérer le nom de l'usine si un factoryId est fourni
+    let category: string | undefined;
+
+    if (factoryId && factoryId !== "") {
+      const factory = await prisma.factory.findUnique({
+        where: { id: factoryId },
+        select: { name: true },
+      });
+
+      if (factory) {
+        category = factory.name;
+        tags.push(`usine:${factory.name}`);
+      }
+    }
 
     // Créer les données du rapport
     const reportData = {
@@ -230,7 +245,7 @@ export async function uploadBiaReportSimple(formData: FormData) {
       continuityLevelText: getContinuityLevelText(analysis.continuityLevel),
       riskCount: analysis.estimatedRisks,
       recommendationCount: analysis.estimatedRecommendations,
-      reportData: reportData as import("@prisma/client").Prisma.InputJsonValue,
+      reportData: reportData as unknown as Record<string, unknown>,
       content: extractedText.substring(0, 2000), // Contenu pour la recherche
       fileName,
       filePath: filePath,
@@ -240,6 +255,7 @@ export async function uploadBiaReportSimple(formData: FormData) {
       isPublic: false,
       tags,
       category: category || undefined,
+      factoryId: factoryId && factoryId !== "" ? factoryId : undefined,
     });
 
     if (result.success) {

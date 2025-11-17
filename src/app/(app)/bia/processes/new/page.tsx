@@ -1,10 +1,21 @@
-import { ProcessForm } from "@/components/bia/process-form";
+import { ProcessFormSpreadsheet } from "@/components/bia/process-form-spreadsheet";
+import { prisma } from "@/lib/prisma";
 
-export default function NewProcessPage() {
+export default async function NewProcessPage() {
+  // Récupérer la liste des usines pour le sélecteur
+  const factories = await prisma.factory.findMany({
+    where: { isActive: true },
+    select: {
+      id: true,
+      name: true,
+      code: true,
+    },
+    orderBy: { name: "asc" },
+  });
+
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">Nouveau processus BIA</h1>
-      <ProcessForm />
+    <div className="container mx-auto p-6 max-w-7xl">
+      <ProcessFormSpreadsheet factories={factories} />
     </div>
   );
 }

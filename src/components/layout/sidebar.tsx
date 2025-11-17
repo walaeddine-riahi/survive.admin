@@ -5,22 +5,16 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import {
-  AlertTriangle,
-  Bell,
-  Calendar,
-  CheckSquare,
+  BarChart3,
   ChevronDown,
-  Eye,
+  GraduationCap,
   LayoutDashboard,
-  LineChart,
   LogOut,
-  LucideIcon,
   PlayCircle,
-  Settings,
+  Presentation,
+  Shield,
   User,
-  Users,
-  UserCircle,
-  FileText,
+  type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -40,58 +34,86 @@ interface Route {
 
 const routes: Route[] = [
   {
-    title: "Tableau de bord",
+    title: "Dashboard",
     icon: LayoutDashboard,
     href: "/dashboard",
   },
-  {
-    title: "Users",
-    href: "/users",
-    icon: Users,
-  },
 
+  // =====================================================
+  // MODULE 1: SIMULATION
+  // =====================================================
   {
-    title: "Équipe",
-    icon: Users,
+    title: "🎮 Simulation",
+    icon: PlayCircle,
     children: [
       {
-        title: "Liste des équipes",
+        title: "Liste des simulations",
+        href: "/simulation",
+      },
+      {
+        title: "Créer simulation",
+        href: "/simulation/create",
+      },
+      {
+        title: "Scénarios",
+        href: "/scenario",
+      },
+      {
+        title: "Injections",
+        href: "/injections",
+      },
+      {
+        title: "Mode Participant",
+        href: "/participant-mode",
+      },
+      {
+        title: "Participations",
+        href: "/participations",
+      },
+    ],
+  },
+
+  // =====================================================
+  // MODULE 2: INSTRUCTEUR
+  // =====================================================
+  {
+    title: "🎓 Instructeur",
+    icon: Presentation,
+    children: [
+      {
+        title: "Vue Instructeur",
+        href: "/instructor-simulations",
+      },
+      {
+        title: "Gestion d'équipes",
         href: "/team",
       },
       {
-        title: "Membres",
+        title: "Liste des équipes",
+        href: "/teams",
+      },
+      {
+        title: "Membres d'équipe",
         href: "/team-members",
       },
       {
-        title: "Chat",
+        title: "Membre (ancien)",
+        href: "/team-member",
+      },
+      {
+        title: "Chat d'équipe",
         href: "/team-chat",
       },
-    ],
-  },
-  {
-    title: "Tâches",
-    icon: CheckSquare,
-    children: [
       {
-        title: "Liste des tâches",
+        title: "Gestion des tâches",
         href: "/task",
       },
       {
-        title: "Créer une tâche",
-        href: "/task/create",
-      },
-    ],
-  },
-  {
-    title: "Incidents",
-    icon: AlertTriangle,
-    children: [
-      {
-        title: "Liste des incidents",
+        title: "Incidents",
         href: "/incident",
       },
       {
-        title: "Créer un incident",
+        title: "Créer incident",
         href: "/incident/create",
       },
       {
@@ -100,74 +122,121 @@ const routes: Route[] = [
       },
     ],
   },
+
+  // =====================================================
+  // MODULE 3: BIA (Business Impact Analysis)
+  // =====================================================
   {
-    title: "Plans",
-    icon: Calendar,
+    title: "📊 BIA - Analyse d'Impact",
+    icon: BarChart3,
     children: [
       {
-        title: "Liste des plans",
+        title: "Dashboard BIA",
+        href: "/bia/dashboard",
+      },
+      {
+        title: "Liste des processus",
+        href: "/bia",
+      },
+      {
+        title: "Nouveau processus",
+        href: "/bia/processes/new",
+      },
+      {
+        title: "Éditer processus",
+        href: "/bia/processes/edit",
+      },
+      {
+        title: "Usines / Factories",
+        href: "/bia/factories",
+      },
+      {
+        title: "Rapports BIA",
+        href: "/bia/reports",
+      },
+      {
+        title: "Conformité",
+        href: "/compliance",
+      },
+      {
+        title: "Conformité (alt)",
+        href: "/conformity",
+      },
+      {
+        title: "Gestion des risques",
+        href: "/risk",
+      },
+    ],
+  },
+
+  // =====================================================
+  // MODULE 4: WORKSHOP (Formation & Développement)
+  // =====================================================
+  {
+    title: "📚 Workshop",
+    icon: GraduationCap,
+    children: [
+      {
+        title: "Formations",
+        href: "/training",
+      },
+      {
+        title: "Plans d'action",
         href: "/plan",
       },
       {
         title: "Types de plans",
         href: "/plan-type",
       },
+      {
+        title: "Événements",
+        href: "/participations",
+      },
+      {
+        title: "Notifications",
+        href: "/notifications",
+      },
     ],
   },
+
+  // =====================================================
+  // PROFIL & COMPTE
+  // =====================================================
   {
-    title: "Notifications",
-    icon: Bell,
-    href: "/notifications",
-  },
-  {
-    title: "Simulations",
-    icon: LineChart,
-    href: "/simulation",
-  },
-  {
-    title: "Vue Instructeur",
-    icon: Eye,
-    href: "/instructor-simulations",
-  },
-  {
-    title: "Scénarios",
-    href: "/scenario",
-    icon: PlayCircle,
-  },
-  {
-    title: "Mode Participant",
-    href: "/participant-mode",
-    icon: UserCircle,
-  },
-  {
-    title: "BIA",
-    href: "/bia",
-    icon: FileText,
-  },
-  {
-    title: "Participations",
-    href: "/participations",
-    icon: Users,
-  },
-  {
-    title: "Injections",
-    href: "/injections",
-    icon: PlayCircle,
-  },
-  {
-    title: "Risques",
-    icon: AlertTriangle,
-    href: "/risk",
-  },
-  {
-    title: "Profil",
+    title: "👤 Profil & Compte",
     icon: User,
-    href: "/profile",
+    children: [
+      {
+        title: "Mon Profil",
+        href: "/profile",
+      },
+      {
+        title: "Paramètres",
+        href: "/settings",
+      },
+    ],
   },
+
+  // =====================================================
+  // ADMINISTRATION
+  // =====================================================
   {
-    title: "Paramètres",
-    icon: Settings,
-    href: "/settings",
+    title: "🛡️ Administration",
+    icon: Shield,
+    children: [
+      {
+        title: "Panel Admin",
+        href: "/admin",
+      },
+      {
+        title: "Utilisateurs",
+        href: "/users",
+      },
+      {
+        title: "Super Admin",
+        href: "/super-admin",
+      },
+    ],
   },
 ];
 
@@ -206,8 +275,10 @@ export function Sidebar({
     >
       <div className="flex h-full flex-col">
         <div className="p-6">
-          <Link href="/dashboard" className="flex items-center">
-            <h1 className="text-2xl font-bold">Dashboard</h1>
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-brand to-brand-accent bg-clip-text text-transparent">
+              SURVIVE.ADMIN
+            </h1>
           </Link>
         </div>
         <Separator />

@@ -1,11 +1,23 @@
 // BIA Reports page for displaying and managing BIA reports
 import { getAllBiaReports } from "@/actions/bia/bia-report-actions";
 import { BiaReportsPageClient } from "./page-client";
+import { prisma } from "@/lib/prisma";
 
 export default async function BiaReportsPage() {
   const result = await getAllBiaReports({ limit: 50 });
 
   const reports = result.success ? result.data || [] : [];
+
+  // Récupérer la liste des usines
+  const factories = await prisma.factory.findMany({
+    where: { isActive: true },
+    select: {
+      id: true,
+      name: true,
+      code: true,
+    },
+    orderBy: { name: "asc" },
+  });
 
   return (
     <div className="container mx-auto p-6">
@@ -16,7 +28,7 @@ export default async function BiaReportsPage() {
         </p>
       </div>
 
-      <BiaReportsPageClient initialReports={reports} />
+      <BiaReportsPageClient initialReports={reports} factories={factories} />
     </div>
   );
 }

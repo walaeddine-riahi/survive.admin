@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@auth/prisma-adapter':
         specifier: ^2.9.1
-        version: 2.10.0(@prisma/client@6.17.0(prisma@6.17.0(typescript@5.9.3))(typescript@5.9.3))(nodemailer@6.10.1)
+        version: 2.10.0(@prisma/client@6.10.1(prisma@6.17.0(typescript@5.9.3))(typescript@5.9.3))(nodemailer@6.10.1)
       '@google/generative-ai':
         specifier: ^0.24.1
         version: 0.24.1
@@ -18,8 +18,8 @@ importers:
         specifier: ^5.0.1
         version: 5.2.2(react-hook-form@7.64.0(react@19.2.0))
       '@prisma/client':
-        specifier: ^6.16.2
-        version: 6.17.0(prisma@6.17.0(typescript@5.9.3))(typescript@5.9.3)
+        specifier: ^6.10.1
+        version: 6.10.1(prisma@6.17.0(typescript@5.9.3))(typescript@5.9.3)
       '@radix-ui/react-alert-dialog':
         specifier: ^1.1.15
         version: 1.1.15(@types/react-dom@19.2.1(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -780,8 +780,8 @@ packages:
   '@panva/hkdf@1.2.1':
     resolution: {integrity: sha512-6oclG6Y3PiDFcoyk8srjLfVKyMfVCKJ27JwNPViuXziFpmdz+MZnZN/aKY0JGXgYuO/VghU0jcOAZgWXZ1Dmrw==}
 
-  '@prisma/client@6.17.0':
-    resolution: {integrity: sha512-b42mTLOdLEZ6e/igu8CLdccAUX9AwHknQQ1+pHOftnzDP2QoyZyFvcANqSLs5ockimFKJnV7Ljf+qrhNYf6oAg==}
+  '@prisma/client@6.10.1':
+    resolution: {integrity: sha512-Re4pMlcUsQsUTAYMK7EJ4Bw2kg3WfZAAlr8GjORJaK4VOP6LxRQUQ1TuLnxcF42XqGkWQ36q5CQF1yVadANQ6w==}
     engines: {node: '>=18.18'}
     peerDependencies:
       prisma: '*'
@@ -4360,10 +4360,10 @@ snapshots:
     optionalDependencies:
       nodemailer: 6.10.1
 
-  '@auth/prisma-adapter@2.10.0(@prisma/client@6.17.0(prisma@6.17.0(typescript@5.9.3))(typescript@5.9.3))(nodemailer@6.10.1)':
+  '@auth/prisma-adapter@2.10.0(@prisma/client@6.10.1(prisma@6.17.0(typescript@5.9.3))(typescript@5.9.3))(nodemailer@6.10.1)':
     dependencies:
       '@auth/core': 0.40.0(nodemailer@6.10.1)
-      '@prisma/client': 6.17.0(prisma@6.17.0(typescript@5.9.3))(typescript@5.9.3)
+      '@prisma/client': 6.10.1(prisma@6.17.0(typescript@5.9.3))(typescript@5.9.3)
     transitivePeerDependencies:
       - '@simplewebauthn/browser'
       - '@simplewebauthn/server'
@@ -5053,7 +5053,7 @@ snapshots:
 
   '@panva/hkdf@1.2.1': {}
 
-  '@prisma/client@6.17.0(prisma@6.17.0(typescript@5.9.3))(typescript@5.9.3)':
+  '@prisma/client@6.10.1(prisma@6.17.0(typescript@5.9.3))(typescript@5.9.3)':
     optionalDependencies:
       prisma: 6.17.0(typescript@5.9.3)
       typescript: 5.9.3

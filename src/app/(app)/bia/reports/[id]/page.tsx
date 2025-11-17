@@ -35,6 +35,7 @@ import { fr } from "date-fns/locale";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BiaAnalysisForm } from "@/components/bia-analysis-form";
+import { ReportAddProcessDialog } from "@/components/bia/report-add-process-dialog";
 
 // Interfaces pour typer les données du rapport
 interface RiskItem {
@@ -70,10 +71,17 @@ interface ReportSummary {
   processesNeedingAttention?: number;
 }
 
+interface RecommendationItem {
+  priority: "high" | "medium" | "low";
+  category: string;
+  title: string;
+  description: string;
+}
+
 interface ReportData {
   summary?: ReportSummary;
   risks?: RiskItem[];
-  recommendations?: string[];
+  recommendations?: (string | RecommendationItem)[];
 }
 
 interface ReportPageProps {
@@ -140,11 +148,27 @@ export default function ReportPage({ params }: ReportPageProps) {
           const analysisResponse = await fetch(
             `/api/bia/reports/${resolvedParams.id}/analysis`
           );
+          console.log(
+            "📡 Status récupération analyse:",
+            analysisResponse.status
+          );
+
           if (analysisResponse.ok) {
             const savedAnalysis = await analysisResponse.json();
             console.log("📥 Analyse sauvegardée chargée:", savedAnalysis);
+            console.log("📊 Type d'analyse:", typeof savedAnalysis);
+            console.log("📊 Clés de l'analyse:", Object.keys(savedAnalysis));
+
             setManualAnalysis(savedAnalysis);
             setAnalysisType("ai"); // Afficher l'analyse sauvegardée
+            console.log("✅ État mis à jour - manualAnalysis défini");
+          } else if (analysisResponse.status === 404) {
+            console.log("ℹ️ Aucune analyse sauvegardée trouvée (404)");
+          } else {
+            console.error(
+              "❌ Erreur récupération analyse:",
+              analysisResponse.status
+            );
           }
         } else {
           setError("Rapport non trouvé");
@@ -638,6 +662,45 @@ export default function ReportPage({ params }: ReportPageProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Section Gestion des Processus */}
+      <Card className="mb-8">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-blue-500" />
+              Processus inclus dans ce rapport
+            </CardTitle>
+            <ReportAddProcessDialog
+              reportId={report.id}
+              reportName={report.name}
+              reportCategory={report.category}
+              currentProcessIds={[]} // TODO: Charger les processus actuels du rapport
+              onSuccess={() => {
+                // Recharger la page pour afficher le nouveau processus
+                window.location.reload();
+              }}
+            />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="text-sm text-muted-foreground">
+            <p className="mb-4">
+              Ce rapport contient actuellement {report.totalProcesses}{" "}
+              processus. Vous pouvez en ajouter d&apos;autres en cliquant sur le
+              bouton ci-dessus.
+            </p>
+            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-xs text-blue-800">
+                💡 <strong>Astuce:</strong> Les processus ajoutés hériteront
+                automatiquement de l&apos;usine &quot;
+                {report.category || "Non définie"}&quot; pour maintenir la
+                cohérence.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Visualiseur de Documents */}
       {showDocumentViewer && (
@@ -1215,10 +1278,24 @@ export default function ReportPage({ params }: ReportPageProps) {
         <div className="space-y-6 mb-8">
           {/* Utiliser l'analyse appropriée selon le type */}
           {(() => {
+            console.log("🔍 Debug affichage analyse:");
+            console.log("  - aiAnalysis:", !!aiAnalysis);
+            console.log("  - localAnalysis:", !!localAnalysis);
+            console.log("  - manualAnalysis:", !!manualAnalysis);
+            console.log("  - analysisType:", analysisType);
+
             const analysis =
               manualAnalysis ||
               (analysisType === "ai" ? aiAnalysis : localAnalysis);
-            if (!analysis) return null;
+
+            console.log("  - analysis sélectionnée:", !!analysis);
+
+            if (!analysis) {
+              console.warn("⚠️ Aucune analyse à afficher!");
+              return null;
+            }
+
+            console.log("✅ Affichage de l'analyse");
 
             return (
               <>
@@ -1984,19 +2061,89 @@ export default function ReportPage({ params }: ReportPageProps) {
                 <CardContent>
                   <div className="space-y-3">
                     {reportData.recommendations.map(
-                      (recommendation: string, index: number) => (
-                        <div
-                          key={index}
-                          className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg"
-                        >
-                          <div className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-xs font-bold">
-                            {index + 1}
-                          </div>
-                          <p className="text-sm text-blue-800">
-                            {recommendation}
-                          </p>
-                        </div>
-                      )
+                      (
+                        recommendation:
+                          | string
+                          | {
+                              priority: string;
+                              category: string;
+                              title: string;
+                              description: string;
+                            },
+                        index: number
+                      ) => {
+                        // Handle both string and object formats
+                        if (typeof recommendation === "string") {
+                          return (
+                            <div
+                              key={index}
+                              className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg"
+                            >
+                              <div className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-xs font-bold">
+                                {index + 1}
+                              </div>
+                              <p className="text-sm text-blue-800">
+                                {recommendation}
+                              </p>
+                            </div>
+                          );
+                        } else {
+                          // Object format with priority, category, title, description
+                          const priorityColors = {
+                            high: "bg-red-50 border-red-200",
+                            medium: "bg-orange-50 border-orange-200",
+                            low: "bg-yellow-50 border-yellow-200",
+                          };
+                          const priorityBadgeColors = {
+                            high: "bg-red-100 text-red-800",
+                            medium: "bg-orange-100 text-orange-800",
+                            low: "bg-yellow-100 text-yellow-800",
+                          };
+
+                          return (
+                            <div
+                              key={index}
+                              className={`p-4 border-2 rounded-lg ${
+                                priorityColors[
+                                  recommendation.priority as keyof typeof priorityColors
+                                ] || "bg-gray-50 border-gray-200"
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-3 mb-2">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                                    {index + 1}
+                                  </div>
+                                  <h4 className="font-semibold text-sm">
+                                    {recommendation.title}
+                                  </h4>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className="text-xs">
+                                    {recommendation.category}
+                                  </Badge>
+                                  <Badge
+                                    className={`text-xs ${
+                                      priorityBadgeColors[
+                                        recommendation.priority as keyof typeof priorityBadgeColors
+                                      ] || "bg-gray-100 text-gray-800"
+                                    }`}
+                                  >
+                                    {recommendation.priority === "high"
+                                      ? "Priorité haute"
+                                      : recommendation.priority === "medium"
+                                      ? "Priorité moyenne"
+                                      : "Priorité basse"}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <p className="text-sm text-muted-foreground ml-8">
+                                {recommendation.description}
+                              </p>
+                            </div>
+                          );
+                        }
+                      }
                     )}
                   </div>
                 </CardContent>

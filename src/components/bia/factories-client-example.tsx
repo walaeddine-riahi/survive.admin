@@ -1,0 +1,567 @@
+/**
+ * Composant Client : Liste et Gestion des Usines
+ *
+ * Ce composant fournit une interface interactive pour :
+ * - Afficher la liste des usines en mode grid/liste
+ * - Rechercher et filtrer les usines
+ * - Créer une nouvelle usine
+ * - Modifier/Supprimer une usine
+ * - Accéder à l'analyse consolidée
+ */
+
+"use client";
+
+import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Building2,
+  Search,
+  Plus,
+  Grid3x3,
+  List,
+  MapPin,
+  Users,
+  FileText,
+  Settings,
+  TrendingUp,
+  AlertCircle,
+  CheckCircle,
+  Edit,
+} from "lucide-react";
+
+// Type pour une usine avec statistiques (doit correspondre au type du serveur)
+interface FactoryWithStats {
+  id: string;
+  name: string;
+  code: string;
+  description?: string | null;
+  address?: string | null;
+  city?: string | null;
+  country?: string | null;
+  isActive: boolean;
+  criticalityLevel?: string | null;
+  employeeCount?: number | null;
+  _count: {
+    processes: number;
+    biaReports: number;
+  };
+  manager?: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string;
+  } | null;
+}
+
+interface FactoriesClientProps {
+  factories: FactoryWithStats[];
+}
+
+export function FactoriesClient({ factories }: FactoriesClientProps) {
+  const router = useRouter();
+
+  // États
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState<
+    "all" | "active" | "inactive"
+  >("all");
+  const [filterCriticality, setFilterCriticality] = useState<string>("all");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+
+  // Filtrage et recherche
+  const filteredFactories = useMemo(() => {
+    return factories.filter((factory) => {
+      // Filtre de recherche
+      const matchesSearch =
+        searchQuery === "" ||
+        factory.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        factory.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        factory.city?.toLowerCase().includes(searchQuery.toLowerCase());
+
+      // Filtre de statut
+      const matchesStatus =
+        filterStatus === "all" ||
+        (filterStatus === "active" && factory.isActive) ||
+        (filterStatus === "inactive" && !factory.isActive);
+
+      // Filtre de criticité
+      const matchesCriticality =
+        filterCriticality === "all" ||
+        factory.criticalityLevel === filterCriticality;
+
+      return matchesSearch && matchesStatus && matchesCriticality;
+    });
+  }, [factories, searchQuery, filterStatus, filterCriticality]);
+
+  // Navigation vers l'analyse d'une usine
+  const handleViewAnalysis = (factoryId: string) => {
+    router.push(`/bia/factories/${factoryId}/analysis`);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Barre de filtres et actions */}
+      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+        {/* Recherche */}
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Rechercher une usine..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+
+        {/* Filtres */}
+        <div className="flex gap-2 flex-wrap">
+          <Select
+            value={filterStatus}
+            onValueChange={(value) =>
+              setFilterStatus(value as "all" | "active" | "inactive")
+            }
+          >
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Statut" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les statuts</SelectItem>
+              <SelectItem value="active">Actives</SelectItem>
+              <SelectItem value="inactive">Inactives</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={filterCriticality}
+            onValueChange={setFilterCriticality}
+          >
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Criticité" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toutes</SelectItem>
+              <SelectItem value="critique">Critique</SelectItem>
+              <SelectItem value="élevé">Élevé</SelectItem>
+              <SelectItem value="moyen">Moyen</SelectItem>
+              <SelectItem value="faible">Faible</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Boutons de vue */}
+          <div className="flex gap-1 border rounded-md p-1">
+            <Button
+              variant={viewMode === "grid" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("grid")}
+            >
+              <Grid3x3 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "list" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("list")}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Bouton créer */}
+          <CreateFactoryDialog
+            isOpen={isCreateDialogOpen}
+            onOpenChange={setIsCreateDialogOpen}
+          />
+        </div>
+      </div>
+
+      {/* Résultats */}
+      <div className="text-sm text-muted-foreground">
+        {filteredFactories.length} usine
+        {filteredFactories.length > 1 ? "s" : ""} trouvée
+        {filteredFactories.length > 1 ? "s" : ""}
+      </div>
+
+      {/* Liste des usines */}
+      {filteredFactories.length === 0 ? (
+        <Card>
+          <CardContent className="text-center py-12">
+            <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Aucune usine trouvée</h3>
+            <p className="text-muted-foreground mb-4">
+              Aucune usine ne correspond à vos critères de recherche.
+            </p>
+            <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Créer une usine
+            </Button>
+          </CardContent>
+        </Card>
+      ) : viewMode === "grid" ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredFactories.map((factory) => (
+            <FactoryCard
+              key={factory.id}
+              factory={factory}
+              onViewAnalysis={handleViewAnalysis}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {filteredFactories.map((factory) => (
+            <FactoryListItem
+              key={factory.id}
+              factory={factory}
+              onViewAnalysis={handleViewAnalysis}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Carte d'usine (vue grille)
+ */
+function FactoryCard({
+  factory,
+  onViewAnalysis,
+}: {
+  factory: FactoryWithStats;
+  onViewAnalysis: (id: string) => void;
+}) {
+  const getCriticalityColor = (level?: string | null) => {
+    switch (level) {
+      case "critique":
+        return "bg-red-500";
+      case "élevé":
+        return "bg-orange-500";
+      case "moyen":
+        return "bg-yellow-500";
+      case "faible":
+        return "bg-green-500";
+      default:
+        return "bg-gray-500";
+    }
+  };
+
+  return (
+    <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-2">
+            <Building2 className="h-5 w-5 text-primary" />
+            <div>
+              <CardTitle className="text-lg">{factory.name}</CardTitle>
+              <CardDescription className="text-xs">
+                {factory.code}
+              </CardDescription>
+            </div>
+          </div>
+          <div className="flex gap-1">
+            {factory.isActive ? (
+              <Badge variant="outline" className="text-xs">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Active
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="text-xs">
+                <AlertCircle className="h-3 w-3 mr-1" />
+                Inactive
+              </Badge>
+            )}
+          </div>
+        </div>
+      </CardHeader>
+
+      <CardContent>
+        {/* Localisation */}
+        {factory.city && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+            <MapPin className="h-4 w-4" />
+            <span>
+              {factory.city}
+              {factory.country && `, ${factory.country}`}
+            </span>
+          </div>
+        )}
+
+        {/* Criticité */}
+        {factory.criticalityLevel && (
+          <div className="mb-3">
+            <div className="flex items-center gap-2">
+              <div
+                className={`h-2 w-2 rounded-full ${getCriticalityColor(
+                  factory.criticalityLevel
+                )}`}
+              />
+              <span className="text-sm capitalize">
+                {factory.criticalityLevel}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Statistiques */}
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          <div className="flex items-center gap-2 text-sm">
+            <Settings className="h-4 w-4 text-muted-foreground" />
+            <span>{factory._count.processes} processus</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <FileText className="h-4 w-4 text-muted-foreground" />
+            <span>{factory._count.biaReports} rapports</span>
+          </div>
+        </div>
+
+        {/* Employés */}
+        {factory.employeeCount && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+            <Users className="h-4 w-4" />
+            <span>{factory.employeeCount} employés</span>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex gap-2">
+          <Button
+            variant="default"
+            size="sm"
+            className="flex-1"
+            onClick={() => onViewAnalysis(factory.id)}
+          >
+            <TrendingUp className="h-4 w-4 mr-2" />
+            Analyse
+          </Button>
+          <Button variant="outline" size="sm">
+            <Edit className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Item d'usine (vue liste)
+ */
+function FactoryListItem({
+  factory,
+  onViewAnalysis,
+}: {
+  factory: FactoryWithStats;
+  onViewAnalysis: (id: string) => void;
+}) {
+  return (
+    <Card className="hover:bg-muted/50 transition-colors">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4 flex-1">
+            <Building2 className="h-8 w-8 text-primary" />
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold">{factory.name}</h3>
+                <Badge variant="outline" className="text-xs">
+                  {factory.code}
+                </Badge>
+                {factory.isActive ? (
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                ) : (
+                  <AlertCircle className="h-4 w-4 text-gray-500" />
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {factory.city && `${factory.city}, `}
+                {factory._count.processes} processus •{" "}
+                {factory._count.biaReports} rapports
+                {factory.employeeCount &&
+                  ` • ${factory.employeeCount} employés`}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {factory.criticalityLevel && (
+              <Badge variant="outline" className="capitalize">
+                {factory.criticalityLevel}
+              </Badge>
+            )}
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => onViewAnalysis(factory.id)}
+            >
+              <TrendingUp className="h-4 w-4 mr-2" />
+              Analyse
+            </Button>
+            <Button variant="outline" size="sm">
+              <Edit className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Dialog de création d'usine
+ */
+function CreateFactoryDialog({
+  isOpen,
+  onOpenChange,
+}: {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      name: formData.get("name") as string,
+      code: formData.get("code") as string,
+      description: formData.get("description") as string,
+      city: formData.get("city") as string,
+      country: formData.get("country") as string,
+    };
+
+    try {
+      const response = await fetch("/api/bia/factories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Erreur lors de la création");
+      }
+
+      onOpenChange(false);
+      router.refresh();
+    } catch (error) {
+      console.error(error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Erreur lors de la création de l'usine"
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogTrigger asChild>
+        <Button>
+          <Plus className="h-4 w-4 mr-2" />
+          Nouvelle Usine
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Créer une Nouvelle Usine</DialogTitle>
+            <DialogDescription>
+              Ajouter une nouvelle usine au système BIA
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nom *</Label>
+              <Input
+                id="name"
+                name="name"
+                placeholder="Ex: Usine de Production A"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="code">Code *</Label>
+              <Input
+                id="code"
+                name="code"
+                placeholder="Ex: UPA"
+                required
+                maxLength={20}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                name="description"
+                placeholder="Description de l'usine..."
+                rows={3}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="city">Ville</Label>
+                <Input id="city" name="city" placeholder="Paris" />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="country">Pays</Label>
+                <Input id="country" name="country" placeholder="France" />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isLoading}
+            >
+              Annuler
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Création..." : "Créer"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}

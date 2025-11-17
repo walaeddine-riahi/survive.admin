@@ -418,6 +418,7 @@ export default function AdminInjectionsPage({
   const handleEditInjection = (injection: Injection) => {
     setEditingInjection({
       ...injection,
+      scenarioName: injection.scenarioName || "workshop",
       imageUrl: injection.imageUrl || undefined,
       videoUrl: injection.videoUrl || undefined,
       attachments:

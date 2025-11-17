@@ -33,6 +33,46 @@ import type {
   BiaSpof,
 } from "@/lib/bia-ai-analyzer";
 
+// Fonction utilitaire pour obtenir les données par défaut
+function getDefaultFormData(): BiaAnalysisResult {
+  return {
+    impacts: [],
+    criticality: {
+      level: "moyen",
+      score: 50,
+      justification: "",
+      processes: [],
+    },
+    metrics: {
+      rto: 8,
+      mtpd: 24,
+      mbco: 4,
+      rpo: 2,
+    },
+    continuityLevel: {
+      level: "jaune",
+      score: 5,
+      description: "",
+      measures: [],
+      recommendations: [],
+    },
+    dependencies: [],
+    resume: "",
+    continuityNeeds: {
+      equipment: [],
+      material: [],
+      personnel: [],
+      infrastructure: [],
+      technology: [],
+      supplyChain: [],
+      other: [],
+    },
+    spof: [],
+    analysisDate: new Date(),
+    confidence: 75,
+  };
+}
+
 interface BiaAnalysisFormProps {
   initialData?: BiaAnalysisResult;
   onSave: (data: BiaAnalysisResult) => void;
@@ -44,9 +84,32 @@ export function BiaAnalysisForm({
   onSave,
   onCancel,
 }: BiaAnalysisFormProps) {
-  const [formData, setFormData] = useState<BiaAnalysisResult>(
-    initialData || getDefaultFormData()
-  );
+  // Fusionner les données initiales avec les valeurs par défaut
+  const defaultData = getDefaultFormData();
+  const mergedData = initialData
+    ? {
+        ...defaultData,
+        ...initialData,
+        criticality: {
+          ...defaultData.criticality,
+          ...(initialData.criticality || {}),
+        },
+        metrics: {
+          ...defaultData.metrics,
+          ...(initialData.metrics || {}),
+        },
+        continuityLevel: {
+          ...defaultData.continuityLevel,
+          ...(initialData.continuityLevel || {}),
+        },
+        continuityNeeds: {
+          ...defaultData.continuityNeeds,
+          ...(initialData.continuityNeeds || {}),
+        },
+      }
+    : defaultData;
+
+  const [formData, setFormData] = useState<BiaAnalysisResult>(mergedData);
 
   const updateFormData = (field: keyof BiaAnalysisResult, value: unknown) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -1058,45 +1121,6 @@ export function BiaAnalysisForm({
       </div>
     </form>
   );
-}
-
-function getDefaultFormData(): BiaAnalysisResult {
-  return {
-    impacts: [],
-    criticality: {
-      level: "moyen",
-      score: 50,
-      justification: "",
-      processes: [],
-    },
-    metrics: {
-      rto: 8,
-      mtpd: 24,
-      mbco: 4,
-      rpo: 2,
-    },
-    continuityLevel: {
-      level: "jaune",
-      score: 5,
-      description: "",
-      measures: [],
-      recommendations: [],
-    },
-    dependencies: [],
-    resume: "",
-    continuityNeeds: {
-      equipment: [],
-      material: [],
-      personnel: [],
-      infrastructure: [],
-      technology: [],
-      supplyChain: [],
-      other: [],
-    },
-    spof: [],
-    analysisDate: new Date(),
-    confidence: 75,
-  };
 }
 
 function getCategoryLabel(category: string): string {

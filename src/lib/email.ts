@@ -125,7 +125,7 @@ const welcomeEmailTemplate = (
               
               <!-- CTA Button -->
               <div style="text-align: center; margin: 40px 0;">
-                <a href="https://survive-tau.vercel.app/simulation/${simulationId}/participant-view"
+                <a href="https://survive-ooredoo.vercel.app/simulation/${simulationId}/participant-view"
                    style="background: linear-gradient(135deg, #E2001A 0%, #C40016 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(226, 0, 26, 0.3); transition: all 0.3s;">
                   🚀 Accéder à la Simulation
                 </a>

@@ -890,103 +890,296 @@ CONTEXTE ADDITIONNEL:
     // Prétraitement intelligent du contenu
     const processedContent = this.preprocessContent(reportContent);
 
-    return `Tu es un expert senior en analyse BIA (Business Impact Analysis) et continuité d'activité avec 15 ans d'expérience. 
-Tu dois analyser ce rapport BIA, même si le contenu est basique ou partiellement extrait d'un fichier Word.
+    return `Vous êtes un analyste expert en Management de la Continuité d'Activité (SMCA/BCM) et votre objectif est d'analyser de manière exhaustive les données d'une Analyse d'Impact Métier (BIA) à partir du rapport fourni.
 
-CONTEXTE: Ce rapport peut provenir d'une extraction basique de fichier Word. Utilise ton expertise pour inférer et extrapoler les informations manquantes de manière cohérente.
+**Mission :**
+Analyser le rapport BIA fourni et extraire TOUS les éléments multiples de chaque section selon la structure SMCA/BCM complète.
 
-RAPPORT BIA À ANALYSER:
+**Rapport à analyser :**
 ${processedContent}
 
-MÉTHODE D'ANALYSE:
-1. Si le contenu est limité, utilise ton expertise pour proposer des estimations réalistes
-2. Base-toi sur les standards BIA (ISO 22301, NIST, etc.) pour combler les lacunes
-3. Génère des recommandations pertinentes même avec peu de données
-4. Utilise des valeurs par défaut cohérentes basées sur ton expérience
+**PRINCIPE FONDAMENTAL :**
+⚠️ CHAQUE SECTION PEUT CONTENIR PLUSIEURS ÉLÉMENTS (N éléments), chacun ayant son propre jeu complet de critères.
 
-ANALYSE DEMANDÉE:
-Extrais et structure les informations suivantes au format JSON. 
-SI LE CONTENU EST LIMITÉ, utilise ton expertise pour générer des analyses réalistes et pertinentes:
+**Instructions d'analyse :**
+
+1. Extrayez TOUS les éléments multiples du rapport (activités, fournisseurs, systèmes, équipements, rôles, etc.)
+2. Pour CHAQUE élément, remplissez TOUS les critères spécifiques de sa catégorie
+3. Si certaines informations ne sont pas présentes, utilisez votre expertise SMCA/BCM basée sur :
+   - Les standards ISO 22301 et ISO 27001
+   - Les meilleures pratiques NIST et BCM
+   - Les benchmarks industriels
+4. Identifiez les dépendances critiques, SPOF, et vulnérabilités
+5. Générez des recommandations actionnables
+
+---
+
+### STRUCTURE DÉTAILLÉE DE L'ANALYSE D'IMPACT (BIA)
+
+**Phase 1 : Identification et Criticité Globale**
+
+**Section 1 : Informations générales** (1 élément unique)
+- Nom du processus métier
+- Département/Unité opérationnelle
+- Localisation géographique
+- Responsable process (Nom, Fonction, Contact)
+- Suppléant process si identifié
+- Impacts globaux en cas d'indisponibilité
+- Criticité globale : [Critique/Élevée/Moyenne/Faible]
+- RTO (Recovery Time Objective) global en heures
+- MTPD (Maximum Tolerable Period of Disruption) en heures
+- MBCO (Minimum Business Continuity Objective) en heures
+- RPO (Recovery Point Objective) en heures
+- Périodes critiques d'activité
+
+**Section 2 : Activités Critiques** (TABLEAU MULTIPLE - N activités)
+⚠️ Créez un élément pour CHAQUE activité critique identifiée dans le rapport.
+Pour CHAQUE activité, extrayez tous les critères suivants :
+- id: numéro séquentiel
+- nom_activite: nom de l'activité
+- delai_legal_contractuel: délai imposé
+- impacts_specifiques: description des impacts
+- niveau_criticite: Critique|Élevé|Moyen|Faible
+- rto: nombre d'heures
+- mtpd: nombre d'heures
+- rpo: nombre d'heures
+- mbco: nombre d'heures
+- solutions_contournement: description des alternatives
+
+**Phase 2 : Impacts et Dépendances**
+
+**Section 3 : Analyse des Impacts** (1 ensemble global)
+- Impacts financiers (pertes directes, coûts de récupération, pénalités)
+- Impacts opérationnels (arrêts, ralentissements, dysfonctionnements)
+- Impacts sur la réputation (image, confiance clients, médias)
+- Impacts sur la capacité opérationnelle (retards, SLA)
+
+**Section 4 : Dépendances** (TABLEAUX MULTIPLES)
+A. Dépendances Produits/Services (N éléments) :
+Pour CHAQUE dépendance :
+- id, nom_produit_service, type_dependance, fournisseur, impact_indisponibilite
+
+B. Dépendances Inter-Services (N éléments) :
+Pour CHAQUE dépendance :
+- id, departement_fonction, type_soutien_fourni, criticite
+
+**Phase 3 : Ressources et Conformité**
+
+**Section 5 : Fournisseurs et Activités Externalisées** (TABLEAU MULTIPLE - N fournisseurs)
+⚠️ Créez un élément pour CHAQUE fournisseur externe critique.
+Pour CHAQUE fournisseur, extrayez tous les critères suivants :
+- id: numéro séquentiel
+- nom_fournisseur: nom complet
+- services_taches_fournies: description des services
+- contact_nom: nom du contact
+- contact_telephone: téléphone
+- contact_email: email
+- zone_geographique: localisation
+- pca_disponible: Oui|Non|Non vérifié
+- contrat_sla_continuite: Oui|Non
+- rto_contractuel: heures
+- mtpd_contractuel: heures
+
+**Section 6 : Cadre Légal et Réglementaire** (TABLEAU MULTIPLE - N obligations)
+⚠️ Créez un élément pour CHAQUE obligation légale/réglementaire.
+Pour CHAQUE obligation :
+- id: numéro séquentiel
+- nature_obligation: type d'obligation
+- reference_legale: ISO/loi/décret/norme
+- autorite_regulation: organisme compétent
+- details_exigences: description détaillée
+- consequences_non_conformite: pénalités/sanctions
+
+**Section 7 : Systèmes Informatiques (MES/Applications IT)** (TABLEAU MULTIPLE - N systèmes)
+⚠️ Créez un élément pour CHAQUE système/application.
+Pour CHAQUE système :
+- id: numéro séquentiel
+- nom_application_systeme: nom complet
+- type: ERP|SIRH|CRM|MES|Autre
+- niveau_criticite: Critique|Important|Normal
+- impact_indisponibilite: description
+- activites_metier_soutenues: liste
+- systemes_secours_disponibles: Oui|Non
+- type_backup: description
+- rto: heures
+- rpo: heures
+- mtpd: heures
+- solutions_contournement: description
+- incidents_anterieurs: historique
+- frequence_incidents: nombre ou description
+
+**Section 8 : Infrastructure Physique** (TABLEAU MULTIPLE - N infrastructures)
+⚠️ Créez un élément pour CHAQUE infrastructure critique.
+Pour CHAQUE infrastructure :
+- id: numéro séquentiel
+- nom_type_infrastructure: description
+- categorie: Électricité|Réseau|Télécom|Locaux|Autres
+- niveau_criticite: Critique|Élevé|Moyen
+- rto: heures
+- mtpd: heures
+- possibilite_travail_distance: Oui|Non|Partiel
+- possibilite_infra_alternatives: Oui|Non
+- localisation_alternative: description
+- delai_basculement: temps de switch
+
+**Phase 4 : Personnel et Équipement**
+
+**Section 9 : Rôles et Compétences Personnel** (TABLEAU MULTIPLE - N rôles)
+⚠️ Créez un élément pour CHAQUE rôle/fonction critique.
+Pour CHAQUE rôle :
+- id: numéro séquentiel
+- intitule_role_fonction: titre du poste
+- nombre_personnes_affectees: nombre
+- taches_principales: description
+- competences_uniques_rares: compétences spéciales
+- certifications_necessaires: certifications requises
+- critique_immediatement: Oui|Non
+- delai_max_reprise_role: heures
+- possibilite_remplacement: Oui|Non|Partiel
+- remplace_par: qui ou quel service
+- solutions_contournement: alternatives
+- formation_requise_remplacement: durée/description
+
+**Section 10A : Équipement Industriel** (TABLEAU MULTIPLE - N équipements)
+⚠️ Créez un élément pour CHAQUE équipement industriel critique.
+Pour CHAQUE équipement :
+- id: numéro séquentiel
+- designation_equipement: nom
+- modele_reference: modèle
+- taches_executees: description
+- critique_apres_rupture: Oui|Non
+- possibilite_reaffectation: Oui|Non
+- rto: heures
+- mtpd: heures
+- solutions_contournement: description
+- caracteristiques_energetiques:
+  - tension_v: voltage
+  - type_courant: AC|DC|Triphasé
+  - puissance_nominale_kw: kW
+  - puissance_demarrage_kw: kW
+  - consommation_journaliere_kwh: kWh/jour
+  - compatible_systemes_secours: Oui|Non
+
+**Section 10B : Équipement Bureautique** (TABLEAU MULTIPLE - N types d'équipements)
+⚠️ Créez un élément pour CHAQUE type d'équipement bureautique.
+Pour CHAQUE type :
+- id: numéro séquentiel
+- type_equipement: catégorie
+- quantite_disponible: nombre
+- taches_supportees: description
+- critique_apres_rupture: Oui|Non
+- rto: heures
+- mtpd: heures
+- quantite_requise_apres_incident: nombre minimum
+- possibilite_reaffectation: Oui|Non
+- solutions_contournement: description
+- fournisseur_remplacement_rapide: nom fournisseur
+
+**Section 11 : Documentation Critique** (TABLEAU MULTIPLE - N documentations)
+⚠️ Créez un élément pour CHAQUE type de documentation critique.
+Pour CHAQUE documentation :
+- id: numéro séquentiel
+- type_nom_documentation: nom
+- format: Papier|Numérique|Mixte
+- emplacement_stockage_principal: localisation
+- emplacement_stockage_secondaire: backup
+- necessaire_apres_rupture: Oui|Non
+- rto: heures
+- niveau_criticite: Critique|Élevé|Moyen
+- acces_disponible_ailleurs: Oui|Non
+- localisation_acces_alternatif: où
+- remplacement_disponible_delais: Oui|Non
+- mesures_remplacement: comment
+- procedure_recuperation: description
+
+---
+
+**FORMAT DE SORTIE REQUIS (JSON strict) :**
+
+Retournez UNIQUEMENT un objet JSON valide avec cette structure exacte (pas de texte avant ou après le JSON):
 
 {
   "impacts": [
     {
-      "type": "Financier/Opérationnel/Réputationnel/Réglementaire",
-      "description": "Description détaillée basée sur ton expertise BIA",
+      "type": "Financier|Opérationnel|Réputationnel|Réglementaire",
+      "description": "Description détaillée de l'impact",
       "severity": "haut|moyen|bas",
-      "financialImpact": nombre_estimé_en_euros_si_applicable,
-      "operationalImpact": "Impact sur les opérations",
-      "reputationalImpact": "Impact sur la réputation"
+      "financialImpact": nombre_euros_ou_null,
+      "operationalImpact": "Description impact opérationnel",
+      "reputationalImpact": "Description impact réputation"
     }
   ],
   "criticality": {
     "level": "haut|moyen|bas",
-    "score": nombre_entre_1_et_100_basé_sur_analyse,
-    "justification": "Justification experte du niveau de criticité",
-    "processes": ["processus", "identifiés", "ou", "extrapolés"],
-    "processOwner": "Nom du responsable principal si identifié dans le document",
-    "ownerRole": "Fonction/rôle du responsable (ex: Chef de service, Directeur, Manager)",
-    "ownerContact": "Email ou téléphone du responsable si présent"
+    "score": nombre_1_a_100,
+    "justification": "Justification du niveau de criticité basée sur l'analyse SMCA",
+    "processes": ["liste", "des", "processus", "identifiés"],
+    "processOwner": "Nom du responsable process",
+    "ownerRole": "Fonction du responsable",
+    "ownerContact": "Email ou téléphone"
   },
   "metrics": {
-    "rto": estimation_heures_rto_réaliste,
-    "mtpd": estimation_heures_mtpd_cohérente,
-    "mbco": estimation_heures_mbco_logique,
-    "rpo": estimation_heures_rpo_si_pertinent
+    "rto": nombre_heures,
+    "mtpd": nombre_heures,
+    "mbco": nombre_heures,
+    "rpo": nombre_heures
   },
   "continuityLevel": {
     "level": "vert|jaune|rouge",
-    "score": nombre_entre_1_et_10_évaluation_experte,
-    "description": "Évaluation experte du niveau de maturité",
-    "measures": ["mesures", "identifiées", "ou", "recommandées", "standard"],
-    "recommendations": ["recommandations", "pertinentes", "basées", "expertise"]
+    "score": nombre_1_a_10,
+    "description": "Évaluation de la maturité BCM",
+    "measures": ["liste", "des", "mesures", "existantes"],
+    "recommendations": ["liste", "des", "recommandations", "SMCA"]
   },
   "dependencies": [
     {
-      "name": "Dépendance identifiée ou typique",
+      "name": "Nom de la dépendance",
       "type": "système|fournisseur|infrastructure|personnel|données",
       "criticality": "critique|important|normal",
-      "description": "Description basée sur l'analyse",
-      "impact": "Impact estimé en cas de défaillance"
+      "description": "Description détaillée",
+      "impact": "Impact en cas de défaillance"
     }
   ],
-  "resume": "Résumé exécutif professionnel de 3-4 phrases avec insights d'expert",
+  "resume": "Résumé exécutif de l'analyse BIA avec focus sur les exigences de continuité critiques, goulots d'étranglement, et dépendances majeures identifiées selon la méthodologie SMCA/BCM",
   "continuityNeeds": {
-    "equipment": ["équipements", "critiques", "identifiés"],
-    "material": ["matériel", "essentiel", "requis"],
-    "personnel": ["rôles", "clés", "critiques"],
-    "infrastructure": ["éléments", "infrastructure", "vitaux"],
-    "technology": ["systèmes", "technologies", "essentiels"],
-    "supplyChain": ["fournisseurs", "chaîne", "approvisionnement", "critiques"],
+    "equipment": ["liste", "équipements", "critiques"],
+    "material": ["liste", "matériel", "nécessaire"],
+    "personnel": ["liste", "rôles", "critiques"],
+    "infrastructure": ["liste", "infrastructures", "vitales"],
+    "technology": ["liste", "systèmes", "IT", "essentiels"],
+    "supplyChain": ["liste", "fournisseurs", "critiques"],
     "other": ["autres", "besoins", "identifiés"]
   },
   "spof": [
     {
-      "name": "Point de défaillance unique identifié",
-      "description": "Description experte du risque",
-      "impact": "Impact détaillé en cas de panne",
+      "name": "Nom du point de défaillance unique",
+      "description": "Description détaillée du SPOF",
+      "impact": "Impact en cas de panne",
       "riskLevel": "critique|élevé|moyen",
-      "mitigation": ["mesures", "concrètes", "d'atténuation"]
+      "mitigation": ["mesures", "concrètes", "de", "mitigation"]
     }
   ],
-  "confidence": nombre_entre_40_et_95_selon_qualité_données
+  "confidence": nombre_40_a_95
 }
 
-DIRECTIVES SPÉCIALES POUR CONTENUS BASIQUES:
-- Si peu de données: génère des estimations réalistes basées sur les standards BIA
-- Utilise des métriques typiques: RTO 4-24h, MTPD 48-72h selon criticité
-- Propose des SPOF courants: systèmes IT, fournisseurs clés, personnel critique
-- Inclus des besoins standard: serveurs de secours, sites alternatifs, équipes d'urgence
-- Ajuste le niveau de confiance selon la richesse des données (40-60% si basique, 70-95% si riche)
+**RÈGLES CRITIQUES :**
+- Niveau continuité: VERT (maturité élevée, mesures robustes), JAUNE (maturité moyenne, améliorations nécessaires), ROUGE (maturité faible, actions urgentes)
+- Criticité: HAUT (processus vital), MOYEN (processus important), BAS (processus standard)
+- RTO = temps maximal de reprise acceptable
+- MTPD = période maximale tolérable de disruption
+- MBCO = objectif minimum de continuité
+- RPO = perte de données maximale acceptable
+- SPOF = Single Point of Failure (identifier et prioriser)
+- Confidence = niveau de confiance (40-60% si données limitées, 70-95% si données riches)
 
-RÈGLES IMPORTANTES:
-- Niveau continuité: VERT (mesures de continuité >= 10), JAUNE (renforcer mesures existantes), ROUGE (pas de mesures)
-- Criticité: HAUT/MOYEN/BAS au lieu de "critique/élevé/etc"
-- RTO = Recovery Time Objective, MTPD = Maximum Tolerable Period of Disruption, MBCO = Minimum Business Continuity Objective
-- SPOF = Single Point of Failure (identifier en ROUGE = critique)
-- Confidence = niveau de confiance de l'analyse (0-100)
+**Approche SMCA/BCM :**
+- Identifiez systématiquement les dépendances critiques
+- Détectez les vulnérabilités et SPOF
+- Évaluez la maturité BCM actuelle
+- Proposez des recommandations priorisées
+- Basez-vous sur les standards ISO 22301, ISO 27001, NIST
 
-RÉPONSE JSON UNIQUEMENT (pas de texte avant ou après):`;
+RÉPONSE JSON UNIQUEMENT (pas de markdown, pas de texte explicatif):`;
   }
 
   /**

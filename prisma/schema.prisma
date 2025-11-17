@@ -61,6 +61,8 @@ model User {
   sentCommunications     Communication[]        @relation("SentCommunications")
   receivedCommunications Communication[]        @relation("ReceivedCommunications")
   targetedInjections     Injection[]            @relation("TargetedInjection")
+  managedFactories       Factory[]              @relation("ManagedFactories")
+  createdFactories       Factory[]              @relation("CreatedFactories")
 
   @@map("users")
 }
@@ -438,6 +440,62 @@ enum CriticalityLevel {
   critical
 }
 
+// ============================================
+// Factory Model - Usines / Sites
+// ============================================
+model Factory {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // Identification
+  name            String    // Nom de l'usine (ex: "Usine A", "Site Principal")
+  code            String    @unique // Code unique (ex: "USA", "SITE_MAIN")
+  description     String?   // Description de l'usine
+  
+  // Informations géographiques
+  address         String?   // Adresse complète
+  city            String?   // Ville
+  postalCode      String?   // Code postal
+  country         String?   // Pays
+  region          String?   // Région/Province
+  coordinates     Json?     // { lat: number, lng: number } pour géolocalisation
+  
+  // Informations organisationnelles
+  managerId       String?   @db.ObjectId
+  manager         User?     @relation("ManagedFactories", fields: [managerId], references: [id])
+  
+  department      String?   // Département principal
+  division        String?   // Division de l'entreprise
+  phoneNumber     String?   // Téléphone principal
+  email           String?   // Email de contact
+  website         String?   // Site web de l'usine
+  
+  // Métadonnées opérationnelles
+  surfaceArea     Float?    // Surface en m²
+  employeeCount   Int?      // Nombre d'employés
+  operatingHours  Json?     // { open: "08:00", close: "18:00", days: ["Mon", "Tue", ...] }
+  timezone        String?   // Fuseau horaire (ex: "Europe/Paris")
+  
+  // Statut et criticité
+  isActive        Boolean   @default(true)
+  criticalityLevel String?  // "critique", "élevé", "moyen", "faible"
+  
+  // Certifications et conformité
+  certifications  String[]  @default([]) // ["ISO 9001", "ISO 27001", etc.]
+  complianceStandards String[] @default([]) // ["RGPD", "SOX", etc.]
+  
+  // Relations avec d'autres entités
+  processes       Process[]  @relation("FactoryProcesses")
+  biaReports      BiaReport[] @relation("FactoryReports")
+  
+  // Métadonnées
+  createdById     String    @db.ObjectId
+  createdBy       User      @relation("CreatedFactories", fields: [createdById], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@map("factories")
+}
+
 model Process {
   id                               String          @id @default(auto()) @map("_id") @db.ObjectId
   name                             String
@@ -559,6 +617,42 @@ model Process {
   supplierCriticality             String?         // Criticité du fournisseur
   hasAlternativeSupplier          Boolean         // Fournisseur alternatif disponible
   supplierHasContinuityPlan       Boolean         // Plan de continuité du fournisseur
+  
+  // ============================================
+  // NOUVEAUX CHAMPS MULTI-ÉLÉMENTS (JSON Arrays)
+  // Compatible avec les standards SMCA/ISO 22301
+  // ============================================
+  
+  // 1. Activités Critiques (N éléments avec criticité, RTO, impacts)
+  activitesCritiques              Json?           // Array d'objets: { nom, delai, impactsOperationnels, impactsReglementaires, impactsImage, criticite, rto, mtpd, rpo, mbco, solutionsContournement }
+  
+  // 2. Fournisseurs Externes (N fournisseurs avec leurs caractéristiques BIA)
+  fournisseursExternes            Json?           // Array d'objets: { nom, servicesOfferts, contactNom, contactTelephone, contactEmail, zoneGeographique, planContinuiteActivite, clauseSLA, rto, mtpd }
+  
+  // 3. Obligations Légales et Réglementaires (N obligations)
+  obligationsLegales              Json?           // Array d'objets: { nature, reference, autoriteRegulation, details, consequencesNonRespect }
+  
+  // 4. Systèmes Informatiques (N systèmes avec RTO/RPO)
+  systemesInformatiques           Json?           // Array d'objets: { nom, typeSysteme, criticite, impactIndisponibilite, activitesAssociees, sauvegardesEnPlace, rto, rpo, mtpd, solutionsContournement, incidentsAnterieurs }
+  
+  // 5. Infrastructures (N infrastructures avec alternatives)
+  infrastructuresPhysiques        Json?           // Array d'objets: { nom, categorie, criticite, rto, mtpd, possibiliteTravailDistance, alternativesDisponibles }
+  
+  // 6. Rôles et Personnel (N rôles avec compétences)
+  rolesPersonnel                  Json?           // Array d'objets: { intituleRole, nombrePersonnes, tachesResponsabilites, competencesRequises, estCritique, delaiDisponibiliteNecessaire, possibiliteRemplacement, personneRemplacante, formationNecessaire, dureeFormation, solutionsContournement }
+  
+  // 7. Équipements Industriels (N équipements avec caractéristiques énergétiques)
+  equipementsIndustriels          Json?           // Array d'objets: { designation, modeleReference, tachesRealise, criticite, rto, mtpd, possibiliteReaffectation, solutionsContournement, tension, typeCourant, puissanceNominale, consommationJournaliere, compatibiliteSecours, alternativesDisponibles }
+  
+  // 8. Équipements Bureautiques (N équipements)
+  equipementsBureautiques         Json?           // Array d'objets: { type, quantiteActuelle, tachesUtilisation, criticite, rto, mtpd, quantiteRequiseApresIncident, possibiliteReaffectation, fournisseur, solutionsContournement }
+  
+  // 9. Documentation (N documents avec emplacements multiples)
+  documentationsCritiques         Json?           // Array d'objets: { type, format, emplacementPrincipal, emplacementsSecondaires, necessaireApresIncident, rto, criticite, modalitesAcces, possibiliteRemplacement, procedureRecuperation, responsable, notes }
+  
+  // Factory relation (nouveau)
+  factoryId                       String?         @db.ObjectId
+  factory                         Factory?        @relation("FactoryProcesses", fields: [factoryId], references: [id])
   
   // Métadonnées
   createdAt                       DateTime        @default(now())
@@ -750,7 +844,11 @@ model BiaReport {
   
   // Tags et catégorisation
   tags                String[]         @default([])
-  category            String?          // Catégorie du rapport (mensuel, audit, etc.)
+  category            String?          // Catégorie du rapport (mensuel, audit, etc.) - conservé pour rétrocompatibilité
+  
+  // Factory relation (nouveau)
+  factoryId           String?          @db.ObjectId
+  factory             Factory?         @relation("FactoryReports", fields: [factoryId], references: [id])
   
   // Relations
   authorId            String           @db.ObjectId
