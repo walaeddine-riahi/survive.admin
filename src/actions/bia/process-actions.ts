@@ -273,7 +273,7 @@ interface PrismaProcessClient {
 
 // Fonction utilitaire pour accéder au modèle Process
 function getProcessModel() {
-  return (prisma as any).process as PrismaProcessClient;
+  return prisma.process as PrismaProcessClient;
 }
 
 export async function createProcess(data: ProcessInput) {
@@ -332,7 +332,7 @@ export async function createProcess(data: ProcessInput) {
       // Gestion des relations
       responsibles: data.responsibles?.length
         ? {
-            create: data.responsibles.map((r: any) => ({
+            create: data.responsibles.map((r) => ({
               name: r.name,
               role: r.role,
               phone: r.phone || null,
@@ -343,7 +343,7 @@ export async function createProcess(data: ProcessInput) {
 
       activities: data.activities?.length
         ? {
-            create: data.activities.map((a: any) => ({
+            create: data.activities.map((a) => ({
               name: a.name,
               description: a.description || null,
             })),
@@ -352,7 +352,7 @@ export async function createProcess(data: ProcessInput) {
 
       industrialEquipmentList: data.industrialEquipmentList?.length
         ? {
-            create: data.industrialEquipmentList.map((eq: any) => ({
+            create: data.industrialEquipmentList.map((eq) => ({
               name: eq.name,
               description: eq.description || null,
             })),
@@ -361,7 +361,7 @@ export async function createProcess(data: ProcessInput) {
 
       officeEquipmentList: data.officeEquipmentList?.length
         ? {
-            create: data.officeEquipmentList.map((eq: any) => ({
+            create: data.officeEquipmentList.map((eq) => ({
               name: eq.name,
               description: eq.description || null,
             })),
@@ -370,7 +370,7 @@ export async function createProcess(data: ProcessInput) {
 
       suppliers: data.suppliers?.length
         ? {
-            create: data.suppliers.map((s: any) => ({
+            create: data.suppliers.map((s) => ({
               name: s.name,
               service: s.service,
               contact: s.contact,
@@ -506,6 +506,7 @@ export async function updateProcess(id: string, data: ProcessInput) {
       : undefined;
 
     // Créer un objet avec toutes les propriétés du formulaire
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateData: any = {
       name: data.name,
       description: data.description || null,

@@ -90,8 +90,9 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
       const textContent = await page.getTextContent();
       
       // Combiner tous les items de texte
+      // TextItem a la propriété str, TextMarkedContent n'en a pas
       const pageText = textContent.items
-        .map((item: { str: string }) => item.str)
+        .map((item) => ('str' in item ? item.str : ''))
         .join(" ");
       
       fullText += pageText + "\n";

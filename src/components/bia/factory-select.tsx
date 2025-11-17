@@ -6,7 +6,6 @@
 
 "use client";
 
-import { Factory } from "@prisma/client";
 import {
   Select,
   SelectContent,
@@ -17,7 +16,7 @@ import {
 import { Building2 } from "lucide-react";
 
 interface FactorySelectProps {
-  factories: Pick<Factory, "id" | "name" | "code">[];
+  factories: Array<{ id: string; name: string; code: string }>;
   value: string;
   onValueChange: (value: string) => void;
   placeholder?: string;

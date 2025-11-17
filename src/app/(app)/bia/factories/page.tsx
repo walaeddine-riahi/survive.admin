@@ -10,7 +10,6 @@
  * Route : /bia/factories
  */
 
-import { Factory } from "@prisma/client";
 import { Metadata } from "next";
 import { FactoriesClient } from "@/components/bia/factories-client";
 import { prisma } from "@/lib/prisma";
@@ -26,7 +25,34 @@ export const metadata: Metadata = {
 /**
  * Type Factory enrichi avec les statistiques
  */
-interface FactoryWithStats extends Factory {
+interface FactoryWithStats {
+  id: string;
+  name: string;
+  code: string;
+  description?: string | null;
+  address?: string | null;
+  city?: string | null;
+  postalCode?: string | null;
+  country?: string | null;
+  region?: string | null;
+  coordinates?: unknown;
+  managerId?: string | null;
+  department?: string | null;
+  division?: string | null;
+  phoneNumber?: string | null;
+  email?: string | null;
+  website?: string | null;
+  surfaceArea?: number | null;
+  employeeCount?: number | null;
+  operatingHours?: unknown;
+  timezone?: string | null;
+  isActive: boolean;
+  criticalityLevel?: string | null;
+  certifications: string[];
+  complianceStandards: string[];
+  createdById: string;
+  createdAt: Date;
+  updatedAt: Date;
   _count: {
     processes: number;
     biaReports: number;
