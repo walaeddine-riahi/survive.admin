@@ -7,7 +7,13 @@ import { revalidatePath } from "next/cache";
 import crypto from "crypto";
 
 // Type alias pour JSON values Prisma
-type JsonValue = string | number | boolean | null | { [key: string]: JsonValue } | JsonValue[];
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: JsonValue }
+  | JsonValue[];
 
 // Types pour les rapports BIA
 export interface BiaReportData {

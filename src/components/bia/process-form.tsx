@@ -316,7 +316,7 @@ type ProcessFormValues = {
   supplierHasContinuityPlan: boolean;
   
   // Autres champs optionnels
-  [key: string]: any; // Pour les champs supplémentaires non typés explicitement
+  [key: string]: unknown; // Pour les champs supplémentaires non typés explicitement
 };
 
 interface ProcessFormProps {
@@ -327,38 +327,12 @@ interface ProcessFormProps {
 export function ProcessForm({ processId, initialData }: ProcessFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
-  
-  // Gestion des responsables
-  const [responsibles, setResponsibles] = useState<Array<{
-    name: string;
-    role: string;
-    phone?: string;
-    email?: string;
-  }>>([]);
-  
-  const [newResponsible, setNewResponsible] = useState({
-    name: '',
-    role: '',
-    phone: '',
-    email: ''
-  });
-  
-  const addResponsible = () => {
-    if (newResponsible.name && newResponsible.role) {
-      setResponsibles([...responsibles, newResponsible]);
-      setNewResponsible({ name: '', role: '', phone: '', email: '' });
-    }
-  };
-  
-  const removeResponsible = (index: number) => {
-    setResponsibles(responsibles.filter((_, i) => i !== index));
-  };
 
   // Fonction utilitaire pour convertir les valeurs null en undefined
   const sanitizeInitialData = (data: Partial<Process> | undefined): Partial<ProcessFormValues> => {
     if (!data) return {};
     
-    const sanitized: any = {};
+    const sanitized: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(data)) {
       sanitized[key] = value === null ? undefined : value;
     }
@@ -475,6 +449,7 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
   }), [initialData]);
 
   const form = useForm<ProcessFormValues>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(processFormSchema) as any,
     defaultValues: mergedDefaults,
     mode: 'onChange',
@@ -483,17 +458,14 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
   // Forcer le typage pour les contrôles du formulaire
   const typedControl = form.control as unknown as Control<ProcessFormValues>;
 
-  const { 
-    handleSubmit, 
-    formState: { errors },
-    reset,
-  } = form;
+  const { reset } = form;
   
   // Réinitialiser le formulaire avec les valeurs fusionnées lorsque initialData change
   useEffect(() => {
     console.log('Initial data reçu:', initialData);
     console.log('Valeurs par défaut fusionnées:', mergedDefaults);
     reset(mergedDefaults);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mergedDefaults, reset]);
 
   const onSubmit: SubmitHandler<ProcessFormValues> = async (data) => {
@@ -711,7 +683,12 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
 
   // État pour l'upload de PDF
   const [uploadingPdf, setUploadingPdf] = React.useState(false);
-  const [pdfAnalysisResult, setPdfAnalysisResult] = React.useState<any>(null);
+  const [pdfAnalysisResult, setPdfAnalysisResult] = React.useState<{
+    name?: string;
+    department?: string;
+    criticality?: string;
+    [key: string]: unknown;
+  } | null>(null);
 
   return (
     <Form {...form}>
@@ -1051,7 +1028,7 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
                 name="impact"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Impact sur l'entreprise</FormLabel>
+                    <FormLabel>Impact sur l&apos;entreprise</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -1392,7 +1369,7 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
               <div>
                 <h3 className="text-lg font-medium">Infrastructure</h3>
                 <p className="text-sm text-muted-foreground">
-                  Configuration de l'infrastructure nécessaire pour le bon fonctionnement du processus.
+                  Configuration de l&apos;infrastructure nécessaire pour le bon fonctionnement du processus.
                 </p>
               </div>
               
@@ -1410,7 +1387,7 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
                       </FormControl>
                       <div className="space-y-1 leading-none">
                         <FormLabel>
-                          Ce processus dépend-il d'une infrastructure physique ?
+                          Ce processus dépend-il d&apos;une infrastructure physique ?
                         </FormLabel>
                         <FormDescription>
                           Cochez cette case si le processus nécessite une infrastructure physique spécifique
@@ -1427,7 +1404,7 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
                       name="infrastructureType"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Type d'infrastructure</FormLabel>
+                          <FormLabel>Type d&apos;infrastructure</FormLabel>
                           <FormControl>
                             <Input 
                               placeholder="Ex: Salle serveur, local technique, atelier..."
@@ -1516,7 +1493,7 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
                             </FormControl>
                             <div className="space-y-1 leading-none">
                               <FormLabel>
-                                Peut-on utiliser d'autres infrastructures en cas de problème ?
+                                Peut-on utiliser d&apos;autres infrastructures en cas de problème ?
                               </FormLabel>
                               <FormDescription>
                                 Cochez cette case si des infrastructures de secours sont disponibles
@@ -1602,7 +1579,7 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
                           </FormControl>
                           <div className="space-y-1 leading-none">
                             <FormLabel>
-                              Peut-on réaffecter l'équipement à d'autres usages ?
+                              Peut-on réaffecter l'équipement à d&apos;autres usages ?
                             </FormLabel>
                             <FormDescription>
                               Cochez cette case si l'équipement peut être réaffecté en cas de besoin
@@ -1830,7 +1807,7 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
                         </FormControl>
                         <div className="space-y-1 leading-none">
                           <FormLabel>
-                            Peut-on réaffecter l'équipement à d'autres usages ?
+                            Peut-on réaffecter l'équipement à d&apos;autres usages ?
                           </FormLabel>
                           <FormDescription>
                             Cochez cette case si l'équipement peut être réaffecté en cas de besoin
@@ -2039,7 +2016,7 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
                     <li>• Maintenir des copies de sécurité à jour des documents critiques</li>
                     <li>• Stocker les documents dans des emplacements sécurisés et redondants</li>
                     <li>• Documenter clairement les procédures de récupération</li>
-                    <li>• Former le personnel aux procédures documentaires d'urgence</li>
+                    <li>• Former le personnel aux procédures documentaires d&apos;urgence</li>
                     <li>• Réviser régulièrement l'actualité et la pertinence des documents</li>
                   </ul>
                 </div>
@@ -2167,7 +2144,7 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
                           <SelectItem value="critique">Critique (arrêt complet)</SelectItem>
                           <SelectItem value="eleve">Élevé (fonctionnement très limité)</SelectItem>
                           <SelectItem value="moyen">Moyen (fonctionnement partiel)</SelectItem>
-                          <SelectItem value="faible">Faible (peu d'impact)</SelectItem>
+                          <SelectItem value="faible">Faible (peu d&apos;impact)</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -2189,10 +2166,10 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
                         </FormControl>
                         <div className="space-y-1 leading-none">
                           <FormLabel>
-                            Le personnel peut-il être remplacé par d'autres employés ?
+                            Le personnel peut-il être remplacé par d&apos;autres employés ?
                           </FormLabel>
                           <FormDescription>
-                            Cochez cette case si d'autres employés peuvent prendre le relais
+                            Cochez cette case si d&apos;autres employés peuvent prendre le relais
                           </FormDescription>
                         </div>
                       </FormItem>
@@ -2377,7 +2354,7 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
                         </FormControl>
                         <div className="space-y-1 leading-none">
                           <FormLabel>
-                            Le fournisseur dispose-t-il d'un plan de continuité d'activité ?
+                            Le fournisseur dispose-t-il d&apos;un plan de continuité d'activité ?
                           </FormLabel>
                           <FormDescription>
                             Cochez cette case si le fournisseur a mis en place un PCA
@@ -2395,7 +2372,7 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
                     <li>• Négocier des contrats avec des clauses de continuité de service</li>
                     <li>• Vérifier régulièrement les plans de continuité des fournisseurs critiques</li>
                     <li>• Maintenir un stock de sécurité pour les fournitures essentielles</li>
-                    <li>• Établir des procédures de basculement en cas de défaillance d'un fournisseur</li>
+                    <li>• Établir des procédures de basculement en cas de défaillance d&apos;un fournisseur</li>
                   </ul>
                 </div>
               </div>
@@ -2554,7 +2531,7 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
                     <li>• Mettre en place des procédures de veille réglementaire</li>
                     <li>• Former régulièrement les équipes aux évolutions réglementaires</li>
                     <li>• Documenter les preuves de conformité</li>
-                    <li>• Établir un plan d'action pour les écarts de conformité</li>
+                    <li>• Établir un plan d&apos;action pour les écarts de conformité</li>
                   </ul>
                 </div>
               </div>

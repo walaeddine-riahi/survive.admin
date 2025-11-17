@@ -108,16 +108,16 @@ async function getFactoryAnalysis(id: string) {
 
   // Calculer les statistiques
   const criticalProcesses = factory.processes.filter(
-    (p) => p.criticality === "critical"
+    (p: { criticality: string }) => p.criticality === "critical"
   ).length;
   const highProcesses = factory.processes.filter(
-    (p) => p.criticality === "high"
+    (p: { criticality: string }) => p.criticality === "high"
   ).length;
 
   const avgRto =
     factory.processes.length > 0
       ? Math.round(
-          factory.processes.reduce((sum, p) => sum + p.rto, 0) /
+          factory.processes.reduce((sum: number, p: { rto: number }) => sum + p.rto, 0) /
             factory.processes.length
         )
       : 0;
@@ -321,7 +321,14 @@ export default async function FactoryAnalysisPage({ params }: Props) {
             </p>
           ) : (
             <div className="space-y-2">
-              {factory.processes.map((process) => (
+              {factory.processes.map((process: {
+                id: string;
+                name: string;
+                department: string;
+                rto: number;
+                mtpd: number;
+                criticality: string;
+              }) => (
                 <Link
                   key={process.id}
                   href={`/bia/processes/${process.id}`}
@@ -357,7 +364,11 @@ export default async function FactoryAnalysisPage({ params }: Props) {
             <FactoryAddReportDialog
               factoryId={factory.id}
               factoryName={factory.name}
-              factoryProcesses={factory.processes.map((p) => ({
+              factoryProcesses={factory.processes.map((p: {
+                id: string;
+                name: string;
+                criticality: string;
+              }) => ({
                 id: p.id,
                 name: p.name,
                 criticality: p.criticality,
@@ -372,7 +383,12 @@ export default async function FactoryAnalysisPage({ params }: Props) {
             </p>
           ) : (
             <div className="space-y-2">
-              {factory.biaReports.map((report) => (
+              {factory.biaReports.map((report: {
+                id: string;
+                name: string;
+                totalProcesses: number;
+                createdAt: Date;
+              }) => (
                 <div
                   key={report.id}
                   className="p-4 rounded-lg border hover:bg-accent transition-colors"

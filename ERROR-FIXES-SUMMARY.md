@@ -6,17 +6,21 @@
 ## ✅ Erreurs Critiques Corrigées (TypeScript)
 
 ### 1. **Erreurs d'import Prisma** (6 erreurs - CORRIGÉ)
+
 **Fichier**: `src/actions/bia/bia-report-actions.ts`
 
-**Problème**: 
+**Problème**:
+
 ```typescript
 import { Prisma } from "@prisma/client";
 // Error: Namespace '"@prisma/client"' has no exported member 'Prisma'
 ```
 
 **Solution**:
+
 - Créé un type `JsonValue` personnalisé pour remplacer `Prisma.InputJsonValue`
 - Supprimé l'import de `Prisma` qui n'est pas disponible
+
 ```typescript
 // Type alias pour JSON values Prisma
 type JsonValue = string | number | boolean | null | { [key: string]: JsonValue } | JsonValue[];
@@ -31,21 +35,25 @@ generationParams: data.generationParams as JsonValue,
 ---
 
 ### 2. **Types `any` explicites** (7 erreurs - CORRIGÉ)
+
 **Fichier**: `src/actions/bia/process-actions.ts`
 
 **Problème**: Utilisation de `any` dans les fonctions map
+
 ```typescript
 data.responsibles.map((r: any) => ({ ... }))
 data.activities.map((a: any) => ({ ... }))
 ```
 
 **Solution**: Suppression des annotations `any`, TypeScript infère correctement les types
+
 ```typescript
 data.responsibles.map((r) => ({ ... }))
 data.activities.map((a) => ({ ... }))
 ```
 
 **Exception**: Une instance de `any` conservée avec `eslint-disable-next-line`
+
 ```typescript
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const updateData: any = {
@@ -56,18 +64,22 @@ const updateData: any = {
 ---
 
 ### 3. **Type Factory manquant** (6 erreurs - CORRIGÉ)
-**Fichiers**: 
+
+**Fichiers**:
+
 - `src/app/(app)/bia/factories/page.tsx`
 - `src/app/(app)/bia/factories/page-example.tsx`
 - `src/components/bia/factory-select.tsx`
 
-**Problème**: 
+**Problème**:
+
 ```typescript
 import { Factory } from "@prisma/client";
 // Error: Module '"@prisma/client"' has no exported member 'Factory'
 ```
 
 **Solution**: Créé une interface `FactoryWithStats` complète basée sur le schéma Prisma
+
 ```typescript
 interface FactoryWithStats {
   id: string;
@@ -115,14 +127,16 @@ interface FactoryWithStats {
 ---
 
 ### 4. **Erreur PDF text extraction** (2 erreurs - CORRIGÉ PRÉCÉDEMMENT)
+
 **Fichier**: `src/actions/bia/analyze-process-pdf.ts`
 
 **Problème**: Type predicate incompatible avec `TextItem | TextMarkedContent`
 
 **Solution**: Utilisation d'un ternaire avec `'str' in item`
+
 ```typescript
 const pageText = textContent.items
-  .map((item) => ('str' in item ? item.str : ''))
+  .map((item) => ("str" in item ? item.str : ""))
   .join(" ");
 ```
 
@@ -133,7 +147,9 @@ const pageText = textContent.items
 ## ⚠️ Erreurs Non-Critiques Restantes (87 warnings ESLint)
 
 ### Variables/Imports non utilisés (32 warnings)
+
 **Exemples**:
+
 - `src/components/bia/process-form-complete.tsx`: `Plus`, `Trash2`, `criticalityOptions`, etc.
 - `src/components/bia/process-form.tsx`: `addResponsible`, `removeResponsible`, `handleSubmit`, `errors`
 
@@ -143,9 +159,11 @@ const pageText = textContent.items
 ---
 
 ### Apostrophes non échappées (28 warnings)
+
 **Fichier**: `src/components/bia/process-form.tsx`
 
 **Exemples**:
+
 ```typescript
 <FormLabel>Impact sur l'entreprise</FormLabel>
 // Devrait être: Impact sur l&apos;entreprise
@@ -157,7 +175,9 @@ const pageText = textContent.items
 ---
 
 ### Types `any` non-critiques (11 warnings)
-**Fichiers**: 
+
+**Fichiers**:
+
 - `src/components/bia/process-form.tsx` (5)
 - `src/components/bia/process-form-spreadsheet.tsx` (2)
 - `src/components/bia/editable-cell.tsx` (1)
@@ -168,6 +188,7 @@ const pageText = textContent.items
 ---
 
 ### React Hooks dependencies (2 warnings)
+
 **Fichier**: `src/components/bia/process-form.tsx`
 
 ```typescript
@@ -183,11 +204,13 @@ useEffect(() => {
 ---
 
 ### Types implicites `any` (7 warnings)
+
 **Fichier**: `src/app/(app)/bia/factories/[id]/analysis/page.tsx`
 
 **Exemples**:
+
 ```typescript
-(p) => p.criticality === "critical" // Parameter 'p' implicitly has an 'any' type
+(p) => p.criticality === "critical"; // Parameter 'p' implicitly has an 'any' type
 ```
 
 **Impact**: Faible - Types peuvent être inférés
@@ -197,16 +220,16 @@ useEffect(() => {
 
 ## 📊 Statistique Finale
 
-| Catégorie | Avant | Après | Statut |
-|-----------|-------|-------|--------|
-| **Erreurs TypeScript critiques** | 19 | 0 | ✅ CORRIGÉ |
-| **Warnings ESLint (unused vars)** | 32 | 32 | ⚠️ Non-bloquant |
-| **Warnings ESLint (unescaped entities)** | 28 | 28 | ⚠️ Non-bloquant |
-| **Warnings ESLint (any types)** | 11 | 11 | ⚠️ Non-bloquant |
-| **Warnings ESLint (React hooks)** | 2 | 2 | ⚠️ Non-bloquant |
-| **Warnings ESLint (implicit any)** | 7 | 7 | ⚠️ Non-bloquant |
-| **TOTAL ERRORS** | 19 | 0 | ✅ **100% CORRIGÉ** |
-| **TOTAL WARNINGS** | 80 | 80 | ⚠️ Non-prioritaire |
+| Catégorie                                | Avant | Après | Statut              |
+| ---------------------------------------- | ----- | ----- | ------------------- |
+| **Erreurs TypeScript critiques**         | 19    | 0     | ✅ CORRIGÉ          |
+| **Warnings ESLint (unused vars)**        | 32    | 32    | ⚠️ Non-bloquant     |
+| **Warnings ESLint (unescaped entities)** | 28    | 28    | ⚠️ Non-bloquant     |
+| **Warnings ESLint (any types)**          | 11    | 11    | ⚠️ Non-bloquant     |
+| **Warnings ESLint (React hooks)**        | 2     | 2     | ⚠️ Non-bloquant     |
+| **Warnings ESLint (implicit any)**       | 7     | 7     | ⚠️ Non-bloquant     |
+| **TOTAL ERRORS**                         | 19    | 0     | ✅ **100% CORRIGÉ** |
+| **TOTAL WARNINGS**                       | 80    | 80    | ⚠️ Non-prioritaire  |
 
 ---
 
@@ -215,7 +238,6 @@ useEffect(() => {
 1. **43325bc** - "fix: resolve TypeScript errors - Prisma imports, Factory type, and any types"
    - Corrections des types Factory
    - Suppression des `any` dans process-actions.ts
-   
 2. **e0a3646** - "fix: replace Prisma namespace imports with custom JsonValue type"
    - Remplacement de `Prisma.InputJsonValue` par `JsonValue`
    - Suppression de l'import `Prisma` problématique
@@ -225,15 +247,18 @@ useEffect(() => {
 ## 🔨 Prochaines Étapes Recommandées
 
 ### Priorité HAUTE (Si besoin)
+
 - ✅ Toutes les erreurs critiques sont corrigées
 - ✅ Le build Netlify devrait passer sans erreur
 
 ### Priorité MOYENNE (Refactorisation future)
+
 1. Nettoyer les imports/variables non utilisés (32 warnings)
 2. Ajouter les types manquants dans `factories/[id]/analysis/page.tsx`
 3. Corriger les dépendances React Hooks
 
 ### Priorité BASSE (Qualité du code)
+
 1. Échapper les apostrophes dans JSX (28 warnings)
 2. Remplacer les `any` par des types spécifiques (11 warnings)
 3. Nettoyer les commentaires et la documentation
@@ -243,16 +268,19 @@ useEffect(() => {
 ## 📝 Notes Techniques
 
 ### Pourquoi Prisma.InputJsonValue ne fonctionne pas?
+
 - Le namespace `Prisma` n'est pas toujours exporté par `@prisma/client`
 - Problème de version ou de configuration du Prisma Client
 - Solution: Type personnalisé `JsonValue` qui est compatible avec Prisma
 
 ### Pourquoi ne pas corriger tous les warnings?
+
 - Les warnings ESLint ne bloquent pas la compilation
 - Focus sur les erreurs TypeScript critiques (bloquent Netlify)
 - Les warnings peuvent être corrigés progressivement lors de la maintenance
 
 ### État du Build
+
 - ✅ **TypeScript**: Aucune erreur bloquante
 - ✅ **ESLint**: Warnings uniquement (non-bloquants)
 - ✅ **Netlify**: Devrait builder sans erreur

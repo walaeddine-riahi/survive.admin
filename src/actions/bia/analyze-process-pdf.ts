@@ -74,30 +74,30 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
     // Import dynamique de pdfjs-dist
     const pdfjs = await getPDFJS();
-    
+
     // Convertir le Buffer en Uint8Array
     const uint8Array = new Uint8Array(buffer);
-    
+
     // Charger le document PDF
     const loadingTask = pdfjs.getDocument({ data: uint8Array });
     const pdfDocument = await loadingTask.promise;
-    
+
     let fullText = "";
-    
+
     // Extraire le texte de chaque page
     for (let pageNum = 1; pageNum <= pdfDocument.numPages; pageNum++) {
       const page = await pdfDocument.getPage(pageNum);
       const textContent = await page.getTextContent();
-      
+
       // Combiner tous les items de texte
       // TextItem a la propriété str, TextMarkedContent n'en a pas
       const pageText = textContent.items
-        .map((item) => ('str' in item ? item.str : ''))
+        .map((item) => ("str" in item ? item.str : ""))
         .join(" ");
-      
+
       fullText += pageText + "\n";
     }
-    
+
     return fullText.trim();
   } catch (error) {
     console.error("Erreur lors de l'extraction du texte du PDF:", error);

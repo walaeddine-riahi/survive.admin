@@ -15,7 +15,7 @@ import { Check, X } from "lucide-react";
 
 type EditableCellProps = {
   value: string | number | boolean | null | undefined;
-  onChange: (value: any) => void;
+  onChange: (value: string | number | boolean | null) => void;
   type?: "text" | "number" | "textarea" | "select" | "boolean";
   options?: Array<{ value: string; label: string }>;
   placeholder?: string;
