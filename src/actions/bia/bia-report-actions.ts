@@ -1,11 +1,13 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import crypto from "crypto";
+
+// Type alias pour JSON values Prisma
+type JsonValue = string | number | boolean | null | { [key: string]: JsonValue } | JsonValue[];
 
 // Types pour les rapports BIA
 export interface BiaReportData {
@@ -55,13 +57,13 @@ export async function createBiaReport(data: BiaReportData) {
         continuityLevelText: data.continuityLevelText,
         riskCount: data.riskCount,
         recommendationCount: data.recommendationCount,
-        reportData: data.reportData as Prisma.InputJsonValue,
+        reportData: data.reportData as JsonValue,
         content: data.content || "",
         fileName: data.fileName,
         filePath: data.filePath,
         fileSize: data.fileSize,
         mimeType: data.mimeType,
-        generationParams: data.generationParams as Prisma.InputJsonValue,
+        generationParams: data.generationParams as JsonValue,
         includedProcessIds: data.includedProcessIds,
         isPublic: data.isPublic || false,
         tags: data.tags || [],
@@ -262,13 +264,13 @@ export async function updateBiaReport(
         continuityLevelText: updates.continuityLevelText,
         riskCount: updates.riskCount,
         recommendationCount: updates.recommendationCount,
-        reportData: updates.reportData as Prisma.InputJsonValue,
+        reportData: updates.reportData as JsonValue,
         content: updates.content,
         fileName: updates.fileName,
         filePath: updates.filePath,
         fileSize: updates.fileSize,
         mimeType: updates.mimeType,
-        generationParams: updates.generationParams as Prisma.InputJsonValue,
+        generationParams: updates.generationParams as JsonValue,
         includedProcessIds: updates.includedProcessIds,
         isPublic: updates.isPublic,
         tags: updates.tags,
@@ -722,7 +724,7 @@ export async function createBiaReportFromProcess(
         continuityLevelText,
         riskCount,
         recommendationCount,
-        reportData: reportData as Prisma.InputJsonValue,
+        reportData: reportData as JsonValue,
         content: "", // Sera généré plus tard si nécessaire
         fileName: `${process.name.replace(/\s+/g, "_")}_BIA_Report.html`,
         filePath: null,
@@ -731,7 +733,7 @@ export async function createBiaReportFromProcess(
         generationParams: {
           processId: process.id,
           generatedAt: new Date().toISOString(),
-        } as Prisma.InputJsonValue,
+        } as JsonValue,
         includedProcessIds: [process.id],
         isPublic: false,
         tags: [
