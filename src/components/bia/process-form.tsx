@@ -2259,8 +2259,8 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
                       d&apos;urgence
                     </li>
                     <li>
-                      • Réviser régulièrement l&apos;actualité et la pertinence des
-                      documents
+                      • Réviser régulièrement l&apos;actualité et la pertinence
+                      des documents
                     </li>
                   </ul>
                 </div>

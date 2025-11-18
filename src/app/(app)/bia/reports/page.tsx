@@ -3,6 +3,9 @@ import { getAllBiaReports } from "@/actions/bia/bia-report-actions";
 import { BiaReportsPageClient } from "./page-client";
 import { prisma } from "@/lib/prisma";
 
+// Force dynamic rendering since we use headers in getAllBiaReports
+export const dynamic = "force-dynamic";
+
 export default async function BiaReportsPage() {
   const result = await getAllBiaReports({ limit: 50 });
 
