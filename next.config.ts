@@ -26,18 +26,34 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   webpack: (config, { isServer }) => {
-    // Exclure canvas du bundle client (native bindings incompatibles avec le navigateur)
-    // canvas est une dépendance optionnelle de pdfjs-dist utilisée uniquement côté serveur
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        canvas: false,
-      };
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        canvas: false,
-      };
+    // Exclure canvas du bundle (native bindings incompatibles)
+    // canvas est une dépendance optionnelle de pdfjs-dist
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      canvas: false,
+    };
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      canvas: false,
+    };
+    
+    // Externaliser canvas côté serveur pour Netlify
+    if (isServer) {
+      // Marquer canvas comme externe pour éviter de le bundler
+      const externals = [...(config.externals || [])];
+      config.externals = [
+        ...externals,
+        'canvas',
+        { canvas: 'canvas' }
+      ];
     }
+    
+    // Ignorer les erreurs de résolution pour canvas
+    config.ignoreWarnings = [
+      ...(config.ignoreWarnings || []),
+      { module: /node_modules\/canvas/ },
+    ];
+    
     return config;
   },
 };
