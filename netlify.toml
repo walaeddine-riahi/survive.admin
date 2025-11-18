@@ -1,0 +1,18 @@
+[build]
+  command = "pnpm install && pnpm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "21"
+  NPM_FLAGS = "--legacy-peer-deps"
+  NODE_OPTIONS = "--max-old-space-size=4096"
+  SKIP_PREFLIGHT_CHECK = "true"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Redirect rules for Next.js
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
