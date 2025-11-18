@@ -17,7 +17,7 @@ type Props = {
   factories?: Array<{ id: string; name: string; code: string }>;
 };
 
-export function ProcessFormSpreadsheetSimple({ }: Props) {
+export function ProcessFormSpreadsheetSimple({}: Props) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 

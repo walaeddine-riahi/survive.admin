@@ -245,7 +245,9 @@ export function ProcessFormComplete({
                     <TableRow label="Nom du processus" required>
                       <EditableCell
                         value={form.watch("name")}
-                        onChange={(val) => form.setValue("name", val)}
+                        onChange={(val) =>
+                          form.setValue("name", String(val ?? ""))
+                        }
                         placeholder="Ex: Production de la ligne A"
                         required
                       />
@@ -253,7 +255,12 @@ export function ProcessFormComplete({
                     <TableRow label="Description">
                       <EditableCell
                         value={form.watch("description")}
-                        onChange={(val) => form.setValue("description", val)}
+                        onChange={(val) =>
+                          form.setValue(
+                            "description",
+                            val === null ? undefined : String(val ?? "")
+                          )
+                        }
                         type="textarea"
                         placeholder="Description détaillée..."
                       />
@@ -264,7 +271,9 @@ export function ProcessFormComplete({
                     >
                       <EditableCell
                         value={form.watch("department")}
-                        onChange={(val) => form.setValue("department", val)}
+                        onChange={(val) =>
+                          form.setValue("department", String(val ?? ""))
+                        }
                         placeholder="Ex: Production"
                         required
                       />
@@ -272,7 +281,9 @@ export function ProcessFormComplete({
                     <TableRow label="Localisation" required>
                       <EditableCell
                         value={form.watch("location")}
-                        onChange={(val) => form.setValue("location", val)}
+                        onChange={(val) =>
+                          form.setValue("location", String(val ?? ""))
+                        }
                         placeholder="Ex: Usine Alger"
                         required
                       />
@@ -281,7 +292,12 @@ export function ProcessFormComplete({
                       <TableRow label="Usine">
                         <EditableCell
                           value={form.watch("factoryId")}
-                          onChange={(val) => form.setValue("factoryId", val)}
+                          onChange={(val) =>
+                            form.setValue(
+                              "factoryId",
+                              val === null ? undefined : String(val ?? "")
+                            )
+                          }
                           type="select"
                           options={factories.map((f) => ({
                             value: f.id,

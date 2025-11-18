@@ -52,7 +52,7 @@ export function EditableCell({
   }, [isEditing]);
 
   const handleSave = () => {
-    onChange(tempValue);
+    onChange(tempValue ?? null);
     setIsEditing(false);
   };
 

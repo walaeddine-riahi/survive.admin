@@ -28,6 +28,7 @@ function section(title) {
 }
 
 // Données de test
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const testReport = {
   name: `Test Analyse BIA - ${new Date().toLocaleTimeString("fr-FR")}`,
   description: "Rapport de test pour validation de l'analyse IA",

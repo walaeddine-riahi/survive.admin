@@ -319,6 +319,7 @@ async function testLocalAnalysis(reportData) {
 }
 
 // Fonction pour tester l'analyse IA via l'API
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function testAIAnalysis(reportId) {
   logSection("🧠 TEST: Analyse IA (Gemini)");
 
@@ -431,6 +432,7 @@ async function testAIAnalysis(reportId) {
 }
 
 // Fonction pour tester la sauvegarde d'une analyse
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function testSaveAnalysis(reportId, analysisData) {
   logSection("💾 TEST: Sauvegarde de l'analyse");
 
@@ -469,6 +471,7 @@ async function testSaveAnalysis(reportId, analysisData) {
 }
 
 // Fonction pour tester la récupération d'une analyse
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function testGetAnalysis(reportId) {
   logSection("📥 TEST: Récupération de l'analyse");
 

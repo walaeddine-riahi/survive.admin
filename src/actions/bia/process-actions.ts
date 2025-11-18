@@ -240,40 +240,9 @@ type ProcessInput = {
   documentationsCritiques?: DocumentationCritique[];
 };
 
-// Type pour un processus
-type Process = {
-  id: string;
-  name: string;
-  description: string | null;
-  department: string;
-  location: string;
-  impact: string;
-  criticality: "low" | "medium" | "high" | "critical";
-  rto: number;
-  mtpd: number;
-  rpo: number;
-  mbco: string;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-// Type pour le client Prisma avec le modèle Process
-interface PrismaProcessClient {
-  create: (args: { data: ProcessInput }) => Promise<Process>;
-  update: (args: {
-    where: { id: string };
-    data: ProcessInput;
-  }) => Promise<Process>;
-  delete: (args: { where: { id: string } }) => Promise<Process>;
-  findUnique: (args: { where: { id: string } }) => Promise<Process | null>;
-  findMany: (args?: {
-    orderBy?: { name: "asc" | "desc" };
-  }) => Promise<Process[]>;
-}
-
-// Fonction utilitaire pour accéder au modèle Process
+// Fonction utilitaire pour accéder au modèle Process (remove type assertion to fix compatibility)
 function getProcessModel() {
-  return prisma.process as PrismaProcessClient;
+  return prisma.process;
 }
 
 export async function createProcess(data: ProcessInput) {

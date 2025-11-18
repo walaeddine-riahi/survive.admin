@@ -539,8 +539,8 @@ export function ProcessFormSpreadsheet({
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          <strong>💡 Astuce :</strong> Cliquez sur n'importe quelle cellule pour
-          l'éditer. Utilisez{" "}
+          <strong>💡 Astuce :</strong> Cliquez sur n&apos;importe quelle cellule
+          pour l&apos;éditer. Utilisez{" "}
           <kbd className="px-2 py-1 text-xs bg-muted rounded">Tab</kbd> pour
           passer à la suivante,
           <kbd className="px-2 py-1 text-xs bg-muted rounded">Enter</kbd> pour
@@ -579,7 +579,9 @@ export function ProcessFormSpreadsheet({
                     <TableRow label="Nom du processus" required>
                       <EditableCell
                         value={form.watch("name")}
-                        onChange={(val) => form.setValue("name", val)}
+                        onChange={(val) =>
+                          form.setValue("name", String(val ?? ""))
+                        }
                         placeholder="Ex: Production de la ligne A"
                         required
                       />
@@ -587,7 +589,9 @@ export function ProcessFormSpreadsheet({
                     <TableRow label="Description">
                       <EditableCell
                         value={form.watch("description")}
-                        onChange={(val) => form.setValue("description", val)}
+                        onChange={(val) =>
+                          form.setValue("description", String(val ?? ""))
+                        }
                         type="textarea"
                         placeholder="Description détaillée du processus..."
                       />
@@ -595,7 +599,9 @@ export function ProcessFormSpreadsheet({
                     <TableRow label="Département" required>
                       <EditableCell
                         value={form.watch("department")}
-                        onChange={(val) => form.setValue("department", val)}
+                        onChange={(val) =>
+                          form.setValue("department", String(val ?? ""))
+                        }
                         placeholder="Ex: Production"
                         required
                       />
@@ -603,7 +609,9 @@ export function ProcessFormSpreadsheet({
                     <TableRow label="Localisation" required>
                       <EditableCell
                         value={form.watch("location")}
-                        onChange={(val) => form.setValue("location", val)}
+                        onChange={(val) =>
+                          form.setValue("location", String(val ?? ""))
+                        }
                         placeholder="Ex: Usine Alger"
                         required
                       />
@@ -612,7 +620,9 @@ export function ProcessFormSpreadsheet({
                       <TableRow label="Usine">
                         <EditableCell
                           value={form.watch("factoryId")}
-                          onChange={(val) => form.setValue("factoryId", val)}
+                          onChange={(val) =>
+                            form.setValue("factoryId", String(val ?? ""))
+                          }
                           type="select"
                           options={factories.map((f) => ({
                             value: f.id,
@@ -659,28 +669,36 @@ export function ProcessFormSpreadsheet({
                     <TableRow label="Nom du responsable">
                       <EditableCell
                         value={form.watch("processOwner")}
-                        onChange={(val) => form.setValue("processOwner", val)}
+                        onChange={(val) =>
+                          form.setValue("processOwner", String(val ?? ""))
+                        }
                         placeholder="Ex: Ahmed Benali"
                       />
                     </TableRow>
                     <TableRow label="Rôle / Fonction">
                       <EditableCell
                         value={form.watch("ownerRole")}
-                        onChange={(val) => form.setValue("ownerRole", val)}
+                        onChange={(val) =>
+                          form.setValue("ownerRole", String(val ?? ""))
+                        }
                         placeholder="Ex: Chef de production"
                       />
                     </TableRow>
                     <TableRow label="Email">
                       <EditableCell
                         value={form.watch("ownerEmail")}
-                        onChange={(val) => form.setValue("ownerEmail", val)}
+                        onChange={(val) =>
+                          form.setValue("ownerEmail", String(val ?? ""))
+                        }
                         placeholder="ex: ahmed.benali@company.com"
                       />
                     </TableRow>
                     <TableRow label="Téléphone">
                       <EditableCell
                         value={form.watch("ownerPhone")}
-                        onChange={(val) => form.setValue("ownerPhone", val)}
+                        onChange={(val) =>
+                          form.setValue("ownerPhone", String(val ?? ""))
+                        }
                         placeholder="Ex: +213 555 123 456"
                       />
                     </TableRow>
@@ -721,7 +739,9 @@ export function ProcessFormSpreadsheet({
                     <TableRow label="Impact" required>
                       <EditableCell
                         value={form.watch("impact")}
-                        onChange={(val) => form.setValue("impact", val)}
+                        onChange={(val) =>
+                          form.setValue("impact", String(val ?? ""))
+                        }
                         type="textarea"
                         placeholder="Décrivez l'impact de la défaillance de ce processus..."
                         required
@@ -731,6 +751,7 @@ export function ProcessFormSpreadsheet({
                       <EditableCell
                         value={form.watch("criticality")}
                         onChange={(val) =>
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
                           form.setValue("criticality", val as any)
                         }
                         type="select"
@@ -789,7 +810,9 @@ export function ProcessFormSpreadsheet({
                     >
                       <EditableCell
                         value={form.watch("mbco")}
-                        onChange={(val) => form.setValue("mbco", val)}
+                        onChange={(val) =>
+                          form.setValue("mbco", String(val ?? ""))
+                        }
                         placeholder="Ex: 50% de la capacité nominale"
                         required
                       />
@@ -831,7 +854,9 @@ export function ProcessFormSpreadsheet({
                     <TableRow label="Périodes critiques">
                       <EditableCell
                         value={form.watch("criticalTimes")}
-                        onChange={(val) => form.setValue("criticalTimes", val)}
+                        onChange={(val) =>
+                          form.setValue("criticalTimes", String(val ?? ""))
+                        }
                         type="textarea"
                         placeholder="Ex: Fin de mois, haute saison..."
                       />
@@ -840,7 +865,7 @@ export function ProcessFormSpreadsheet({
                       <EditableCell
                         value={form.watch("financialImpact")}
                         onChange={(val) =>
-                          form.setValue("financialImpact", val)
+                          form.setValue("financialImpact", String(val ?? ""))
                         }
                         type="textarea"
                         placeholder="Pertes de revenus, coûts de récupération, pénalités..."
@@ -850,7 +875,7 @@ export function ProcessFormSpreadsheet({
                       <EditableCell
                         value={form.watch("operationalImpact")}
                         onChange={(val) =>
-                          form.setValue("operationalImpact", val)
+                          form.setValue("operationalImpact", String(val ?? ""))
                         }
                         type="textarea"
                         placeholder="Arrêts, ralentissements, dysfonctionnements..."
@@ -860,7 +885,7 @@ export function ProcessFormSpreadsheet({
                       <EditableCell
                         value={form.watch("reputationImpact")}
                         onChange={(val) =>
-                          form.setValue("reputationImpact", val)
+                          form.setValue("reputationImpact", String(val ?? ""))
                         }
                         type="textarea"
                         placeholder="Image de marque, confiance clients, médias..."
@@ -870,7 +895,10 @@ export function ProcessFormSpreadsheet({
                       <EditableCell
                         value={form.watch("operationalCapacityImpact")}
                         onChange={(val) =>
-                          form.setValue("operationalCapacityImpact", val)
+                          form.setValue(
+                            "operationalCapacityImpact",
+                            String(val ?? "")
+                          )
                         }
                         type="textarea"
                         placeholder="Impact sur les délais, SLA, capacité de production..."
@@ -914,7 +942,7 @@ export function ProcessFormSpreadsheet({
                       <EditableCell
                         value={form.watch("mainFunctionality")}
                         onChange={(val) =>
-                          form.setValue("mainFunctionality", val)
+                          form.setValue("mainFunctionality", String(val ?? ""))
                         }
                         type="textarea"
                         placeholder="Quel est l'objectif principal de ce processus ?"
@@ -924,7 +952,10 @@ export function ProcessFormSpreadsheet({
                       <EditableCell
                         value={form.watch("productDependencies")}
                         onChange={(val) =>
-                          form.setValue("productDependencies", val)
+                          form.setValue(
+                            "productDependencies",
+                            String(val ?? "")
+                          )
                         }
                         type="textarea"
                         placeholder="Quels produits/services dépendent de ce processus ? Format: Produit | Type de dépendance (séparez par des lignes)"
@@ -934,7 +965,10 @@ export function ProcessFormSpreadsheet({
                       <EditableCell
                         value={form.watch("interServiceDependencies")}
                         onChange={(val) =>
-                          form.setValue("interServiceDependencies", val)
+                          form.setValue(
+                            "interServiceDependencies",
+                            String(val ?? "")
+                          )
                         }
                         type="textarea"
                         placeholder="Quels départements/fonctions doivent soutenir ce processus ? Format: Département | Type de soutien (séparez par des lignes)"
@@ -1047,7 +1081,7 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `activitesCritiques.${index}.nom`,
-                                    val
+                                    String(val ?? "")
                                   )
                                 }
                                 placeholder="Nom de l'activité"
@@ -1062,6 +1096,7 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `activitesCritiques.${index}.criticite`,
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                     val as any
                                   )
                                 }
@@ -1126,7 +1161,7 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `activitesCritiques.${index}.impactsOperationnels`,
-                                    val
+                                    String(val ?? "")
                                   )
                                 }
                                 placeholder="Impacts..."
@@ -1140,7 +1175,7 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `activitesCritiques.${index}.solutionsContournement`,
-                                    val
+                                    String(val ?? "")
                                   )
                                 }
                                 placeholder="Solutions..."
@@ -1216,8 +1251,8 @@ export function ProcessFormSpreadsheet({
                 {fournisseursFields.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <p>
-                      Aucun fournisseur externe. Cliquez sur "Ajouter" pour
-                      commencer.
+                      Aucun fournisseur externe. Cliquez sur &quot;Ajouter&quot;
+                      pour commencer.
                     </p>
                   </div>
                 ) : (
@@ -1278,7 +1313,7 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `fournisseursExternes.${index}.nom`,
-                                    val
+                                    String(val ?? "")
                                   )
                                 }
                                 placeholder="Nom du fournisseur"
@@ -1293,7 +1328,7 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `fournisseursExternes.${index}.servicesOfferts`,
-                                    val
+                                    String(val ?? "")
                                   )
                                 }
                                 placeholder="Services..."
@@ -1307,7 +1342,7 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `fournisseursExternes.${index}.contactNom`,
-                                    val
+                                    String(val ?? "")
                                   )
                                 }
                                 placeholder="Nom contact"
@@ -1321,7 +1356,7 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `fournisseursExternes.${index}.contactTelephone`,
-                                    val
+                                    String(val ?? "")
                                   )
                                 }
                                 placeholder="Téléphone"
@@ -1335,7 +1370,7 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `fournisseursExternes.${index}.contactEmail`,
-                                    val
+                                    String(val ?? "")
                                   )
                                 }
                                 placeholder="Email"
@@ -1349,7 +1384,7 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `fournisseursExternes.${index}.zoneGeographique`,
-                                    val
+                                    String(val ?? "")
                                   )
                                 }
                                 placeholder="Zone..."
@@ -1529,7 +1564,7 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `systemesInformatiques.${index}.nom`,
-                                    val
+                                    String(val ?? "")
                                   )
                                 }
                                 placeholder="Système"
@@ -1543,7 +1578,7 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `systemesInformatiques.${index}.typeSysteme`,
-                                    val
+                                    String(val ?? "")
                                   )
                                 }
                                 placeholder="ERP..."
@@ -1716,7 +1751,7 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `infrastructuresPhysiques.${index}.nom`,
-                                    val
+                                    String(val ?? "")
                                   )
                                 }
                                 placeholder="Nom infrastructure"
@@ -1730,7 +1765,8 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `infrastructuresPhysiques.${index}.categorie`,
-                                    val
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                    String(val ?? "") as any
                                   )
                                 }
                                 placeholder="Bâtiment, Réseau..."
@@ -1890,7 +1926,7 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `rolesPersonnel.${index}.intituleRole`,
-                                    val
+                                    String(val ?? "")
                                   )
                                 }
                                 placeholder="Rôle"
@@ -1920,7 +1956,7 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `rolesPersonnel.${index}.tachesResponsabilites`,
-                                    val
+                                    String(val ?? "")
                                   )
                                 }
                                 type="textarea"
@@ -1935,7 +1971,7 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `rolesPersonnel.${index}.competencesRequises`,
-                                    val
+                                    String(val ?? "")
                                   )
                                 }
                                 type="textarea"
@@ -2061,7 +2097,7 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `equipementsIndustriels.${index}.designation`,
-                                    val
+                                    String(val ?? "")
                                   )
                                 }
                                 placeholder="Équipement"
@@ -2075,7 +2111,7 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `equipementsIndustriels.${index}.modeleReference`,
-                                    val
+                                    String(val ?? "")
                                   )
                                 }
                                 placeholder="Modèle"
@@ -2234,7 +2270,7 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `equipementsBureautiques.${index}.type`,
-                                    val
+                                    String(val ?? "")
                                   )
                                 }
                                 placeholder="PC, Imprimante..."
@@ -2411,7 +2447,7 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `documentationsCritiques.${index}.type`,
-                                    val
+                                    String(val ?? "")
                                   )
                                 }
                                 placeholder="Type doc"
@@ -2425,7 +2461,8 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `documentationsCritiques.${index}.format`,
-                                    val
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                    String(val ?? "") as any
                                   )
                                 }
                                 placeholder="Papier, PDF..."
@@ -2439,7 +2476,7 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `documentationsCritiques.${index}.emplacementPrincipal`,
-                                    val
+                                    String(val ?? "")
                                   )
                                 }
                                 placeholder="Emplacement"
@@ -2583,7 +2620,7 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `obligationsLegales.${index}.nature`,
-                                    val
+                                    String(val ?? "")
                                   )
                                 }
                                 placeholder="Ex: Norme ISO..."
@@ -2597,7 +2634,7 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `obligationsLegales.${index}.reference`,
-                                    val
+                                    String(val ?? "")
                                   )
                                 }
                                 placeholder="Référence"
@@ -2611,7 +2648,7 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `obligationsLegales.${index}.autoriteRegulation`,
-                                    val
+                                    String(val ?? "")
                                   )
                                 }
                                 placeholder="Organisme"
@@ -2625,7 +2662,7 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `obligationsLegales.${index}.details`,
-                                    val
+                                    String(val ?? "")
                                   )
                                 }
                                 type="textarea"
@@ -2640,7 +2677,7 @@ export function ProcessFormSpreadsheet({
                                 onChange={(val) =>
                                   form.setValue(
                                     `obligationsLegales.${index}.consequencesNonRespect`,
-                                    val
+                                    String(val ?? "")
                                   )
                                 }
                                 type="textarea"

@@ -117,8 +117,10 @@ async function getFactoryAnalysis(id: string) {
   const avgRto =
     factory.processes.length > 0
       ? Math.round(
-          factory.processes.reduce((sum: number, p: { rto: number }) => sum + p.rto, 0) /
-            factory.processes.length
+          factory.processes.reduce(
+            (sum: number, p: { rto: number }) => sum + p.rto,
+            0
+          ) / factory.processes.length
         )
       : 0;
 
@@ -321,31 +323,33 @@ export default async function FactoryAnalysisPage({ params }: Props) {
             </p>
           ) : (
             <div className="space-y-2">
-              {factory.processes.map((process: {
-                id: string;
-                name: string;
-                department: string;
-                rto: number;
-                mtpd: number;
-                criticality: string;
-              }) => (
-                <Link
-                  key={process.id}
-                  href={`/bia/processes/${process.id}`}
-                  className="block p-4 rounded-lg border hover:bg-accent transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="font-medium">{process.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {process.department} • RTO: {process.rto}h • MTPD:{" "}
-                        {process.mtpd}h
+              {factory.processes.map(
+                (process: {
+                  id: string;
+                  name: string;
+                  department: string;
+                  rto: number;
+                  mtpd: number;
+                  criticality: string;
+                }) => (
+                  <Link
+                    key={process.id}
+                    href={`/bia/processes/${process.id}`}
+                    className="block p-4 rounded-lg border hover:bg-accent transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="font-medium">{process.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {process.department} • RTO: {process.rto}h • MTPD:{" "}
+                          {process.mtpd}h
+                        </div>
                       </div>
+                      {getCriticalityBadge(process.criticality)}
                     </div>
-                    {getCriticalityBadge(process.criticality)}
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                )
+              )}
             </div>
           )}
         </CardContent>
@@ -364,15 +368,13 @@ export default async function FactoryAnalysisPage({ params }: Props) {
             <FactoryAddReportDialog
               factoryId={factory.id}
               factoryName={factory.name}
-              factoryProcesses={factory.processes.map((p: {
-                id: string;
-                name: string;
-                criticality: string;
-              }) => ({
-                id: p.id,
-                name: p.name,
-                criticality: p.criticality,
-              }))}
+              factoryProcesses={factory.processes.map(
+                (p: { id: string; name: string; criticality: string }) => ({
+                  id: p.id,
+                  name: p.name,
+                  criticality: p.criticality,
+                })
+              )}
             />
           </div>
         </CardHeader>
@@ -383,35 +385,41 @@ export default async function FactoryAnalysisPage({ params }: Props) {
             </p>
           ) : (
             <div className="space-y-2">
-              {factory.biaReports.map((report: {
-                id: string;
-                name: string;
-                totalProcesses: number;
-                createdAt: Date;
-              }) => (
-                <div
-                  key={report.id}
-                  className="p-4 rounded-lg border hover:bg-accent transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="font-medium">{report.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {report.totalProcesses} processus • Créé le{" "}
-                        {new Date(report.createdAt).toLocaleDateString("fr-FR")}
+              {factory.biaReports.map(
+                (report: {
+                  id: string;
+                  name: string;
+                  status: string;
+                  totalProcesses: number;
+                  continuityLevel: number | null;
+                  createdAt: Date;
+                }) => (
+                  <div
+                    key={report.id}
+                    className="p-4 rounded-lg border hover:bg-accent transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="font-medium">{report.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {report.totalProcesses} processus • Créé le{" "}
+                          {new Date(report.createdAt).toLocaleDateString(
+                            "fr-FR"
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">{report.status}</Badge>
+                        {report.continuityLevel && (
+                          <div className="text-sm text-muted-foreground">
+                            {report.continuityLevel}%
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">{report.status}</Badge>
-                      {report.continuityLevel && (
-                        <div className="text-sm text-muted-foreground">
-                          {report.continuityLevel}%
-                        </div>
-                      )}
-                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              )}
             </div>
           )}
         </CardContent>
