@@ -4,6 +4,25 @@ import * as z from "zod";
 // Schémas pour les éléments multiples (JSON)
 // ============================================
 
+// Impact de perturbation
+export const impactSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  level: z.enum(["low", "medium", "high"]),
+  hasImpact: z.boolean(),
+  description: z.string(),
+});
+
+// Dépendance
+export const dependencySchema = z.object({
+  id: z.string(),
+  processName: z.string(),
+  department: z.string(),
+  supportType: z.string(),
+  reason: z.string(),
+  dependencyType: z.string(),
+});
+
 // 1. Activités Critiques
 export const activiteCritiqueSchema = z.object({
   nom: z.string().min(1, "Le nom de l'activité est requis"),
@@ -27,6 +46,7 @@ export const fournisseurExterneSchema = z.object({
   contactTelephone: z.string().optional(),
   contactEmail: z.string().email("Email invalide").optional().or(z.literal("")),
   zoneGeographique: z.string().optional(),
+  isUniqueSupplier: z.boolean().optional(),
   planContinuiteActivite: z.enum(["oui", "non"]),
   clauseSLA: z.enum(["oui", "non"]),
   rto: z.coerce.number().min(0),
@@ -35,7 +55,8 @@ export const fournisseurExterneSchema = z.object({
 
 // 3. Obligations Légales
 export const obligationLegaleSchema = z.object({
-  nature: z.string().min(1, "La nature de l'obligation est requise"),
+  domaine: z.string().min(1, "Le domaine de l'obligation est requis"),
+  obligationLegale: z.string().min(1, "L'obligation légale est requise"),
   reference: z.string().optional(),
   autoriteRegulation: z.string().optional(),
   details: z.string().optional(),
@@ -54,6 +75,7 @@ export const systemeInformatiqueSchema = z.object({
   rpo: z.coerce.number().min(0),
   mtpd: z.coerce.number().min(0),
   solutionsContournement: z.string().optional(),
+  solutionRepli: z.string().optional(),
   incidentsAnterieurs: z.string().optional(),
 });
 
@@ -72,18 +94,18 @@ export const infrastructurePhysiqueSchema = z.object({
   mtpd: z.coerce.number().min(0),
   possibiliteTravailDistance: z.enum(["oui", "non"]),
   alternativesDisponibles: z.string().optional(),
+  solutionRepli: z.string().optional(),
 });
 
 // 6. Rôles et Personnel
 export const rolePersonnelSchema = z.object({
-  intituleRole: z.string().min(1, "L'intitulé du rôle est requis"),
-  nombrePersonnes: z.coerce.number().min(1),
+  role: z.string().min(1, "Le rôle est requis"),
+  effectif: z.coerce.number().min(1),
   tachesResponsabilites: z.string().optional(),
-  competencesRequises: z.string().optional(),
-  estCritique: z.enum(["oui", "non"]),
+  competenceUnique: z.enum(["oui", "non"]),
   delaiDisponibiliteNecessaire: z.string().optional(),
-  possibiliteRemplacement: z.enum(["oui", "non"]),
-  personneRemplacante: z.string().optional(),
+  remplacable: z.enum(["oui", "non"]),
+  remplacePar: z.string().optional(),
   formationNecessaire: z.enum(["oui", "non"]),
   dureeFormation: z.string().optional(),
   solutionsContournement: z.string().optional(),
@@ -99,6 +121,7 @@ export const equipementIndustrielSchema = z.object({
   mtpd: z.coerce.number().min(0),
   possibiliteReaffectation: z.enum(["oui", "non"]),
   solutionsContournement: z.string().optional(),
+  solutionRepli: z.string().optional(),
   // Caractéristiques énergétiques
   tension: z.string().optional(),
   typeCourant: z.string().optional(),
@@ -120,6 +143,7 @@ export const equipementBureautiqueSchema = z.object({
   possibiliteReaffectation: z.enum(["oui", "non"]),
   fournisseur: z.string().optional(),
   solutionsContournement: z.string().optional(),
+  solutionRepli: z.string().optional(),
 });
 
 // 9. Documentation Critique
@@ -133,6 +157,7 @@ export const documentationCritiqueSchema = z.object({
   criticite: z.enum(["low", "medium", "high", "critical"]),
   modalitesAcces: z.string().optional(),
   possibiliteRemplacement: z.enum(["oui", "non"]),
+  solutionRepli: z.string().optional(),
   procedureRecuperation: z.string().optional(),
   responsable: z.string().optional(),
   notes: z.string().optional(),
@@ -157,6 +182,20 @@ export const processFormSchemaEnhanced = z.object({
   ownerEmail: z.string().email("Email invalide").optional().or(z.literal("")),
   ownerPhone: z.string().optional(),
 
+  // Responsables intérimaires (JSON array)
+  interimManagers: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        role: z.string(),
+        email: z.string(),
+        phone: z.string(),
+        isActive: z.boolean(),
+      })
+    )
+    .optional(),
+
   // ===== 2. Criticité et métriques (en UPPERCASE pour Prisma) =====
   criticality: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
   rto: z.coerce.number().min(0, "RTO doit être positif"),
@@ -167,6 +206,11 @@ export const processFormSchemaEnhanced = z.object({
   // ===== 3. Impact =====
   impact: z.string().min(1, "L'impact est requis"),
   criticalTimes: z.string().optional(),
+
+  // Nouveaux impacts structurés
+  impacts: z.array(impactSchema).optional(),
+
+  // Anciens champs (deprecated mais gardés pour compatibilité)
   financialImpact: z.string().optional(),
   operationalImpact: z.string().optional(),
   reputationImpact: z.string().optional(),
@@ -176,6 +220,9 @@ export const processFormSchemaEnhanced = z.object({
   mainFunctionality: z.string().optional(),
   productDependencies: z.string().optional(),
   interServiceDependencies: z.string().optional(),
+
+  // Nouvelles dépendances structurées
+  dependencies: z.array(dependencySchema).optional(),
 
   // ===== 5. Arrays JSON multi-éléments (NOUVEAUX) =====
   activitesCritiques: z.array(activiteCritiqueSchema).optional(),
@@ -274,6 +321,7 @@ export const processFormSchemaEnhanced = z.object({
   providedService: z.string().optional(),
   supplierDetails: z.string().optional(),
   supplierCriticality: z.string().optional(),
+  isUniqueSupplier: z.boolean().optional(),
   hasAlternativeSupplier: z.boolean().optional(),
 });
 

@@ -42,6 +42,35 @@ type ProcessInput = {
   ownerEmail?: string | null;
   ownerPhone?: string | null;
 
+  // Responsables intérimaires (JSON array)
+  interimManagers?: Array<{
+    id: string;
+    name: string;
+    role: string;
+    email: string;
+    phone: string;
+    isActive: boolean;
+  }>;
+
+  // Impacts structurés (JSON array)
+  impacts?: Array<{
+    id: string;
+    type: string;
+    level: "low" | "medium" | "high";
+    hasImpact: boolean;
+    description: string;
+  }>;
+
+  // Dépendances structurées (JSON array)
+  dependencies?: Array<{
+    id: string;
+    processName: string;
+    department: string;
+    supportType: string;
+    reason: string;
+    dependencyType: string;
+  }>;
+
   // Relations
   responsibles?: Array<{
     id?: string;
@@ -55,13 +84,6 @@ type ProcessInput = {
     id?: string;
     name: string;
     description?: string | null;
-  }>;
-
-  impacts?: Array<{
-    id?: string;
-    type: string;
-    description: string;
-    level: string;
   }>;
 
   applications?: Array<{
@@ -222,6 +244,7 @@ type ProcessInput = {
   providedService?: string | null;
   supplierDetails?: string | null;
   supplierCriticality?: string | null;
+  isUniqueSupplier?: boolean;
   hasAlternativeSupplier?: boolean;
   supplierHasContinuityPlan?: boolean;
 
@@ -272,6 +295,11 @@ export async function createProcess(data: ProcessInput) {
       ownerRole: data.ownerRole || null,
       ownerEmail: data.ownerEmail || null,
       ownerPhone: data.ownerPhone || null,
+
+      // Responsables intérimaires (JSON)
+      interimManagers: data.interimManagers?.length
+        ? JSON.stringify(data.interimManagers)
+        : null,
 
       // Factory relation (si fourni)
       ...(data.factoryId && {
@@ -399,6 +427,7 @@ export async function createProcess(data: ProcessInput) {
       providedService: data.providedService,
       supplierDetails: data.supplierDetails,
       supplierCriticality: data.supplierCriticality,
+      isUniqueSupplier: data.isUniqueSupplier,
 
       // ============================================
       // NOUVEAUX CHAMPS JSON (9 multi-éléments)
@@ -564,8 +593,20 @@ export async function updateProcess(id: string, data: ProcessInput) {
       providedService: data.providedService,
       supplierDetails: data.supplierDetails,
       supplierCriticality: data.supplierCriticality,
+      isUniqueSupplier: data.isUniqueSupplier,
       hasAlternativeSupplier: data.hasAlternativeSupplier,
       supplierHasContinuityPlan: data.supplierHasContinuityPlan,
+
+      // ============================================
+      // CHAMPS RESPONSABLE DU PROCESSUS
+      // ============================================
+      processOwner: data.processOwner || null,
+      ownerRole: data.ownerRole || null,
+      ownerEmail: data.ownerEmail || null,
+      ownerPhone: data.ownerPhone || null,
+      interimManagers: data.interimManagers?.length
+        ? JSON.stringify(data.interimManagers)
+        : null,
 
       // ============================================
       // NOUVEAUX CHAMPS JSON (9 multi-éléments)

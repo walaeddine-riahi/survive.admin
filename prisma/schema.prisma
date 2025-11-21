@@ -511,6 +511,9 @@ model Process {
   ownerEmail                       String?         // Email du responsable
   ownerPhone                       String?         // Téléphone du responsable
   
+  // Responsables intérimaires (plusieurs possibles)
+  interimManagers                  Json?           // Array d'objets: { name, role, email, phone, isActive }
+  
   // Métriques BIA
   rto                              Int             // Recovery Time Objective (en heures)
   mtpd                             Int             // Maximum Tolerable Period of Disruption (en heures)

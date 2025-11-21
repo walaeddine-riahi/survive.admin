@@ -5,7 +5,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import * as React from "react";
 import { useState, useEffect } from "react";
-import { useForm, Control, SubmitHandler } from "react-hook-form";
+import {
+  useForm,
+  Control,
+  SubmitHandler,
+  useFieldArray,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -43,12 +48,42 @@ import {
   AlertCircle,
   CheckCircle2,
   Sparkles,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { analyzeProcessPdf } from "@/actions/bia/analyze-process-pdf";
 import type { ExtractedProcessData } from "@/actions/bia/analyze-process-pdf";
 import { toast } from "sonner";
+
+// Type pour un responsable intérimaire
+export interface InterimManager {
+  name: string;
+  role: string;
+  email: string;
+  phone: string;
+  isActive: boolean;
+}
+
+// Type pour un impact
+export interface ImpactItem {
+  id: string;
+  type: string;
+  level: "low" | "medium" | "high";
+  hasImpact: boolean;
+  description: string;
+}
+
+// Type pour une dépendance
+export interface DependencyItem {
+  id: string;
+  processName: string;
+  department: string;
+  supportType: string;
+  reason: string;
+  dependencyType: string;
+}
 
 // Définition du type Process pour éviter la dépendance à @prisma/client
 export interface Process {
@@ -61,6 +96,15 @@ export interface Process {
   manager: string;
   criticalTimes?: string | null;
 
+  // Responsable principal
+  processOwner?: string | null;
+  ownerRole?: string | null;
+  ownerEmail?: string | null;
+  ownerPhone?: string | null;
+
+  // Responsables intérimaires
+  interimManagers?: InterimManager[] | null;
+
   // Métriques de reprise d'activité
   impact: string;
   criticality: "low" | "medium" | "high" | "critical";
@@ -69,11 +113,17 @@ export interface Process {
   rpo: number;
   mbco: string;
 
-  // Impacts de perturbation
+  // Impacts de perturbation (nouveau format)
+  impacts?: ImpactItem[] | null;
+
+  // Anciens champs d'impact (deprecated, gardés pour compatibilité)
   financialImpact?: string | null;
   operationalImpact?: string | null;
   reputationImpact?: string | null;
   operationalCapacityImpact?: string | null;
+
+  // Dépendances (nouveau format)
+  dependencies?: DependencyItem[] | null;
 
   // Périmètre et Dépendances
   mainFunctionality?: string | null;
@@ -183,13 +233,44 @@ const processFormSchema = z.object({
   department: z.string().min(1, { message: "Le département est requis" }),
   location: z.string().min(1, { message: "La localisation est requise" }),
 
+  // Responsable principal
+  processOwner: z.string().optional(),
+  ownerRole: z.string().optional(),
+  ownerEmail: z.string().email().optional().or(z.literal("")),
+  ownerPhone: z.string().optional(),
+
   // 2. Activités et dépendances
   mainFunctionality: z.string().optional(),
   productDependencies: z.string().optional(),
   interServiceDependencies: z.string().optional(),
   criticalTimes: z.string().optional(),
 
+  // Dépendances structurées
+  dependencies: z
+    .array(
+      z.object({
+        id: z.string(),
+        processName: z.string(),
+        department: z.string(),
+        supportType: z.string(),
+        reason: z.string(),
+        dependencyType: z.string(),
+      })
+    )
+    .optional(),
+
   // 3. Impacts de perturbation
+  impacts: z
+    .array(
+      z.object({
+        id: z.string(),
+        type: z.string(),
+        level: z.enum(["low", "medium", "high"]),
+        hasImpact: z.boolean(),
+        description: z.string(),
+      })
+    )
+    .optional(),
   financialImpact: z.string().optional(),
   operationalImpact: z.string().optional(),
   reputationImpact: z.string().optional(),
@@ -326,7 +407,20 @@ type ProcessFormValues = {
   manager: string;
   criticalTimes?: string;
 
-  // Impacts de perturbation
+  // Responsable principal
+  processOwner?: string;
+  ownerRole?: string;
+  ownerEmail?: string;
+  ownerPhone?: string;
+
+  // Responsables intérimaires
+  interimManagers?: InterimManager[];
+
+  // Dépendances (nouveau format)
+  dependencies?: DependencyItem[];
+
+  // Impacts de perturbation (nouveau format)
+  impacts?: ImpactItem[];
   financialImpact?: string;
   operationalImpact?: string;
   reputationImpact?: string;
@@ -380,6 +474,21 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
     for (const [key, value] of Object.entries(data)) {
       sanitized[key] = value === null ? undefined : value;
     }
+
+    // Mapper les responsables provenant de l'API (si présents) vers interimManagers
+    const maybeResponsibles = (data as any)?.responsibles;
+    if (Array.isArray(maybeResponsibles) && maybeResponsibles.length) {
+      sanitized.interimManagers = maybeResponsibles.map(
+        (r: any, i: number) => ({
+          id: r.id || String(Date.now() + i),
+          name: r.name || "",
+          role: r.role || "",
+          email: r.email || "",
+          phone: r.phone || "",
+          isActive: true,
+        })
+      );
+    }
     return sanitized;
   };
 
@@ -392,7 +501,81 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
     manager: "",
     criticalTimes: "",
 
-    // Impacts de perturbation
+    // Responsable principal
+    processOwner: "",
+    ownerRole: "",
+    ownerEmail: "",
+    ownerPhone: "",
+
+    // Responsables intérimaires
+    interimManagers: [],
+
+    // Dépendances (nouveau format)
+    dependencies: [
+      {
+        id: "1",
+        processName: "",
+        department: "",
+        supportType: "",
+        reason: "",
+        dependencyType: "",
+      },
+      {
+        id: "2",
+        processName: "",
+        department: "",
+        supportType: "",
+        reason: "",
+        dependencyType: "",
+      },
+      {
+        id: "3",
+        processName: "",
+        department: "",
+        supportType: "",
+        reason: "",
+        dependencyType: "",
+      },
+    ],
+
+    // Impacts de perturbation (nouveau format)
+    impacts: [
+      {
+        id: "1",
+        type: "Financier",
+        level: "medium",
+        hasImpact: false,
+        description: "",
+      },
+      {
+        id: "2",
+        type: "Opérationnel",
+        level: "medium",
+        hasImpact: false,
+        description: "",
+      },
+      {
+        id: "3",
+        type: "Réputation",
+        level: "medium",
+        hasImpact: false,
+        description: "",
+      },
+      {
+        id: "4",
+        type: "Légal/Réglementaire",
+        level: "medium",
+        hasImpact: false,
+        description: "",
+      },
+      {
+        id: "5",
+        type: "Sécurité",
+        level: "medium",
+        hasImpact: false,
+        description: "",
+      },
+    ],
     financialImpact: "",
     operationalImpact: "",
     reputationImpact: "",
@@ -491,15 +674,38 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
       ...defaultValues,
       ...sanitizeInitialData(initialData),
     }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [initialData]
   );
 
   const form = useForm<ProcessFormValues>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(processFormSchema) as any,
     defaultValues: mergedDefaults,
     mode: "onChange",
   });
+
+  // Field array pour les responsables intérimaires
+  const {
+    fields: interimFields,
+    append: appendInterim,
+    remove: removeInterim,
+  } = useFieldArray({ control: form.control, name: "interimManagers" });
+
+  // Field array pour les dépendances
+  const {
+    fields: dependencyFields,
+    append: appendDependency,
+    remove: removeDependency,
+    update: updateDependency,
+  } = useFieldArray({ control: form.control, name: "dependencies" });
+
+  // Field array pour les impacts
+  const {
+    fields: impactFields,
+    append: appendImpact,
+    remove: removeImpact,
+    update: updateImpact,
+  } = useFieldArray({ control: form.control, name: "impacts" });
 
   // Forcer le typage pour les contrôles du formulaire
   const typedControl = form.control as unknown as Control<ProcessFormValues>;
@@ -579,6 +785,23 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
         mtpd: data.mtpd || 0,
         rpo: data.rpo || 0,
         mbco: data.mbco,
+
+        // Responsable principal
+        processOwner: data.processOwner || null,
+        ownerRole: data.ownerRole || null,
+        ownerEmail: data.ownerEmail || null,
+        ownerPhone: data.ownerPhone || null,
+
+        // Responsables (créés à partir des responsables intérimaires)
+        responsibles:
+          data.interimManagers && data.interimManagers.length
+            ? data.interimManagers.map((m) => ({
+                name: String(m.name || ""),
+                role: String(m.role || ""),
+                phone: m.phone || null,
+                email: m.email || null,
+              }))
+            : undefined,
 
         // Impacts de perturbation
         financialImpact: data.financialImpact || null,
@@ -1145,26 +1368,6 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
 
               <FormField
                 control={typedControl}
-                name="rpo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      RPO - Recovery Point Objective (minutes)
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="Perte de données maximale acceptable"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={typedControl}
                 name="mbco"
                 render={({ field }) => (
                   <FormItem>
@@ -1182,6 +1385,256 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
                 )}
               />
 
+              <FormField
+                control={typedControl}
+                name="criticalTimes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Périodes critiques</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Décrivez les périodes critiques d'activité (ex: fin de mois, saison haute...)"
+                        className="min-h-[80px]"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* SECTION IMPACTS DE LA PERTURBATION */}
+            <div className="space-y-4 col-span-2 border-t pt-6 mt-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">
+                  Impacts de la Perturbation
+                </h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    appendImpact({
+                      id: String(Date.now()),
+                      type: "",
+                      level: "medium",
+                      hasImpact: false,
+                      description: "",
+                    })
+                  }
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Ajouter un impact
+                </Button>
+              </div>
+              <div className="space-y-4">
+                <div className="grid grid-cols-12 gap-2 font-medium text-sm border-b pb-2">
+                  <div className="col-span-3">Type d&apos;impact</div>
+                  <div className="col-span-2">Niveau</div>
+                  <div className="col-span-2">Impact?</div>
+                  <div className="col-span-4">Description/Justification</div>
+                  <div className="col-span-1"></div>
+                </div>
+                {impactFields.map((field, index) => (
+                  <div
+                    key={field.id}
+                    className="grid grid-cols-12 gap-2 items-start"
+                  >
+                    <div className="col-span-3">
+                      <Input
+                        value={field.type}
+                        onChange={(e) => {
+                          const updated = { ...field, type: e.target.value };
+                          updateImpact(index, updated);
+                        }}
+                        placeholder="Type d'impact"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Select
+                        value={field.level}
+                        onValueChange={(value: "low" | "medium" | "high") => {
+                          const updated = { ...field, level: value };
+                          updateImpact(index, updated);
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Bas</SelectItem>
+                          <SelectItem value="medium">Moyen</SelectItem>
+                          <SelectItem value="high">Haut</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-2 flex items-center justify-center">
+                      <input
+                        type="checkbox"
+                        checked={field.hasImpact}
+                        onChange={(e) => {
+                          const updated = {
+                            ...field,
+                            hasImpact: e.target.checked,
+                          };
+                          updateImpact(index, updated);
+                        }}
+                        className="h-4 w-4"
+                        aria-label="A un impact"
+                      />
+                    </div>
+                    <div className="col-span-4">
+                      <Textarea
+                        value={field.description}
+                        onChange={(e) => {
+                          const updated = {
+                            ...field,
+                            description: e.target.value,
+                          };
+                          updateImpact(index, updated);
+                        }}
+                        placeholder="Description..."
+                        className="min-h-[60px]"
+                      />
+                    </div>
+                    <div className="col-span-1 flex items-center justify-center">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeImpact(index)}
+                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* SECTION DÉPENDANCES */}
+            <div className="space-y-4 col-span-2 border-t pt-6 mt-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Dépendances</h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    appendDependency({
+                      id: String(Date.now()),
+                      processName: "",
+                      department: "",
+                      supportType: "",
+                      reason: "",
+                      dependencyType: "",
+                    })
+                  }
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Ajouter une dépendance
+                </Button>
+              </div>
+              <div className="space-y-4">
+                <div className="grid grid-cols-12 gap-2 font-medium text-sm border-b pb-2">
+                  <div className="col-span-2">Processus dépendant</div>
+                  <div className="col-span-2">Département/Fonction</div>
+                  <div className="col-span-2">Type de soutien</div>
+                  <div className="col-span-2">Pourquoi cette dépendance?</div>
+                  <div className="col-span-3">Type de dépendance (détail)</div>
+                  <div className="col-span-1"></div>
+                </div>
+                {dependencyFields.map((field, index) => (
+                  <div
+                    key={field.id}
+                    className="grid grid-cols-12 gap-2 items-start"
+                  >
+                    <div className="col-span-2">
+                      <Input
+                        value={field.processName}
+                        onChange={(e) => {
+                          const updated = {
+                            ...field,
+                            processName: e.target.value,
+                          };
+                          updateDependency(index, updated);
+                        }}
+                        placeholder="Nom du processus"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Input
+                        value={field.department}
+                        onChange={(e) => {
+                          const updated = {
+                            ...field,
+                            department: e.target.value,
+                          };
+                          updateDependency(index, updated);
+                        }}
+                        placeholder="Département"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Input
+                        value={field.supportType}
+                        onChange={(e) => {
+                          const updated = {
+                            ...field,
+                            supportType: e.target.value,
+                          };
+                          updateDependency(index, updated);
+                        }}
+                        placeholder="Type de soutien"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Textarea
+                        value={field.reason}
+                        onChange={(e) => {
+                          const updated = {
+                            ...field,
+                            reason: e.target.value,
+                          };
+                          updateDependency(index, updated);
+                        }}
+                        placeholder="Raison..."
+                        className="min-h-[60px]"
+                      />
+                    </div>
+                    <div className="col-span-3">
+                      <Textarea
+                        value={field.dependencyType}
+                        onChange={(e) => {
+                          const updated = {
+                            ...field,
+                            dependencyType: e.target.value,
+                          };
+                          updateDependency(index, updated);
+                        }}
+                        placeholder="Détail du type..."
+                        className="min-h-[60px]"
+                      />
+                    </div>
+                    <div className="col-span-1 flex items-center justify-center">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeDependency(index)}
+                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4 col-span-2">
               <FormField
                 control={typedControl}
                 name="impact"
@@ -1238,6 +1691,188 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
                   </FormItem>
                 )}
               />
+
+              {/* Responsable principal et responsables intérimaires */}
+              <div className="col-span-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={typedControl}
+                    name="processOwner"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Responsable principal (nom)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Nom complet" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={typedControl}
+                    name="ownerRole"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Rôle / Fonction</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Rôle" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={typedControl}
+                    name="ownerEmail"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email du responsable</FormLabel>
+                        <FormControl>
+                          <Input placeholder="email@exemple.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={typedControl}
+                    name="ownerPhone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Téléphone</FormLabel>
+                        <FormControl>
+                          <Input placeholder="+216 00 000 000" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="mt-4">
+                  <h4 className="mb-2 font-medium">
+                    Responsables intérimaires
+                  </h4>
+                  <div className="space-y-3">
+                    {interimFields.map((item, index) => (
+                      <div
+                        key={item.id}
+                        className="grid grid-cols-1 md:grid-cols-6 gap-2 items-end"
+                      >
+                        <FormField
+                          control={typedControl}
+                          name={`interimManagers.${index}.name`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Nom</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Nom complet" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={typedControl}
+                          name={`interimManagers.${index}.role`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Rôle</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Rôle" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={typedControl}
+                          name={`interimManagers.${index}.email`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="email@exemple.com"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={typedControl}
+                          name={`interimManagers.${index}.phone`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Téléphone</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Téléphone" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={typedControl}
+                          name={`interimManagers.${index}.isActive`}
+                          render={({ field }) => (
+                            <FormItem className="flex items-center gap-2">
+                              <FormControl>
+                                <Checkbox
+                                  checked={Boolean(field.value)}
+                                  onCheckedChange={(v) =>
+                                    field.onChange(Boolean(v))
+                                  }
+                                />
+                              </FormControl>
+                              <div>
+                                <FormLabel className="mb-0">Actif</FormLabel>
+                                <FormMessage />
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="col-span-1">
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            type="button"
+                            onClick={() => removeInterim(index)}
+                          >
+                            Supprimer
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+
+                    <Button
+                      type="button"
+                      onClick={() =>
+                        appendInterim({
+                          id: String(Date.now()),
+                          name: "",
+                          role: "",
+                          email: "",
+                          phone: "",
+                          isActive: true,
+                        })
+                      }
+                    >
+                      Ajouter un responsable intérimaire
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
           </TabsContent>
 
@@ -2574,6 +3209,27 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
                     )}
                   />
                 </div>
+
+                <FormField
+                  control={typedControl}
+                  name="isUniqueSupplier"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Fournisseur unique</FormLabel>
+                        <FormDescription>
+                          Ce processus dépend-il d&apos;un seul fournisseur ?
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
 
                 <FormField
                   control={typedControl}

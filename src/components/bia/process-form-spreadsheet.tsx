@@ -72,6 +72,7 @@ export function ProcessFormSpreadsheet({
     responsable: true,
     criticite: true,
     impacts: true,
+    dependencies: true,
     scope: true,
     activitesCritiques: false,
     fournisseursExternes: false,
@@ -98,6 +99,7 @@ export function ProcessFormSpreadsheet({
       ownerRole: initialData?.ownerRole || "Responsable Production",
       ownerEmail: initialData?.ownerEmail || "ahmed.bensalem@entreprise.com",
       ownerPhone: initialData?.ownerPhone || "+216 71 234 567",
+      interimManagers: initialData?.interimManagers || [],
       impact:
         initialData?.impact ||
         "Arrêt complet de la production, perte de revenus de 50 000 DT/jour",
@@ -109,6 +111,75 @@ export function ProcessFormSpreadsheet({
       criticalTimes:
         initialData?.criticalTimes ||
         "Fin de mois (clôture comptable)\nHaute saison (Juin-Septembre)\nPériode de Ramadan",
+
+      // Nouveaux impacts structurés
+      impacts: initialData?.impacts || [
+        {
+          id: "1",
+          type: "Financier",
+          level: "medium" as const,
+          hasImpact: false,
+          description: "",
+        },
+        {
+          id: "2",
+          type: "Opérationnel",
+          level: "medium" as const,
+          hasImpact: false,
+          description: "",
+        },
+        {
+          id: "3",
+          type: "Réputation",
+          level: "medium" as const,
+          hasImpact: false,
+          description: "",
+        },
+        {
+          id: "4",
+          type: "Légal/Réglementaire",
+          level: "medium" as const,
+          hasImpact: false,
+          description: "",
+        },
+        {
+          id: "5",
+          type: "Sécurité",
+          level: "medium" as const,
+          hasImpact: false,
+          description: "",
+        },
+      ],
+
+      // Nouvelles dépendances structurées
+      dependencies: initialData?.dependencies || [
+        {
+          id: "1",
+          processName: "",
+          department: "",
+          supportType: "",
+          reason: "",
+          dependencyType: "",
+        },
+        {
+          id: "2",
+          processName: "",
+          department: "",
+          supportType: "",
+          reason: "",
+          dependencyType: "",
+        },
+        {
+          id: "3",
+          processName: "",
+          department: "",
+          supportType: "",
+          reason: "",
+          dependencyType: "",
+        },
+      ],
+
+      // Anciens champs (deprecated)
       financialImpact:
         initialData?.financialImpact ||
         "Perte de chiffre d'affaires: 50 000 DT/jour\nPénalités contractuelles: 10 000 DT/jour\nCoûts de récupération: 20 000 DT",
@@ -180,6 +251,7 @@ export function ProcessFormSpreadsheet({
           contactTelephone: "+216 71 123 456",
           contactEmail: "contact@pharmachem.tn",
           zoneGeographique: "Tunisie - Sousse",
+          isUniqueSupplier: false,
           rto: 24,
           mtpd: 48,
           planContinuiteActivite: "oui" as const,
@@ -192,15 +264,18 @@ export function ProcessFormSpreadsheet({
           contactTelephone: "+216 71 987 654",
           contactEmail: "s.benali@packtech.com",
           zoneGeographique: "Tunisie - Tunis",
+          isUniqueSupplier: false,
           rto: 48,
           mtpd: 96,
           planContinuiteActivite: "non" as const,
           clauseSLA: "oui" as const,
         },
       ],
-      obligationsLegales: initialData?.obligationsLegales || [
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      obligationsLegales: (initialData as any)?.obligationsLegales || [
         {
-          nature: "Bonnes Pratiques de Fabrication (GMP)",
+          domaine: "Santé - Production Pharmaceutique",
+          obligationLegale: "Bonnes Pratiques de Fabrication (GMP)",
           reference: "Directive 2003/94/CE",
           autoriteRegulation:
             "Ministère de la Santé - Direction de la Pharmacie",
@@ -210,7 +285,8 @@ export function ProcessFormSpreadsheet({
             "Suspension de l'autorisation de production\nAmendes: 50 000 - 500 000 DT\nRetrait produits du marché",
         },
         {
-          nature: "ISO 9001:2015",
+          domaine: "Qualité",
+          obligationLegale: "ISO 9001:2015",
           reference: "ISO 9001:2015",
           autoriteRegulation: "INNORPI",
           details: "Système de management de la qualité certifié",
@@ -268,33 +344,30 @@ export function ProcessFormSpreadsheet({
             "Système de climatisation redondant\nProcédure arrêt production si température > 25°C",
         },
       ],
-      rolesPersonnel: initialData?.rolesPersonnel || [
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      rolesPersonnel: (initialData as any)?.rolesPersonnel || [
         {
-          intituleRole: "Opérateur de production ligne A",
-          nombrePersonnes: 8,
+          role: "Opérateur de production ligne A",
+          effectif: 8,
           tachesResponsabilites:
             "Conduite ligne production\nContrôles en cours\nEnregistrement données",
-          competencesRequises:
-            "Formation GMP\nHabilitation machines\nConnaissances produits",
-          estCritique: "oui" as const,
+          competenceUnique: "non" as const,
           delaiDisponibiliteNecessaire: "Immédiat (équipes 3x8)",
-          possibiliteRemplacement: "oui" as const,
-          personneRemplacante: "Opérateurs formés des lignes B et C",
+          remplacable: "oui" as const,
+          remplacePar: "Opérateurs formés des lignes B et C",
           formationNecessaire: "oui" as const,
           dureeFormation: "2 semaines formation + 1 mois tutorat",
           solutionsContournement: "Polyvalence opérateurs autres lignes",
         },
         {
-          intituleRole: "Technicien maintenance",
-          nombrePersonnes: 3,
+          role: "Technicien maintenance",
+          effectif: 3,
           tachesResponsabilites:
             "Maintenance préventive\nDépannage\nRéglages machines",
-          competencesRequises:
-            "Électromécanique\nAutomatisme\nConnaissance équipements",
-          estCritique: "oui" as const,
+          competenceUnique: "oui" as const,
           delaiDisponibiliteNecessaire: "Moins de 2 heures",
-          possibiliteRemplacement: "oui" as const,
-          personneRemplacante: "Techniciens équipe centrale",
+          remplacable: "oui" as const,
+          remplacePar: "Techniciens équipe centrale",
           formationNecessaire: "oui" as const,
           dureeFormation: "3 mois",
           solutionsContournement: "Appel technicien astreinte",
@@ -399,6 +472,26 @@ export function ProcessFormSpreadsheet({
   });
 
   // Field arrays pour les multi-éléments
+  const {
+    fields: interimFields,
+    append: appendInterim,
+    remove: removeInterim,
+  } = useFieldArray({ control: form.control, name: "interimManagers" });
+
+  const {
+    fields: impactFields,
+    append: appendImpact,
+    remove: removeImpact,
+    update: updateImpact,
+  } = useFieldArray({ control: form.control, name: "impacts" });
+
+  const {
+    fields: dependencyFields,
+    append: appendDependency,
+    remove: removeDependency,
+    update: updateDependency,
+  } = useFieldArray({ control: form.control, name: "dependencies" });
+
   const {
     fields: activitesFields,
     append: appendActivite,
@@ -657,7 +750,9 @@ export function ProcessFormSpreadsheet({
                     <CardTitle className="text-lg">
                       2. Responsable du Processus
                     </CardTitle>
-                    <Badge variant="secondary">4 champs</Badge>
+                    <Badge variant="secondary">
+                      {4 + interimFields.length} champs
+                    </Badge>
                   </div>
                 </div>
               </CardHeader>
@@ -704,6 +799,143 @@ export function ProcessFormSpreadsheet({
                     </TableRow>
                   </tbody>
                 </table>
+
+                {/* Responsables intérimaires */}
+                <div className="mt-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-sm">
+                      Responsables Intérimaires
+                    </h4>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        appendInterim({
+                          id: String(Date.now()),
+                          name: "",
+                          role: "",
+                          email: "",
+                          phone: "",
+                          isActive: true,
+                        })
+                      }
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Ajouter un responsable intérimaire
+                    </Button>
+                  </div>
+
+                  {interimFields.length > 0 && (
+                    <div className="space-y-3">
+                      {interimFields.map((field, index) => (
+                        <Card key={field.id} className="p-4 bg-slate-50/50">
+                          <div className="flex items-start gap-4">
+                            <div className="flex-1 space-y-3">
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="text-xs font-medium">
+                                    Nom
+                                  </label>
+                                  <EditableCell
+                                    value={form.watch(
+                                      `interimManagers.${index}.name`
+                                    )}
+                                    onChange={(val) =>
+                                      form.setValue(
+                                        `interimManagers.${index}.name`,
+                                        String(val ?? "")
+                                      )
+                                    }
+                                    placeholder="Nom complet"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-xs font-medium">
+                                    Rôle
+                                  </label>
+                                  <EditableCell
+                                    value={form.watch(
+                                      `interimManagers.${index}.role`
+                                    )}
+                                    onChange={(val) =>
+                                      form.setValue(
+                                        `interimManagers.${index}.role`,
+                                        String(val ?? "")
+                                      )
+                                    }
+                                    placeholder="Fonction"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-xs font-medium">
+                                    Email
+                                  </label>
+                                  <EditableCell
+                                    value={form.watch(
+                                      `interimManagers.${index}.email`
+                                    )}
+                                    onChange={(val) =>
+                                      form.setValue(
+                                        `interimManagers.${index}.email`,
+                                        String(val ?? "")
+                                      )
+                                    }
+                                    placeholder="email@exemple.com"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-xs font-medium">
+                                    Téléphone
+                                  </label>
+                                  <EditableCell
+                                    value={form.watch(
+                                      `interimManagers.${index}.phone`
+                                    )}
+                                    onChange={(val) =>
+                                      form.setValue(
+                                        `interimManagers.${index}.phone`,
+                                        String(val ?? "")
+                                      )
+                                    }
+                                    placeholder="+216 00 000 000"
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={form.watch(
+                                    `interimManagers.${index}.isActive`
+                                  )}
+                                  onChange={(e) =>
+                                    form.setValue(
+                                      `interimManagers.${index}.isActive`,
+                                      e.target.checked
+                                    )
+                                  }
+                                  className="rounded"
+                                  aria-label="Responsable actif"
+                                />
+                                <label className="text-xs">
+                                  Responsable actif
+                                </label>
+                              </div>
+                            </div>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => removeInterim(index)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </CollapsibleContent>
           </Card>
@@ -789,21 +1021,6 @@ export function ProcessFormSpreadsheet({
                         </span>
                       </div>
                     </TableRow>
-                    <TableRow label="RPO (Recovery Point Objective)" required>
-                      <div className="flex items-center gap-2">
-                        <EditableCell
-                          value={form.watch("rpo")}
-                          onChange={(val) => form.setValue("rpo", Number(val))}
-                          type="number"
-                          min={0}
-                          placeholder="0"
-                          required
-                        />
-                        <span className="text-sm text-muted-foreground">
-                          heures
-                        </span>
-                      </div>
-                    </TableRow>
                     <TableRow
                       label="MBCO (Minimum Business Continuity Objective)"
                       required
@@ -815,6 +1032,16 @@ export function ProcessFormSpreadsheet({
                         }
                         placeholder="Ex: 50% de la capacité nominale"
                         required
+                      />
+                    </TableRow>
+                    <TableRow label="Périodes critiques">
+                      <EditableCell
+                        value={form.watch("criticalTimes")}
+                        onChange={(val) =>
+                          form.setValue("criticalTimes", String(val ?? ""))
+                        }
+                        placeholder="Ex: fin de mois, saison haute, période fiscale..."
+                        type="textarea"
                       />
                     </TableRow>
                   </tbody>
@@ -842,140 +1069,269 @@ export function ProcessFormSpreadsheet({
                     <CardTitle className="text-lg">
                       2. Impacts de la Perturbation 💥
                     </CardTitle>
-                    <Badge variant="secondary">5 champs</Badge>
+                    <Badge variant="secondary">
+                      {impactFields.length} impacts
+                    </Badge>
                   </div>
                 </div>
               </CardHeader>
             </CollapsibleTrigger>
             <CollapsibleContent>
               <CardContent>
-                <table className="w-full border">
-                  <tbody>
-                    <TableRow label="Périodes critiques">
-                      <EditableCell
-                        value={form.watch("criticalTimes")}
-                        onChange={(val) =>
-                          form.setValue("criticalTimes", String(val ?? ""))
-                        }
-                        type="textarea"
-                        placeholder="Ex: Fin de mois, haute saison..."
-                      />
-                    </TableRow>
-                    <TableRow label="Impacts financiers">
-                      <EditableCell
-                        value={form.watch("financialImpact")}
-                        onChange={(val) =>
-                          form.setValue("financialImpact", String(val ?? ""))
-                        }
-                        type="textarea"
-                        placeholder="Pertes de revenus, coûts de récupération, pénalités..."
-                      />
-                    </TableRow>
-                    <TableRow label="Impacts opérationnels">
-                      <EditableCell
-                        value={form.watch("operationalImpact")}
-                        onChange={(val) =>
-                          form.setValue("operationalImpact", String(val ?? ""))
-                        }
-                        type="textarea"
-                        placeholder="Arrêts, ralentissements, dysfonctionnements..."
-                      />
-                    </TableRow>
-                    <TableRow label="Impacts sur la réputation">
-                      <EditableCell
-                        value={form.watch("reputationImpact")}
-                        onChange={(val) =>
-                          form.setValue("reputationImpact", String(val ?? ""))
-                        }
-                        type="textarea"
-                        placeholder="Image de marque, confiance clients, médias..."
-                      />
-                    </TableRow>
-                    <TableRow label="Retards / Capacité opérationnelle">
-                      <EditableCell
-                        value={form.watch("operationalCapacityImpact")}
-                        onChange={(val) =>
-                          form.setValue(
-                            "operationalCapacityImpact",
-                            String(val ?? "")
-                          )
-                        }
-                        type="textarea"
-                        placeholder="Impact sur les délais, SLA, capacité de production..."
-                      />
-                    </TableRow>
-                  </tbody>
-                </table>
+                <div className="space-y-4">
+                  <div className="flex justify-end mb-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        appendImpact({
+                          id: String(Date.now()),
+                          type: "",
+                          level: "medium",
+                          hasImpact: false,
+                          description: "",
+                        })
+                      }
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Ajouter un impact
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-12 gap-2 font-medium text-sm border-b pb-2">
+                    <div className="col-span-3">Type d&apos;impact</div>
+                    <div className="col-span-2">Niveau</div>
+                    <div className="col-span-2">Impact?</div>
+                    <div className="col-span-4">Description/Justification</div>
+                    <div className="col-span-1"></div>
+                  </div>
+                  {impactFields.map((field, index) => (
+                    <div
+                      key={field.id}
+                      className="grid grid-cols-12 gap-2 items-start"
+                    >
+                      <div className="col-span-3">
+                        <EditableCell
+                          value={field.type}
+                          onChange={(val) => {
+                            const updated = {
+                              ...field,
+                              type: String(val ?? ""),
+                            };
+                            updateImpact(index, updated);
+                          }}
+                          placeholder="Type d'impact"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <select
+                          value={field.level}
+                          onChange={(e) => {
+                            const updated = {
+                              ...field,
+                              level: e.target.value as
+                                | "low"
+                                | "medium"
+                                | "high",
+                            };
+                            updateImpact(index, updated);
+                          }}
+                          className="w-full p-2 border rounded"
+                          aria-label="Niveau d'impact"
+                        >
+                          <option value="low">Bas</option>
+                          <option value="medium">Moyen</option>
+                          <option value="high">Haut</option>
+                        </select>
+                      </div>
+                      <div className="col-span-2 flex items-center justify-center">
+                        <input
+                          type="checkbox"
+                          checked={field.hasImpact}
+                          onChange={(e) => {
+                            const updated = {
+                              ...field,
+                              hasImpact: e.target.checked,
+                            };
+                            updateImpact(index, updated);
+                          }}
+                          className="h-4 w-4"
+                          aria-label="A un impact"
+                        />
+                      </div>
+                      <div className="col-span-4">
+                        <EditableCell
+                          value={field.description}
+                          onChange={(val) => {
+                            const updated = {
+                              ...field,
+                              description: String(val ?? ""),
+                            };
+                            updateImpact(index, updated);
+                          }}
+                          placeholder="Description..."
+                          type="textarea"
+                        />
+                      </div>
+                      <div className="col-span-1 flex items-center justify-center">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeImpact(index)}
+                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </CollapsibleContent>
           </Card>
         </Collapsible>
 
-        {/* SECTION 3: PÉRIMÈTRE ET DÉPENDANCES */}
+        {/* SECTION 3: DÉPENDANCES */}
         <Collapsible
-          open={openSections.scope}
-          onOpenChange={() => toggleSection("scope")}
+          open={openSections.dependencies}
+          onOpenChange={() => toggleSection("dependencies")}
         >
-          <Card className="border-teal-200">
+          <Card className="border-purple-200">
             <CollapsibleTrigger className="w-full">
-              <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors bg-teal-50/30">
+              <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors bg-purple-50/30">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {openSections.scope ? (
+                    {openSections.dependencies ? (
                       <ChevronDown className="h-5 w-5" />
                     ) : (
                       <ChevronRight className="h-5 w-5" />
                     )}
-                    <CardTitle className="text-lg">
-                      3. Périmètre et Dépendances 🔗
-                    </CardTitle>
-                    <Badge variant="secondary">3 champs</Badge>
+                    <CardTitle className="text-lg">3. Dépendances 🔗</CardTitle>
+                    <Badge variant="secondary">
+                      {dependencyFields.length} dépendances
+                    </Badge>
                   </div>
                 </div>
               </CardHeader>
             </CollapsibleTrigger>
             <CollapsibleContent>
               <CardContent>
-                <table className="w-full border">
-                  <tbody>
-                    <TableRow label="Fonctionnalité principale / Objectif">
-                      <EditableCell
-                        value={form.watch("mainFunctionality")}
-                        onChange={(val) =>
-                          form.setValue("mainFunctionality", String(val ?? ""))
-                        }
-                        type="textarea"
-                        placeholder="Quel est l'objectif principal de ce processus ?"
-                      />
-                    </TableRow>
-                    <TableRow label="Dépendances Produits/Services">
-                      <EditableCell
-                        value={form.watch("productDependencies")}
-                        onChange={(val) =>
-                          form.setValue(
-                            "productDependencies",
-                            String(val ?? "")
-                          )
-                        }
-                        type="textarea"
-                        placeholder="Quels produits/services dépendent de ce processus ? Format: Produit | Type de dépendance (séparez par des lignes)"
-                      />
-                    </TableRow>
-                    <TableRow label="Dépendances Interservices">
-                      <EditableCell
-                        value={form.watch("interServiceDependencies")}
-                        onChange={(val) =>
-                          form.setValue(
-                            "interServiceDependencies",
-                            String(val ?? "")
-                          )
-                        }
-                        type="textarea"
-                        placeholder="Quels départements/fonctions doivent soutenir ce processus ? Format: Département | Type de soutien (séparez par des lignes)"
-                      />
-                    </TableRow>
-                  </tbody>
-                </table>
+                <div className="space-y-4">
+                  <div className="flex justify-end mb-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        appendDependency({
+                          id: String(Date.now()),
+                          processName: "",
+                          department: "",
+                          supportType: "",
+                          reason: "",
+                          dependencyType: "",
+                        })
+                      }
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Ajouter une dépendance
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-12 gap-2 font-medium text-sm border-b pb-2">
+                    <div className="col-span-2">Processus dépendant</div>
+                    <div className="col-span-2">Département/Fonction</div>
+                    <div className="col-span-2">Type de soutien</div>
+                    <div className="col-span-2">Pourquoi?</div>
+                    <div className="col-span-3">Type (détail)</div>
+                    <div className="col-span-1"></div>
+                  </div>
+                  {dependencyFields.map((field, index) => (
+                    <div
+                      key={field.id}
+                      className="grid grid-cols-12 gap-2 items-start"
+                    >
+                      <div className="col-span-2">
+                        <EditableCell
+                          value={field.processName}
+                          onChange={(val) => {
+                            const updated = {
+                              ...field,
+                              processName: String(val ?? ""),
+                            };
+                            updateDependency(index, updated);
+                          }}
+                          placeholder="Nom du processus"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <EditableCell
+                          value={field.department}
+                          onChange={(val) => {
+                            const updated = {
+                              ...field,
+                              department: String(val ?? ""),
+                            };
+                            updateDependency(index, updated);
+                          }}
+                          placeholder="Département"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <EditableCell
+                          value={field.supportType}
+                          onChange={(val) => {
+                            const updated = {
+                              ...field,
+                              supportType: String(val ?? ""),
+                            };
+                            updateDependency(index, updated);
+                          }}
+                          placeholder="Type de soutien"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <EditableCell
+                          value={field.reason}
+                          onChange={(val) => {
+                            const updated = {
+                              ...field,
+                              reason: String(val ?? ""),
+                            };
+                            updateDependency(index, updated);
+                          }}
+                          placeholder="Raison..."
+                          type="textarea"
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <EditableCell
+                          value={field.dependencyType}
+                          onChange={(val) => {
+                            const updated = {
+                              ...field,
+                              dependencyType: String(val ?? ""),
+                            };
+                            updateDependency(index, updated);
+                          }}
+                          placeholder="Détail du type..."
+                          type="textarea"
+                        />
+                      </div>
+                      <div className="col-span-1 flex items-center justify-center">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeDependency(index)}
+                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </CollapsibleContent>
           </Card>
@@ -1234,6 +1590,7 @@ export function ProcessFormSpreadsheet({
                       appendFournisseur({
                         nom: "",
                         servicesOfferts: "",
+                        isUniqueSupplier: false,
                         planContinuiteActivite: "non",
                         clauseSLA: "non",
                         rto: 0,
@@ -1280,6 +1637,9 @@ export function ProcessFormSpreadsheet({
                           </th>
                           <th className="px-2 py-2 text-left border-r w-32">
                             Zone Géographique
+                          </th>
+                          <th className="px-2 py-2 text-left border-r w-32">
+                            Fournisseur Unique
                           </th>
                           <th className="px-2 py-2 text-left border-r w-24">
                             RTO (h) *
@@ -1389,6 +1749,27 @@ export function ProcessFormSpreadsheet({
                                 }
                                 placeholder="Zone..."
                               />
+                            </td>
+                            <td className="px-2 py-1 border-r">
+                              <div className="flex items-center justify-center">
+                                <input
+                                  type="checkbox"
+                                  checked={
+                                    form.watch(
+                                      `fournisseursExternes.${index}.isUniqueSupplier`
+                                    ) || false
+                                  }
+                                  onChange={(e) =>
+                                    form.setValue(
+                                      `fournisseursExternes.${index}.isUniqueSupplier`,
+                                      e.target.checked
+                                    )
+                                  }
+                                  className="h-4 w-4 cursor-pointer"
+                                  title="Fournisseur unique"
+                                  aria-label="Fournisseur unique"
+                                />
+                              </div>
                             </td>
                             <td className="px-2 py-1 border-r">
                               <EditableCell
@@ -1547,6 +1928,7 @@ export function ProcessFormSpreadsheet({
                           <th className="border p-1">RTO</th>
                           <th className="border p-1">RPO</th>
                           <th className="border p-1">MTPD</th>
+                          <th className="border p-1">Solution de Repli</th>
                           <th className="border p-1">Actions</th>
                         </tr>
                       </thead>
@@ -1650,6 +2032,21 @@ export function ProcessFormSpreadsheet({
                                 type="number"
                               />
                             </td>
+                            <td className="border p-1">
+                              <EditableCell
+                                value={form.watch(
+                                  `systemesInformatiques.${index}.solutionRepli`
+                                )}
+                                onChange={(val) =>
+                                  form.setValue(
+                                    `systemesInformatiques.${index}.solutionRepli`,
+                                    String(val ?? "")
+                                  )
+                                }
+                                placeholder="Solution..."
+                                type="textarea"
+                              />
+                            </td>
                             <td className="border p-1 text-center">
                               <Button
                                 type="button"
@@ -1734,6 +2131,7 @@ export function ProcessFormSpreadsheet({
                           <th className="border p-2">Criticité</th>
                           <th className="border p-2">RTO (h)</th>
                           <th className="border p-2">MTPD (h)</th>
+                          <th className="border p-2">Solution de Repli</th>
                           <th className="border p-2">Actions</th>
                         </tr>
                       </thead>
@@ -1828,6 +2226,21 @@ export function ProcessFormSpreadsheet({
                                 type="number"
                               />
                             </td>
+                            <td className="border p-1">
+                              <EditableCell
+                                value={form.watch(
+                                  `infrastructuresPhysiques.${index}.solutionRepli`
+                                )}
+                                onChange={(val) =>
+                                  form.setValue(
+                                    `infrastructuresPhysiques.${index}.solutionRepli`,
+                                    String(val ?? "")
+                                  )
+                                }
+                                placeholder="Solution..."
+                                type="textarea"
+                              />
+                            </td>
                             <td className="border p-1 text-center">
                               <Button
                                 type="button"
@@ -1876,10 +2289,10 @@ export function ProcessFormSpreadsheet({
                     onClick={(e) => {
                       e.stopPropagation();
                       appendRole({
-                        intituleRole: "",
-                        nombrePersonnes: 0,
-                        estCritique: "non",
-                        possibiliteRemplacement: "non",
+                        role: "",
+                        effectif: 0,
+                        competenceUnique: "non",
+                        remplacable: "non",
                         formationNecessaire: "non",
                       });
                     }}
@@ -1904,11 +2317,12 @@ export function ProcessFormSpreadsheet({
                       <thead className="bg-muted">
                         <tr>
                           <th className="border p-2">#</th>
-                          <th className="border p-2">Intitulé</th>
-                          <th className="border p-2">Nombre</th>
-                          <th className="border p-2">Tâches critiques</th>
-                          <th className="border p-2">Compétences</th>
-                          <th className="border p-2">Critique?</th>
+                          <th className="border p-2">Rôle</th>
+                          <th className="border p-2">Effectif</th>
+                          <th className="border p-2">Tâches/Responsabilités</th>
+                          <th className="border p-2">Compétence Unique?</th>
+                          <th className="border p-2">Remplaçable?</th>
+                          <th className="border p-2">Remplacé par</th>
                           <th className="border p-2">Actions</th>
                         </tr>
                       </thead>
@@ -1921,11 +2335,11 @@ export function ProcessFormSpreadsheet({
                             <td className="border p-1">
                               <EditableCell
                                 value={form.watch(
-                                  `rolesPersonnel.${index}.intituleRole`
+                                  `rolesPersonnel.${index}.role`
                                 )}
                                 onChange={(val) =>
                                   form.setValue(
-                                    `rolesPersonnel.${index}.intituleRole`,
+                                    `rolesPersonnel.${index}.role`,
                                     String(val ?? "")
                                   )
                                 }
@@ -1935,13 +2349,11 @@ export function ProcessFormSpreadsheet({
                             <td className="border p-1">
                               <EditableCell
                                 value={form
-                                  .watch(
-                                    `rolesPersonnel.${index}.nombrePersonnes`
-                                  )
+                                  .watch(`rolesPersonnel.${index}.effectif`)
                                   ?.toString()}
                                 onChange={(val) =>
                                   form.setValue(
-                                    `rolesPersonnel.${index}.nombrePersonnes`,
+                                    `rolesPersonnel.${index}.effectif`,
                                     Number(val)
                                   )
                                 }
@@ -1966,26 +2378,11 @@ export function ProcessFormSpreadsheet({
                             <td className="border p-1">
                               <EditableCell
                                 value={form.watch(
-                                  `rolesPersonnel.${index}.competencesRequises`
+                                  `rolesPersonnel.${index}.competenceUnique`
                                 )}
                                 onChange={(val) =>
                                   form.setValue(
-                                    `rolesPersonnel.${index}.competencesRequises`,
-                                    String(val ?? "")
-                                  )
-                                }
-                                type="textarea"
-                                placeholder="Compétences..."
-                              />
-                            </td>
-                            <td className="border p-1">
-                              <EditableCell
-                                value={form.watch(
-                                  `rolesPersonnel.${index}.estCritique`
-                                )}
-                                onChange={(val) =>
-                                  form.setValue(
-                                    `rolesPersonnel.${index}.estCritique`,
+                                    `rolesPersonnel.${index}.competenceUnique`,
                                     val as "oui" | "non"
                                   )
                                 }
@@ -1995,6 +2392,42 @@ export function ProcessFormSpreadsheet({
                                   { value: "non", label: "Non" },
                                 ]}
                               />
+                            </td>
+                            <td className="border p-1">
+                              <EditableCell
+                                value={form.watch(
+                                  `rolesPersonnel.${index}.remplacable`
+                                )}
+                                onChange={(val) =>
+                                  form.setValue(
+                                    `rolesPersonnel.${index}.remplacable`,
+                                    val as "oui" | "non"
+                                  )
+                                }
+                                type="select"
+                                options={[
+                                  { value: "oui", label: "Oui" },
+                                  { value: "non", label: "Non" },
+                                ]}
+                              />
+                            </td>
+                            <td className="border p-1">
+                              {form.watch(
+                                `rolesPersonnel.${index}.remplacable`
+                              ) === "oui" && (
+                                <EditableCell
+                                  value={form.watch(
+                                    `rolesPersonnel.${index}.remplacePar`
+                                  )}
+                                  onChange={(val) =>
+                                    form.setValue(
+                                      `rolesPersonnel.${index}.remplacePar`,
+                                      String(val ?? "")
+                                    )
+                                  }
+                                  placeholder="Nom..."
+                                />
+                              )}
                             </td>
                             <td className="border p-1 text-center">
                               <Button
@@ -2080,6 +2513,7 @@ export function ProcessFormSpreadsheet({
                           <th className="border p-2">Criticité</th>
                           <th className="border p-2">RTO (h)</th>
                           <th className="border p-2">MTPD (h)</th>
+                          <th className="border p-2">Solution de Repli</th>
                           <th className="border p-2">Actions</th>
                         </tr>
                       </thead>
@@ -2169,6 +2603,21 @@ export function ProcessFormSpreadsheet({
                                 type="number"
                               />
                             </td>
+                            <td className="border p-1">
+                              <EditableCell
+                                value={form.watch(
+                                  `equipementsIndustriels.${index}.solutionRepli`
+                                )}
+                                onChange={(val) =>
+                                  form.setValue(
+                                    `equipementsIndustriels.${index}.solutionRepli`,
+                                    String(val ?? "")
+                                  )
+                                }
+                                placeholder="Solution..."
+                                type="textarea"
+                              />
+                            </td>
                             <td className="border p-1 text-center">
                               <Button
                                 type="button"
@@ -2250,9 +2699,11 @@ export function ProcessFormSpreadsheet({
                           <th className="border p-2">#</th>
                           <th className="border p-2">Type</th>
                           <th className="border p-2">Quantité</th>
+                          <th className="border p-2">Qté Requise en Crise</th>
                           <th className="border p-2">Criticité</th>
                           <th className="border p-2">RTO (h)</th>
                           <th className="border p-2">MTPD (h)</th>
+                          <th className="border p-2">Solution de Repli</th>
                           <th className="border p-2">Actions</th>
                         </tr>
                       </thead>
@@ -2290,6 +2741,23 @@ export function ProcessFormSpreadsheet({
                                   )
                                 }
                                 type="number"
+                              />
+                            </td>
+                            <td className="border p-1">
+                              <EditableCell
+                                value={form
+                                  .watch(
+                                    `equipementsBureautiques.${index}.quantiteRequiseApresIncident`
+                                  )
+                                  ?.toString()}
+                                onChange={(val) =>
+                                  form.setValue(
+                                    `equipementsBureautiques.${index}.quantiteRequiseApresIncident`,
+                                    Number(val)
+                                  )
+                                }
+                                type="number"
+                                placeholder="Qté crise"
                               />
                             </td>
                             <td className="border p-1">
@@ -2344,6 +2812,21 @@ export function ProcessFormSpreadsheet({
                                   )
                                 }
                                 type="number"
+                              />
+                            </td>
+                            <td className="border p-1">
+                              <EditableCell
+                                value={form.watch(
+                                  `equipementsBureautiques.${index}.solutionRepli`
+                                )}
+                                onChange={(val) =>
+                                  form.setValue(
+                                    `equipementsBureautiques.${index}.solutionRepli`,
+                                    String(val ?? "")
+                                  )
+                                }
+                                placeholder="Solution..."
+                                type="textarea"
                               />
                             </td>
                             <td className="border p-1 text-center">
@@ -2430,6 +2913,7 @@ export function ProcessFormSpreadsheet({
                           <th className="border p-2">Emplacement principal</th>
                           <th className="border p-2">Criticité</th>
                           <th className="border p-2">RTO (h)</th>
+                          <th className="border p-2">Solution de Repli</th>
                           <th className="border p-2">Actions</th>
                         </tr>
                       </thead>
@@ -2520,6 +3004,21 @@ export function ProcessFormSpreadsheet({
                                 type="number"
                               />
                             </td>
+                            <td className="border p-1">
+                              <EditableCell
+                                value={form.watch(
+                                  `documentationsCritiques.${index}.solutionRepli`
+                                )}
+                                onChange={(val) =>
+                                  form.setValue(
+                                    `documentationsCritiques.${index}.solutionRepli`,
+                                    String(val ?? "")
+                                  )
+                                }
+                                placeholder="Solution..."
+                                type="textarea"
+                              />
+                            </td>
                             <td className="border p-1 text-center">
                               <Button
                                 type="button"
@@ -2570,7 +3069,8 @@ export function ProcessFormSpreadsheet({
                     onClick={(e) => {
                       e.stopPropagation();
                       appendObligation({
-                        nature: "",
+                        domaine: "",
+                        obligationLegale: "",
                         reference: "",
                         autoriteRegulation: "",
                         details: "",
@@ -2598,7 +3098,8 @@ export function ProcessFormSpreadsheet({
                       <thead className="bg-muted">
                         <tr>
                           <th className="border p-2 w-10">#</th>
-                          <th className="border p-2">Nature</th>
+                          <th className="border p-2">Domaine</th>
+                          <th className="border p-2">Obligation Légale</th>
                           <th className="border p-2">Référence</th>
                           <th className="border p-2">Autorité</th>
                           <th className="border p-2">Détails</th>
@@ -2615,15 +3116,30 @@ export function ProcessFormSpreadsheet({
                             <td className="border p-1">
                               <EditableCell
                                 value={form.watch(
-                                  `obligationsLegales.${index}.nature`
+                                  `obligationsLegales.${index}.domaine`
                                 )}
                                 onChange={(val) =>
                                   form.setValue(
-                                    `obligationsLegales.${index}.nature`,
+                                    `obligationsLegales.${index}.domaine`,
                                     String(val ?? "")
                                   )
                                 }
-                                placeholder="Ex: Norme ISO..."
+                                placeholder="Ex: Santé, Sécurité..."
+                              />
+                            </td>
+                            <td className="border p-1">
+                              <EditableCell
+                                value={form.watch(
+                                  `obligationsLegales.${index}.obligationLegale`
+                                )}
+                                onChange={(val) =>
+                                  form.setValue(
+                                    `obligationsLegales.${index}.obligationLegale`,
+                                    String(val ?? "")
+                                  )
+                                }
+                                placeholder="Obligation..."
+                                type="textarea"
                               />
                             </td>
                             <td className="border p-1">

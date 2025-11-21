@@ -36,24 +36,20 @@ const nextConfig: NextConfig = {
       ...config.resolve.alias,
       canvas: false,
     };
-    
+
     // Externaliser canvas côté serveur pour Netlify
     if (isServer) {
       // Marquer canvas comme externe pour éviter de le bundler
       const externals = [...(config.externals || [])];
-      config.externals = [
-        ...externals,
-        'canvas',
-        { canvas: 'canvas' }
-      ];
+      config.externals = [...externals, "canvas", { canvas: "canvas" }];
     }
-    
+
     // Ignorer les erreurs de résolution pour canvas
     config.ignoreWarnings = [
       ...(config.ignoreWarnings || []),
       { module: /node_modules\/canvas/ },
     ];
-    
+
     return config;
   },
 };
