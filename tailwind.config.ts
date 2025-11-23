@@ -52,11 +52,13 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        brand: {
-          DEFAULT: "#008080",
-          light: "#00b3b3",
-          dark: "#005959",
-          accent: "#f9b233",
+        youtube: {
+          red: "hsl(var(--youtube-red))",
+          "red-dark": "hsl(var(--youtube-red-dark))",
+          "red-light": "hsl(var(--youtube-red-light))",
+          gray: "hsl(var(--youtube-gray))",
+          "gray-dark": "hsl(var(--youtube-gray-dark))",
+          blue: "hsl(var(--youtube-blue))",
         },
       },
       borderRadius: {
@@ -65,7 +67,7 @@ const config = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        sans: ["Roboto", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "monospace"],
       },
       keyframes: {

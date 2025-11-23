@@ -1,12 +1,13 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import {
   BarChart3,
   ChevronDown,
   GraduationCap,
-  LayoutDashboard,
+  Home,
   LogOut,
   PlayCircle,
   Presentation,
@@ -32,8 +33,8 @@ interface Route {
 
 const routes: Route[] = [
   {
-    title: "Dashboard",
-    icon: LayoutDashboard,
+    title: "Accueil",
+    icon: Home,
     href: "/dashboard",
   },
 
@@ -41,7 +42,7 @@ const routes: Route[] = [
   // MODULE 1: SIMULATION
   // =====================================================
   {
-    title: "🎮 Simulation",
+    title: "Simulation",
     icon: PlayCircle,
     children: [
       {
@@ -75,7 +76,7 @@ const routes: Route[] = [
   // MODULE 2: INSTRUCTEUR
   // =====================================================
   {
-    title: "🎓 Instructeur",
+    title: "Instructeur",
     icon: Presentation,
     children: [
       {
@@ -125,7 +126,7 @@ const routes: Route[] = [
   // MODULE 3: BIA (Business Impact Analysis)
   // =====================================================
   {
-    title: "📊 BIA - Analyse d'Impact",
+    title: "BIA",
     icon: BarChart3,
     children: [
       {
@@ -171,7 +172,7 @@ const routes: Route[] = [
   // MODULE 4: WORKSHOP (Formation & Développement)
   // =====================================================
   {
-    title: "📚 Workshop",
+    title: "Workshop",
     icon: GraduationCap,
     children: [
       {
@@ -201,7 +202,7 @@ const routes: Route[] = [
   // PROFIL & COMPTE
   // =====================================================
   {
-    title: "👤 Profil & Compte",
+    title: "Profil",
     icon: User,
     children: [
       {
@@ -219,7 +220,7 @@ const routes: Route[] = [
   // ADMINISTRATION
   // =====================================================
   {
-    title: "🛡️ Administration",
+    title: "Admin",
     icon: Shield,
     children: [
       {
@@ -267,29 +268,24 @@ export function Sidebar({
   return (
     <div
       className={cn(
-        "sidebar-enterprise w-64 lg:w-72 transform bg-card text-card-foreground transition-transform duration-200 ease-in-out md:translate-x-0 z-40",
+        "fixed inset-y-0 left-0 z-40 w-64 transform bg-background border-r border-border transition-transform duration-200 ease-in-out md:translate-x-0",
         isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
       )}
     >
       <div className="flex h-full flex-col">
-        {/* Logo Section - Clean & Minimal */}
-        <div className="px-6 py-5 border-b border-border">
-          <Link href="/dashboard" className="flex items-center gap-3 group">
-            <div className="h-10 w-10 rounded-md bg-primary flex items-center justify-center transition-opacity group-hover:opacity-90">
-              <span className="text-white font-semibold text-lg">S</span>
+        {/* Logo Section - YouTube Style */}
+        <div className="h-14 px-4 flex items-center border-b border-border">
+          <Link href="/dashboard" className="flex items-center gap-2 group">
+            <div className="h-8 w-8 rounded-sm bg-primary flex items-center justify-center">
+              <span className="text-white font-bold text-base">S</span>
             </div>
-            <div className="flex flex-col">
-              <h1 className="text-base font-semibold text-foreground">
-                SURVIVE.ADMIN
-              </h1>
-              <p className="text-xs text-muted-foreground">Crisis Management</p>
-            </div>
+            <span className="font-medium text-base">SURVIVE</span>
           </Link>
         </div>
 
-        {/* Navigation Section */}
-        <ScrollArea className="flex-1 px-4">
-          <div className="space-y-2 py-4">
+        {/* Navigation Section - YouTube Style */}
+        <ScrollArea className="flex-1 px-3 py-2">
+          <div className="space-y-1">
             {routes.map((route) => (
               <div key={route.href || route.title}>
                 {route.children ? (
@@ -297,55 +293,38 @@ export function Sidebar({
                     <button
                       onClick={() => handleMenuClick(route.title)}
                       className={cn(
-                        "sidebar-item-enterprise text-sm w-full justify-start",
-                        isActive(route.href || "") ||
-                          isChildActive(route.children)
-                          ? "sidebar-item-active"
-                          : "sidebar-item-inactive"
+                        "w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-sm font-normal transition-colors",
+                        isChildActive(route.children)
+                          ? "bg-muted font-medium"
+                          : "hover:bg-muted/50"
                       )}
                     >
-                      <div className="flex items-center flex-1 gap-3">
-                        <route.icon
-                          className="h-5 w-5 shrink-0"
-                        />
-                        <span className="truncate">
-                          {route.title}
-                        </span>
-                        <ChevronDown
-                          className={cn(
-                            "h-4 w-4 ml-auto shrink-0 transition-transform duration-200",
-                            openMenuId === route.title
-                              ? "transform rotate-180"
-                              : ""
-                          )}
-                        />
+                      <div className="flex items-center gap-3">
+                        <route.icon className="h-5 w-5 flex-shrink-0" />
+                        <span className="truncate text-sm">{route.title}</span>
                       </div>
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 flex-shrink-0 transition-transform duration-200",
+                          openMenuId === route.title && "rotate-180"
+                        )}
+                      />
                     </button>
                     {openMenuId === route.title && (
-                      <div className="ml-6 mt-1 space-y-0.5 border-l-2 border-border pl-3">
+                      <div className="ml-8 mt-1 space-y-0.5 pb-1">
                         {route.children.map((child) => (
                           <Link
                             key={child.href}
                             href={child.href}
                             className={cn(
-                              "flex items-center px-3 py-2.5 text-sm transition-colors duration-150 border-l-2 -ml-3 pl-3",
+                              "block px-3 py-1.5 text-xs rounded-lg transition-colors",
                               isActive(child.href)
-                                ? "text-primary border-l-primary bg-primary/5 font-medium"
-                                : "text-muted-foreground hover:text-foreground border-l-transparent hover:border-l-border"
+                                ? "bg-muted font-medium text-foreground"
+                                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                             )}
                             onClick={() => setIsMobileMenuOpen(false)}
                           >
-                            <div className="flex items-center flex-1 gap-3">
-                              <div
-                                className={cn(
-                                  "h-1 w-1 rounded-full shrink-0",
-                                  isActive(child.href)
-                                    ? "bg-primary scale-125"
-                                    : "bg-muted-foreground/40 group-hover:bg-foreground/60"
-                                )}
-                              />
-                              <span className="truncate">{child.title}</span>
-                            </div>
+                            {child.title}
                           </Link>
                         ))}
                       </div>
@@ -353,26 +332,17 @@ export function Sidebar({
                   </>
                 ) : (
                   <Link
-                    href={route.href || ""}
+                    href={route.href || "#"}
                     className={cn(
-                      "text-sm group flex px-3 py-2.5 w-full justify-start font-medium cursor-pointer rounded-lg transition-all duration-200",
+                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-normal transition-colors",
                       isActive(route.href || "")
-                        ? "text-primary bg-primary/10 shadow-sm"
-                        : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                        ? "bg-muted font-medium text-foreground"
+                        : "text-foreground hover:bg-muted/50"
                     )}
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
-                    <div className="flex items-center flex-1 gap-3">
-                      <route.icon
-                        className={cn(
-                          "h-5 w-5 shrink-0 transition-transform",
-                          isActive(route.href || "")
-                            ? "text-primary scale-110"
-                            : "group-hover:scale-110"
-                        )}
-                      />
-                      <span className="truncate">{route.title}</span>
-                    </div>
+                    <route.icon className="h-5 w-5 flex-shrink-0" />
+                    <span className="truncate text-sm">{route.title}</span>
                   </Link>
                 )}
               </div>
@@ -380,18 +350,18 @@ export function Sidebar({
           </div>
         </ScrollArea>
 
-        {/* Logout Section - Enterprise Style */}
-        <div className="border-t border-border p-4">
-          <button
-            className="sidebar-item-enterprise w-full justify-start text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/5"
+        {/* Footer Section - YouTube Style */}
+        <div className="border-t border-border p-3">
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-3 px-3 py-2 text-sm font-normal hover:bg-muted rounded-lg"
             onClick={() => {
-              // Ajouter la logique de déconnexion ici
               setIsMobileMenuOpen(false);
             }}
           >
-            <LogOut className="h-5 w-5 mr-3 shrink-0" />
-            <span className="truncate">Déconnexion</span>
-          </button>
+            <LogOut className="h-5 w-5" />
+            <span>Déconnexion</span>
+          </Button>
         </div>
       </div>
     </div>
