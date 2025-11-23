@@ -1,8 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import {
   BarChart3,
@@ -269,21 +267,29 @@ export function Sidebar({
   return (
     <div
       className={cn(
-        "fixed inset-y-0 z-40 w-64 transform bg-card text-card-foreground border-r transition-transform duration-200 ease-in-out md:translate-x-0",
+        "sidebar-enterprise w-64 lg:w-72 transform bg-card text-card-foreground transition-transform duration-200 ease-in-out md:translate-x-0 z-40",
         isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
       )}
     >
       <div className="flex h-full flex-col">
-        <div className="p-6">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <h1 className="text-xl font-bold bg-gradient-to-r from-brand to-brand-accent bg-clip-text text-transparent">
-              SURVIVE.ADMIN
-            </h1>
+        {/* Logo Section - Clean & Minimal */}
+        <div className="px-6 py-5 border-b border-border">
+          <Link href="/dashboard" className="flex items-center gap-3 group">
+            <div className="h-10 w-10 rounded-md bg-primary flex items-center justify-center transition-opacity group-hover:opacity-90">
+              <span className="text-white font-semibold text-lg">S</span>
+            </div>
+            <div className="flex flex-col">
+              <h1 className="text-base font-semibold text-foreground">
+                SURVIVE.ADMIN
+              </h1>
+              <p className="text-xs text-muted-foreground">Crisis Management</p>
+            </div>
           </Link>
         </div>
-        <Separator />
-        <ScrollArea className="flex-1 px-3">
-          <div className="space-y-1 py-2">
+
+        {/* Navigation Section */}
+        <ScrollArea className="flex-1 px-4">
+          <div className="space-y-2 py-4">
             {routes.map((route) => (
               <div key={route.href || route.title}>
                 {route.children ? (
@@ -291,16 +297,20 @@ export function Sidebar({
                     <button
                       onClick={() => handleMenuClick(route.title)}
                       className={cn(
-                        "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-accent-foreground hover:bg-accent rounded-lg transition",
+                        "sidebar-item-enterprise text-sm w-full justify-start",
                         isActive(route.href || "") ||
                           isChildActive(route.children)
-                          ? "text-accent-foreground bg-accent"
-                          : "text-muted-foreground"
+                          ? "sidebar-item-active"
+                          : "sidebar-item-inactive"
                       )}
                     >
-                      <div className="flex items-center flex-1">
-                        <route.icon className="h-5 w-5 mr-3 shrink-0" />
-                        <span className="truncate">{route.title}</span>
+                      <div className="flex items-center flex-1 gap-3">
+                        <route.icon
+                          className="h-5 w-5 shrink-0"
+                        />
+                        <span className="truncate">
+                          {route.title}
+                        </span>
                         <ChevronDown
                           className={cn(
                             "h-4 w-4 ml-auto shrink-0 transition-transform duration-200",
@@ -312,24 +322,29 @@ export function Sidebar({
                       </div>
                     </button>
                     {openMenuId === route.title && (
-                      <div className="ml-6 mt-1 space-y-1">
+                      <div className="ml-6 mt-1 space-y-0.5 border-l-2 border-border pl-3">
                         {route.children.map((child) => (
                           <Link
                             key={child.href}
                             href={child.href}
                             className={cn(
-                              "text-sm group flex p-2.5 w-full justify-start font-medium cursor-pointer hover:text-accent-foreground hover:bg-accent rounded-lg transition",
+                              "flex items-center px-3 py-2.5 text-sm transition-colors duration-150 border-l-2 -ml-3 pl-3",
                               isActive(child.href)
-                                ? "text-accent-foreground bg-accent"
-                                : "text-muted-foreground"
+                                ? "text-primary border-l-primary bg-primary/5 font-medium"
+                                : "text-muted-foreground hover:text-foreground border-l-transparent hover:border-l-border"
                             )}
                             onClick={() => setIsMobileMenuOpen(false)}
                           >
-                            <div className="flex items-center flex-1">
-                              <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 mr-3 shrink-0" />
-                              <span className="truncate text-sm">
-                                {child.title}
-                              </span>
+                            <div className="flex items-center flex-1 gap-3">
+                              <div
+                                className={cn(
+                                  "h-1 w-1 rounded-full shrink-0",
+                                  isActive(child.href)
+                                    ? "bg-primary scale-125"
+                                    : "bg-muted-foreground/40 group-hover:bg-foreground/60"
+                                )}
+                              />
+                              <span className="truncate">{child.title}</span>
                             </div>
                           </Link>
                         ))}
@@ -340,15 +355,22 @@ export function Sidebar({
                   <Link
                     href={route.href || ""}
                     className={cn(
-                      "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-accent-foreground hover:bg-accent rounded-lg transition",
+                      "text-sm group flex px-3 py-2.5 w-full justify-start font-medium cursor-pointer rounded-lg transition-all duration-200",
                       isActive(route.href || "")
-                        ? "text-accent-foreground bg-accent"
-                        : "text-muted-foreground"
+                        ? "text-primary bg-primary/10 shadow-sm"
+                        : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
                     )}
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
-                    <div className="flex items-center flex-1">
-                      <route.icon className="h-5 w-5 mr-3 shrink-0" />
+                    <div className="flex items-center flex-1 gap-3">
+                      <route.icon
+                        className={cn(
+                          "h-5 w-5 shrink-0 transition-transform",
+                          isActive(route.href || "")
+                            ? "text-primary scale-110"
+                            : "group-hover:scale-110"
+                        )}
+                      />
                       <span className="truncate">{route.title}</span>
                     </div>
                   </Link>
@@ -357,11 +379,11 @@ export function Sidebar({
             ))}
           </div>
         </ScrollArea>
-        <Separator />
-        <div className="p-3">
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-muted-foreground hover:text-accent-foreground hover:bg-accent"
+
+        {/* Logout Section - Enterprise Style */}
+        <div className="border-t border-border p-4">
+          <button
+            className="sidebar-item-enterprise w-full justify-start text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/5"
             onClick={() => {
               // Ajouter la logique de déconnexion ici
               setIsMobileMenuOpen(false);
@@ -369,7 +391,7 @@ export function Sidebar({
           >
             <LogOut className="h-5 w-5 mr-3 shrink-0" />
             <span className="truncate">Déconnexion</span>
-          </Button>
+          </button>
         </div>
       </div>
     </div>

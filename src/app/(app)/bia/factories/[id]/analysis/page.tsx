@@ -163,7 +163,7 @@ export default async function FactoryAnalysisPage({ params }: Props) {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="space-y-6">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Link href="/bia/factories" className="hover:text-foreground">

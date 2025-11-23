@@ -458,6 +458,8 @@ type ProcessFormValues = {
 interface ProcessFormProps {
   processId?: string;
   initialData?: Partial<Process>;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  factories?: Array<{ id: string; name: string; code: string }>;
 }
 
 export function ProcessForm({ processId, initialData }: ProcessFormProps) {
