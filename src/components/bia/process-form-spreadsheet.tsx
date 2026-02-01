@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AIDocumentUpload } from "@/components/bia/ai-document-upload";
 
 type ProcessFormSpreadsheetProps = {
   processId?: string;
@@ -553,6 +554,128 @@ export function ProcessFormSpreadsheet({
     setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
+  // Fonction pour remplir automatiquement le formulaire avec les données extraites par l'IA
+  const handleAIDataExtracted = (aiData: any) => {
+    console.log("📋 Données IA reçues:", aiData);
+
+    // Remplir les champs simples
+    if (aiData.name) form.setValue("name", aiData.name);
+    if (aiData.description) form.setValue("description", aiData.description);
+    if (aiData.department) form.setValue("department", aiData.department);
+    if (aiData.location) form.setValue("location", aiData.location);
+    if (aiData.processOwner) form.setValue("processOwner", aiData.processOwner);
+    if (aiData.ownerRole) form.setValue("ownerRole", aiData.ownerRole);
+    if (aiData.ownerEmail) form.setValue("ownerEmail", aiData.ownerEmail);
+    if (aiData.ownerPhone) form.setValue("ownerPhone", aiData.ownerPhone);
+    if (aiData.impact) form.setValue("impact", aiData.impact);
+    if (aiData.criticality) form.setValue("criticality", aiData.criticality);
+    if (aiData.rto) form.setValue("rto", Number(aiData.rto));
+    if (aiData.mtpd) form.setValue("mtpd", Number(aiData.mtpd));
+    if (aiData.rpo) form.setValue("rpo", Number(aiData.rpo));
+    if (aiData.mbco) form.setValue("mbco", aiData.mbco);
+    if (aiData.criticalTimes)
+      form.setValue("criticalTimes", aiData.criticalTimes);
+
+    // Remplir les impacts si disponibles
+    if (
+      aiData.impacts &&
+      Array.isArray(aiData.impacts) &&
+      aiData.impacts.length > 0
+    ) {
+      const currentImpacts = form.getValues("impacts");
+      aiData.impacts.forEach((impact: any, index: number) => {
+        if (currentImpacts[index]) {
+          if (impact.type) currentImpacts[index].type = impact.type;
+          if (impact.level) currentImpacts[index].level = impact.level;
+          if (impact.hasImpact !== undefined)
+            currentImpacts[index].hasImpact = impact.hasImpact;
+          if (impact.description)
+            currentImpacts[index].description = impact.description;
+        }
+      });
+      form.setValue("impacts", currentImpacts);
+    }
+
+    // Remplir les activités critiques si disponibles
+    if (aiData.criticalActivities && Array.isArray(aiData.criticalActivities)) {
+      const activities = aiData.criticalActivities.map(
+        (activity: any, index: number) => ({
+          nom: activity.name || "",
+          criticite: activity.criticality || "medium",
+          delai: "",
+          rto: activity.rto || 4,
+          mtpd: activity.rto ? activity.rto * 2 : 8,
+          rpo: activity.rpo || 2,
+          mbco: activity.mbco || "",
+          impactsOperationnels: activity.impact || "",
+          impactsReglementaires: "",
+          impactsImage: "",
+        })
+      );
+      form.setValue("activitesCritiques", activities);
+    }
+
+    // Remplir les systèmes si disponibles
+    if (aiData.systems && Array.isArray(aiData.systems)) {
+      const systems = aiData.systems.map((system: any) => ({
+        nom: system.name || "",
+        type: system.type || "",
+        criticite: system.criticality || "medium",
+        rto: system.rto || 4,
+        alternativeSolution: system.alternativeSolution || "",
+      }));
+      form.setValue("systemes", systems);
+    }
+
+    // Remplir le personnel si disponible
+    if (aiData.personnel && Array.isArray(aiData.personnel)) {
+      const personnel = aiData.personnel.map((person: any) => ({
+        role: person.role || "",
+        nombrePersonnes: person.number || 1,
+        competences: person.skills || "",
+        criticite: person.criticality || "medium",
+        solutionBackup: person.backupOption || "",
+      }));
+      form.setValue("personnel", personnel);
+    }
+
+    // Remplir les dépendances si disponibles
+    if (aiData.dependencies && Array.isArray(aiData.dependencies)) {
+      const deps = aiData.dependencies.map((dep: any) => ({
+        id: Math.random().toString(36).substr(2, 9),
+        processName: dep.name || "",
+        department: "",
+        supportType: dep.type || "",
+        reason: dep.description || "",
+        dependencyType: dep.type || "",
+      }));
+      form.setValue("dependencies", deps);
+    }
+
+    // Ouvrir toutes les sections pour que l'utilisateur puisse voir les données
+    setOpenSections({
+      general: true,
+      responsable: true,
+      criticite: true,
+      impacts: true,
+      dependencies: true,
+      scope: true,
+      activitesCritiques: true,
+      fournisseursExternes: true,
+      legal: true,
+      systemes: true,
+      infrastructure: true,
+      personnel: true,
+      equipIndus: true,
+      equipBuro: true,
+      docs: true,
+    });
+
+    toast.success(
+      "✨ Formulaire rempli automatiquement ! Vérifiez et ajustez les données si nécessaire."
+    );
+  };
+
   const onSubmit = async (data: ProcessFormValues) => {
     setIsLoading(true);
 
@@ -640,6 +763,14 @@ export function ProcessFormSpreadsheet({
           valider.
         </AlertDescription>
       </Alert>
+
+      {/* Upload de document avec IA - uniquement en création */}
+      {!processId && (
+        <AIDocumentUpload
+          onDataExtracted={handleAIDataExtracted}
+          disabled={isLoading}
+        />
+      )}
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         {/* SECTION 1: INFORMATIONS GÉNÉRALES */}

@@ -39,6 +39,8 @@ import {
 import Link from "next/link";
 import { FactoryAddProcessDialog } from "@/components/bia/factory-add-process-dialog";
 import { FactoryAddReportDialog } from "@/components/bia/factory-add-report-dialog";
+import { FactoryReportsList } from "@/components/bia/factory-reports-list";
+import { FactoryProcessesList } from "@/components/bia/factory-processes-list";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -317,41 +319,17 @@ export default async function FactoryAnalysisPage({ params }: Props) {
           </div>
         </CardHeader>
         <CardContent>
-          {factory.processes.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
-              Aucun processus associé à cette usine
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {factory.processes.map(
-                (process: {
-                  id: string;
-                  name: string;
-                  department: string;
-                  rto: number;
-                  mtpd: number;
-                  criticality: string;
-                }) => (
-                  <Link
-                    key={process.id}
-                    href={`/bia/processes/${process.id}`}
-                    className="block p-4 rounded-lg border hover:bg-accent transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="font-medium">{process.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {process.department} • RTO: {process.rto}h • MTPD:{" "}
-                          {process.mtpd}h
-                        </div>
-                      </div>
-                      {getCriticalityBadge(process.criticality)}
-                    </div>
-                  </Link>
-                )
-              )}
-            </div>
-          )}
+          <FactoryProcessesList
+            processes={factory.processes.map((process) => ({
+              id: process.id,
+              name: process.name,
+              department: process.department,
+              rto: process.rto,
+              mtpd: process.mtpd,
+              criticality: process.criticality,
+            }))}
+            factoryId={factory.id}
+          />
         </CardContent>
       </Card>
 
@@ -379,49 +357,17 @@ export default async function FactoryAnalysisPage({ params }: Props) {
           </div>
         </CardHeader>
         <CardContent>
-          {factory.biaReports.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
-              Aucun rapport BIA pour cette usine
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {factory.biaReports.map(
-                (report: {
-                  id: string;
-                  name: string;
-                  status: string;
-                  totalProcesses: number;
-                  continuityLevel: number | null;
-                  createdAt: Date;
-                }) => (
-                  <div
-                    key={report.id}
-                    className="p-4 rounded-lg border hover:bg-accent transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="font-medium">{report.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {report.totalProcesses} processus • Créé le{" "}
-                          {new Date(report.createdAt).toLocaleDateString(
-                            "fr-FR"
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">{report.status}</Badge>
-                        {report.continuityLevel && (
-                          <div className="text-sm text-muted-foreground">
-                            {report.continuityLevel}%
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )
-              )}
-            </div>
-          )}
+          <FactoryReportsList
+            reports={factory.biaReports.map((report) => ({
+              id: report.id,
+              name: report.name,
+              status: report.status,
+              totalProcesses: report.totalProcesses,
+              continuityLevel: report.continuityLevel,
+              createdAt: report.createdAt,
+            }))}
+            factoryId={factory.id}
+          />
         </CardContent>
       </Card>
     </div>

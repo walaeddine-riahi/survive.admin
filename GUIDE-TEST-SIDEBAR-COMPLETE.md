@@ -330,9 +330,9 @@ Ces pages existent mais peuvent être vides ou nécessiter des paramètres.
 
 ## 📝 RAPPORT DE TEST
 
-### Date : ******\_\_\_******
+### Date : **\*\***\_\_\_**\*\***
 
-### Testeur : ******\_\_\_******
+### Testeur : **\*\***\_\_\_**\*\***
 
 ### Environnement :
 

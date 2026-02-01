@@ -41,17 +41,24 @@ export function Header({
               size="icon"
               onClick={toggleSidebar}
               className="hover:bg-muted rounded-full h-10 w-10 transition-colors flex-shrink-0"
-              title={isSidebarOpen ? "Masquer la sidebar" : "Afficher la sidebar"}
+              title={
+                isSidebarOpen ? "Masquer la sidebar" : "Afficher la sidebar"
+              }
             >
               <Menu className="h-5 w-5" />
               <span className="sr-only">Menu</span>
             </Button>
           )}
-          <Link href="/dashboard" className="flex items-center gap-1.5 flex-shrink-0">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-1.5 flex-shrink-0"
+          >
             <div className="h-8 w-8 rounded-sm bg-primary flex items-center justify-center">
               <span className="text-white font-bold text-base">S</span>
             </div>
-            <span className="font-medium text-lg hidden sm:inline-block">SURVIVE</span>
+            <span className="font-medium text-lg hidden sm:inline-block">
+              SURVIVE
+            </span>
           </Link>
         </div>
 
@@ -88,13 +95,22 @@ export function Header({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="rounded-xl">
-              <DropdownMenuItem onClick={() => setTheme("light")} className="rounded-lg">
+              <DropdownMenuItem
+                onClick={() => setTheme("light")}
+                className="rounded-lg"
+              >
                 Clair
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTheme("dark")} className="rounded-lg">
+              <DropdownMenuItem
+                onClick={() => setTheme("dark")}
+                className="rounded-lg"
+              >
                 Sombre
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTheme("system")} className="rounded-lg">
+              <DropdownMenuItem
+                onClick={() => setTheme("system")}
+                className="rounded-lg"
+              >
                 Système
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -115,10 +131,16 @@ export function Header({
             <DropdownMenuContent align="end" className="rounded-xl w-48">
               <DropdownMenuLabel>Mon Compte</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push("/profile")} className="rounded-lg">
+              <DropdownMenuItem
+                onClick={() => router.push("/profile")}
+                className="rounded-lg"
+              >
                 Profil
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/settings")} className="rounded-lg">
+              <DropdownMenuItem
+                onClick={() => router.push("/settings")}
+                className="rounded-lg"
+              >
                 Paramètres
               </DropdownMenuItem>
               <DropdownMenuSeparator />

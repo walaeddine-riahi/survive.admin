@@ -7,6 +7,7 @@ Cette fonctionnalité permet d'**uploader un fichier PDF de rapport BIA** (comme
 ## ✨ Fonctionnalités
 
 ### 1. **Analyse Intelligente par IA**
+
 - 🤖 Utilise **Gemini AI** pour comprendre le contenu du PDF
 - 📄 Extrait automatiquement les informations structurées
 - 🎯 Confiance estimée pour chaque analyse (0-100%)
@@ -17,6 +18,7 @@ Cette fonctionnalité permet d'**uploader un fichier PDF de rapport BIA** (comme
 Le système peut extraire automatiquement :
 
 #### Informations de Base
+
 - ✅ Nom du processus
 - ✅ Description détaillée
 - ✅ Département/Service
@@ -24,6 +26,7 @@ Le système peut extraire automatiquement :
 - ✅ Nom du responsable
 
 #### Métriques BIA
+
 - ✅ **RTO** (Recovery Time Objective) en heures
 - ✅ **MTPD** (Maximum Tolerable Period of Disruption) en heures
 - ✅ **RPO** (Recovery Point Objective) en heures
@@ -32,16 +35,19 @@ Le système peut extraire automatiquement :
 - ✅ Type d'**impact** (Financial/Reputation/Legal/Operational/Safety/Environmental)
 
 #### Impacts
+
 - ✅ Impact financier
 - ✅ Impact opérationnel
 - ✅ Impact sur la réputation
 
 #### Périmètre et Dépendances
+
 - ✅ Fonctionnalité principale
 - ✅ Dépendances produits/services
 - ✅ Dépendances inter-services
 
 #### Ressources
+
 - ✅ Fournisseurs externes et clés
 - ✅ Rôles et responsabilités du personnel
 - ✅ Nombre de personnes impliquées
@@ -56,6 +62,7 @@ Le système peut extraire automatiquement :
 ## 🚀 Utilisation
 
 ### Étape 1 : Accéder au Formulaire
+
 ```
 Navigation: /bia/processes/new
 ```
@@ -63,6 +70,7 @@ Navigation: /bia/processes/new
 ### Étape 2 : Uploader le PDF
 
 1. **Localisez la section bleue** en haut du formulaire
+
    ```
    📁 Remplissage automatique depuis PDF
    ```
@@ -78,17 +86,20 @@ Navigation: /bia/processes/new
 L'analyse se déroule en **3 phases** :
 
 #### Phase 1 : Extraction du texte (5-10s)
+
 ```
 📄 Extraction du texte du PDF...
 ✅ Texte extrait: XXXX caractères
 ```
 
 #### Phase 2 : Analyse IA (10-30s)
+
 ```
 🧠 Analyse du contenu avec IA...
 ```
 
 L'IA analyse le document et identifie :
+
 - Structure du document
 - Sections et sous-sections
 - Métriques BIA (RTO, MTPD, RPO)
@@ -96,6 +107,7 @@ L'IA analyse le document et identifie :
 - Dépendances et ressources
 
 #### Phase 3 : Remplissage des champs
+
 ```
 ✅ Formulaire rempli automatiquement !
 Confiance: 85% - Vérifiez et complétez les informations
@@ -159,6 +171,7 @@ Confiance: 85% - Vérifiez et complétez les informations
 **Utilise** : Gemini 1.5 Flash de Google
 
 **Avantages** :
+
 - ✅ Compréhension contextuelle du document
 - ✅ Extraction intelligente même si mal formaté
 - ✅ Interprétation sémantique des informations
@@ -166,9 +179,10 @@ Confiance: 85% - Vérifiez et complétez les informations
 - ✅ Gère les variations de format
 
 **Prompt utilisé** :
+
 ```
-Tu es un expert en Business Impact Analysis (BIA). 
-Analyse le document suivant et extrais les informations 
+Tu es un expert en Business Impact Analysis (BIA).
+Analyse le document suivant et extrais les informations
 sur le processus métier...
 
 Structure attendue: JSON avec 30+ champs
@@ -179,17 +193,20 @@ Structure attendue: JSON avec 30+ champs
 **Utilise** : Patterns regex et recherche de mots-clés
 
 **Avantages** :
+
 - ✅ Ne nécessite pas de connexion API
 - ✅ Rapide (< 1 seconde)
 - ✅ Données privées (traitement local)
 - ✅ Fonctionne offline
 
 **Inconvénients** :
+
 - ⚠️ Précision variable (30-60%)
 - ⚠️ Nécessite un format structuré
 - ⚠️ Sensible aux variations de formulation
 
 **Patterns détectés** :
+
 ```javascript
 // Exemples de patterns
 /Processus\s*:\s*([^\n]+)/i
@@ -336,24 +353,24 @@ Form Submission
 
 ## 🎯 Taux de Confiance
 
-| Score | Signification | Action Recommandée |
-|-------|---------------|-------------------|
-| **90-100%** | Excellente extraction | Vérification rapide |
-| **70-89%** | Bonne extraction | Vérification standard |
-| **50-69%** | Extraction partielle | Compléter manuellement |
-| **30-49%** | Extraction basique | Vérifier attentivement |
-| **0-29%** | Extraction faible | Ressaisir manuellement |
+| Score       | Signification         | Action Recommandée     |
+| ----------- | --------------------- | ---------------------- |
+| **90-100%** | Excellente extraction | Vérification rapide    |
+| **70-89%**  | Bonne extraction      | Vérification standard  |
+| **50-69%**  | Extraction partielle  | Compléter manuellement |
+| **30-49%**  | Extraction basique    | Vérifier attentivement |
+| **0-29%**   | Extraction faible     | Ressaisir manuellement |
 
 ## ⚡ Performance
 
 ### Temps d'Analyse Moyen
 
-| Taille PDF | Extraction Texte | Analyse IA | Total |
-|------------|-----------------|------------|-------|
-| < 1 MB | 2-5 secondes | 10-15 secondes | **12-20s** |
-| 1-5 MB | 5-10 secondes | 15-25 secondes | **20-35s** |
-| 5-10 MB | 10-15 secondes | 25-35 secondes | **35-50s** |
-| 10-20 MB | 15-25 secondes | 35-50 secondes | **50-75s** |
+| Taille PDF | Extraction Texte | Analyse IA     | Total      |
+| ---------- | ---------------- | -------------- | ---------- |
+| < 1 MB     | 2-5 secondes     | 10-15 secondes | **12-20s** |
+| 1-5 MB     | 5-10 secondes    | 15-25 secondes | **20-35s** |
+| 5-10 MB    | 10-15 secondes   | 25-35 secondes | **35-50s** |
+| 10-20 MB   | 15-25 secondes   | 35-50 secondes | **50-75s** |
 
 ### Limitations
 
@@ -377,6 +394,7 @@ Form Submission
 ⚠️ **Avertissement** : Les données du PDF sont envoyées à l'API Gemini pour analyse.
 
 **Si vous traitez des données sensibles** :
+
 - Utilisez l'analyse heuristique (désactiver GEMINI_API_KEY)
 - Anonymisez le PDF avant upload
 - Utilisez un modèle local (future feature)
@@ -386,11 +404,13 @@ Form Submission
 ### Problème : "Le PDF ne contient pas assez de texte"
 
 **Causes** :
+
 - PDF scanné (image, pas de texte)
 - PDF protégé/chiffré
 - PDF corrompu
 
 **Solutions** :
+
 - Utilisez un PDF avec texte sélectionnable
 - Utilisez un logiciel OCR pour convertir
 - Re-générez le PDF depuis Word/Excel
@@ -398,11 +418,13 @@ Form Submission
 ### Problème : "Erreur lors de l'analyse"
 
 **Causes** :
+
 - API Gemini indisponible
 - Limite de taux atteinte
 - Fichier trop volumineux
 
 **Solutions** :
+
 - Vérifiez GEMINI_API_KEY dans `.env`
 - Attendez quelques minutes et réessayez
 - Réduisez la taille du PDF
@@ -410,11 +432,13 @@ Form Submission
 ### Problème : Champs mal remplis
 
 **Causes** :
+
 - Format PDF non standard
 - Terminologie différente
 - Informations éparpillées
 
 **Solutions** :
+
 - Vérifiez et corrigez manuellement
 - Utilisez un format de rapport standardisé
 - Structurez mieux vos PDF (titres clairs)
@@ -474,17 +498,17 @@ Rapport BIA - [Département] - [Date]
    Processus: [Nom]
    Département: [Dept]
    Responsable: [Nom]
-   
+
 2. MÉTRIQUES BIA
    RTO: XX heures
    MTPD: XX heures
    RPO: XX heures
    Criticité: [Niveau]
-   
+
 3. IMPACTS
    - Financier: [Description]
    - Opérationnel: [Description]
-   
+
 4. RESSOURCES
    - Systèmes IT: [Liste]
    - Personnel: [Rôles]

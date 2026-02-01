@@ -4,8 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import { writeFile, mkdir, readFile, unlink } from "fs/promises";
-import { join } from "path";
+import { azureStorage } from "@/lib/azure-storage";
 import { createBiaReport } from "./bia-report-actions";
 
 // Extraction de texte simplifiée (sans packages externes)
@@ -159,28 +158,56 @@ export async function uploadBiaReportSimple(formData: FormData) {
       };
     }
 
-    // Créer le répertoire de stockage si nécessaire
-    const uploadsDir = join(process.cwd(), "uploads", "bia-reports");
-    try {
-      await mkdir(uploadsDir, { recursive: true });
-    } catch {
-      // Le répertoire existe déjà
-    }
-
-    // Générer un nom de fichier unique
-    const timestamp = Date.now();
-    const fileName = `${timestamp}-${file.name.replace(
-      /[^a-zA-Z0-9.-]/g,
-      "_"
-    )}`;
-    const filePath = join(uploadsDir, fileName);
-
     // Lire le contenu du fichier
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Sauvegarder le fichier
-    await writeFile(filePath, buffer);
+    // Upload vers Azure Storage
+    let fileUrl: string;
+    try {
+      if (azureStorage.isAvailable()) {
+        // Générer un nom de fichier unique
+        const timestamp = Date.now();
+        const fileName = `${timestamp}-${file.name.replace(
+          /[^a-zA-Z0-9.-]/g,
+          "_"
+        )}`;
+
+        // Upload vers Azure avec un dossier spécifique
+        fileUrl = await azureStorage.uploadFile(
+          buffer,
+          fileName,
+          "bia-reports"
+        );
+        console.log(`✅ Fichier uploadé vers Azure Storage: ${fileUrl}`);
+      } else {
+        // Fallback : stockage local si Azure n'est pas configuré
+        const { writeFile, mkdir } = await import("fs/promises");
+        const { join } = await import("path");
+
+        const uploadsDir = join(process.cwd(), "uploads", "bia-reports");
+        await mkdir(uploadsDir, { recursive: true });
+
+        const timestamp = Date.now();
+        const fileName = `${timestamp}-${file.name.replace(
+          /[^a-zA-Z0-9.-]/g,
+          "_"
+        )}`;
+        const filePath = join(uploadsDir, fileName);
+
+        await writeFile(filePath, buffer);
+        fileUrl = `/uploads/bia-reports/${fileName}`;
+        console.log(
+          `⚠️ Fichier stocké localement (Azure non configuré): ${fileUrl}`
+        );
+      }
+    } catch (uploadError) {
+      console.error("Erreur d'upload:", uploadError);
+      return {
+        success: false,
+        error: "Erreur lors de l'upload du fichier",
+      };
+    }
 
     // Extraire le texte de base
     const extractedText = await extractBasicTextFromFile(buffer, file.name);
@@ -230,6 +257,8 @@ export async function uploadBiaReportSimple(formData: FormData) {
       analysis,
       contentLength: extractedText.length,
       processingMethod: "simple-upload",
+      storageType: azureStorage.isAvailable() ? "azure" : "local",
+      fileUrl,
       note: "Analyse basique - extraction complète nécessite des outils spécialisés",
     };
 
@@ -247,8 +276,8 @@ export async function uploadBiaReportSimple(formData: FormData) {
       recommendationCount: analysis.estimatedRecommendations,
       reportData: reportData as unknown as Record<string, unknown>,
       content: extractedText.substring(0, 2000), // Contenu pour la recherche
-      fileName,
-      filePath: filePath,
+      fileName: file.name,
+      filePath: fileUrl,
       fileSize: buffer.length,
       mimeType: file.type,
       includedProcessIds: [],

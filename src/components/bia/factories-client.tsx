@@ -55,7 +55,22 @@ import {
   AlertCircle,
   CheckCircle,
   Edit,
+  Trash2,
+  Power,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 // Type pour une usine avec statistiques (doit correspondre au type du serveur)
 interface FactoryWithStats {
@@ -97,6 +112,11 @@ export function FactoriesClient({ factories }: FactoriesClientProps) {
   const [filterCriticality, setFilterCriticality] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
+  // États pour la sélection et suppression
+  const [selectedFactories, setSelectedFactories] = useState<string[]>([]);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // Filtrage et recherche
   const filteredFactories = useMemo(() => {
     return factories.filter((factory) => {
@@ -125,6 +145,79 @@ export function FactoriesClient({ factories }: FactoriesClientProps) {
   // Navigation vers l'analyse d'une usine
   const handleViewAnalysis = (factoryId: string) => {
     router.push(`/bia/factories/${factoryId}/analysis`);
+  };
+
+  // Gestion de la sélection
+  const toggleFactory = (factoryId: string) => {
+    setSelectedFactories((prev) =>
+      prev.includes(factoryId)
+        ? prev.filter((id) => id !== factoryId)
+        : [...prev, factoryId]
+    );
+  };
+
+  const toggleAll = () => {
+    if (selectedFactories.length === filteredFactories.length) {
+      setSelectedFactories([]);
+    } else {
+      setSelectedFactories(filteredFactories.map((f) => f.id));
+    }
+  };
+
+  // Suppression des usines
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch("/api/bia/factories/delete", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ factoryIds: selectedFactories }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Erreur lors de la suppression");
+      }
+
+      const data = await response.json();
+      toast.success(data.message || "Usines supprimées avec succès");
+      setSelectedFactories([]);
+      setShowDeleteDialog(false);
+      router.refresh();
+    } catch (error) {
+      console.error("Erreur:", error);
+      toast.error("Erreur lors de la suppression des usines");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Basculer le statut actif/inactif
+  const handleToggleStatus = async (
+    factoryId: string,
+    currentStatus: boolean
+  ) => {
+    try {
+      const response = await fetch("/api/bia/factories/toggle-status", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ factoryId }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Erreur lors du changement de statut");
+      }
+
+      const data = await response.json();
+      toast.success(data.message);
+      router.refresh();
+    } catch (error) {
+      console.error("Erreur:", error);
+      toast.error("Erreur lors du changement de statut");
+    }
   };
 
   return (
@@ -202,6 +295,46 @@ export function FactoriesClient({ factories }: FactoriesClientProps) {
         </div>
       </div>
 
+      {/* Barre d'actions pour la sélection et suppression */}
+      {filteredFactories.length > 0 && (
+        <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-slate-50 to-slate-100 border-2 border-slate-200 rounded-xl shadow-sm">
+          <div className="flex items-center gap-3">
+            <Checkbox
+              checked={
+                selectedFactories.length === filteredFactories.length &&
+                filteredFactories.length > 0
+              }
+              onCheckedChange={toggleAll}
+              className="h-5 w-5 rounded-md border-2 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 transition-all duration-200"
+            />
+            <span className="text-sm font-medium text-slate-700">
+              {selectedFactories.length === filteredFactories.length
+                ? "Tout désélectionner"
+                : "Sélectionner tout"}
+            </span>
+          </div>
+
+          {selectedFactories.length > 0 && (
+            <div className="flex items-center gap-3 ml-auto">
+              <span className="text-sm font-medium text-slate-600">
+                {selectedFactories.length} usine
+                {selectedFactories.length > 1 ? "s" : ""} sélectionnée
+                {selectedFactories.length > 1 ? "s" : ""}
+              </span>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setShowDeleteDialog(true)}
+                className="gap-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 shadow-md hover:shadow-lg transition-all duration-200"
+              >
+                <Trash2 className="h-4 w-4" />
+                Supprimer
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Résultats */}
       <div className="text-sm text-muted-foreground">
         {filteredFactories.length} usine
@@ -231,6 +364,9 @@ export function FactoriesClient({ factories }: FactoriesClientProps) {
               key={factory.id}
               factory={factory}
               onViewAnalysis={handleViewAnalysis}
+              isSelected={selectedFactories.includes(factory.id)}
+              onToggleSelect={toggleFactory}
+              onToggleStatus={handleToggleStatus}
             />
           ))}
         </div>
@@ -241,10 +377,57 @@ export function FactoriesClient({ factories }: FactoriesClientProps) {
               key={factory.id}
               factory={factory}
               onViewAnalysis={handleViewAnalysis}
+              isSelected={selectedFactories.includes(factory.id)}
+              onToggleSelect={toggleFactory}
+              onToggleStatus={handleToggleStatus}
             />
           ))}
         </div>
       )}
+
+      {/* Dialog de confirmation de suppression */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer{" "}
+              {selectedFactories.length === 1
+                ? "cette usine"
+                : `ces ${selectedFactories.length} usines`}{" "}
+              ?
+              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm font-medium text-red-900 mb-2">
+                  ⚠️ Cette action est irréversible
+                </p>
+                <ul className="text-sm text-red-800 space-y-1 list-disc list-inside">
+                  {factories
+                    .filter((f) => selectedFactories.includes(f.id))
+                    .map((factory) => (
+                      <li key={factory.id}>
+                        <span className="font-medium">{factory.name}</span>
+                        <span className="text-red-600 ml-2">
+                          ({factory._count.processes} processus,{" "}
+                          {factory._count.biaReports} rapports)
+                        </span>
+                      </li>
+                    ))}
+                </ul>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? "Suppression..." : "Supprimer"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -255,9 +438,15 @@ export function FactoriesClient({ factories }: FactoriesClientProps) {
 function FactoryCard({
   factory,
   onViewAnalysis,
+  isSelected,
+  onToggleSelect,
+  onToggleStatus,
 }: {
   factory: FactoryWithStats;
   onViewAnalysis: (id: string) => void;
+  isSelected: boolean;
+  onToggleSelect: (id: string) => void;
+  onToggleStatus: (id: string, currentStatus: boolean) => void;
 }) {
   const getCriticalityColor = (level?: string | null) => {
     switch (level) {
@@ -275,19 +464,33 @@ function FactoryCard({
   };
 
   return (
-    <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+    <Card
+      className={`hover:shadow-lg transition-all duration-200 border-2 rounded-xl ${
+        isSelected ? "bg-blue-50 border-blue-300 shadow-md" : "border-slate-200"
+      }`}
+    >
       <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-primary" />
-            <div>
-              <CardTitle className="text-lg">{factory.name}</CardTitle>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3 flex-1">
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={() => onToggleSelect(factory.id)}
+              onClick={(e) => e.stopPropagation()}
+              className={`h-5 w-5 rounded-md border-2 transition-all duration-200 ${
+                isSelected
+                  ? "data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 scale-110"
+                  : "border-slate-300"
+              }`}
+            />
+            <Building2 className="h-5 w-5 text-primary flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <CardTitle className="text-lg truncate">{factory.name}</CardTitle>
               <CardDescription className="text-xs">
                 {factory.code}
               </CardDescription>
             </div>
           </div>
-          <div className="flex gap-1">
+          <div className="flex gap-1 flex-shrink-0">
             {factory.isActive ? (
               <Badge variant="outline" className="text-xs">
                 <CheckCircle className="h-3 w-3 mr-1" />
@@ -351,6 +554,37 @@ function FactoryCard({
           </div>
         )}
 
+        {/* Statut actif/inactif */}
+        <div className="flex items-center justify-between p-4 bg-gradient-to-r from-slate-50 via-slate-100 to-slate-50 border-2 border-slate-200 rounded-xl mb-4 shadow-sm hover:shadow-md transition-all duration-200">
+          <div className="flex items-center gap-3">
+            <div
+              className={`p-2 rounded-lg transition-all duration-300 ${
+                factory.isActive
+                  ? "bg-green-100 shadow-sm shadow-green-500/20"
+                  : "bg-slate-200"
+              }`}
+            >
+              <Power
+                className={`h-5 w-5 transition-colors duration-300 ${
+                  factory.isActive ? "text-green-600" : "text-slate-500"
+                }`}
+              />
+            </div>
+            <div>
+              <span className="text-sm font-semibold text-slate-800 block">
+                {factory.isActive ? "Usine active" : "Usine inactive"}
+              </span>
+              <span className="text-xs text-slate-500">
+                {factory.isActive ? "En fonctionnement" : "Hors service"}
+              </span>
+            </div>
+          </div>
+          <Switch
+            checked={factory.isActive}
+            onCheckedChange={() => onToggleStatus(factory.id, factory.isActive)}
+          />
+        </div>
+
         {/* Actions */}
         <div className="flex gap-2">
           <Button
@@ -377,15 +611,35 @@ function FactoryCard({
 function FactoryListItem({
   factory,
   onViewAnalysis,
+  isSelected,
+  onToggleSelect,
+  onToggleStatus,
 }: {
   factory: FactoryWithStats;
   onViewAnalysis: (id: string) => void;
+  isSelected: boolean;
+  onToggleSelect: (id: string) => void;
+  onToggleStatus: (id: string, currentStatus: boolean) => void;
 }) {
   return (
-    <Card className="hover:bg-muted/50 transition-colors">
+    <Card
+      className={`hover:bg-muted/50 transition-all duration-200 border-2 rounded-xl ${
+        isSelected ? "bg-blue-50 border-blue-300 shadow-md" : "border-slate-200"
+      }`}
+    >
       <CardContent className="p-4">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4 flex-1">
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={() => onToggleSelect(factory.id)}
+              onClick={(e) => e.stopPropagation()}
+              className={`h-5 w-5 rounded-md border-2 transition-all duration-200 ${
+                isSelected
+                  ? "data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 scale-110"
+                  : "border-slate-300"
+              }`}
+            />
             <Building2 className="h-8 w-8 text-primary" />
             <div className="flex-1">
               <div className="flex items-center gap-2">
@@ -415,6 +669,27 @@ function FactoryListItem({
                 {factory.criticalityLevel}
               </Badge>
             )}
+            <div className="flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-slate-50 via-slate-100 to-slate-50 border-2 border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200">
+              <div
+                className={`p-1.5 rounded-lg transition-all duration-300 ${
+                  factory.isActive
+                    ? "bg-green-100 shadow-sm shadow-green-500/20"
+                    : "bg-slate-200"
+                }`}
+              >
+                <Power
+                  className={`h-4 w-4 transition-colors duration-300 ${
+                    factory.isActive ? "text-green-600" : "text-slate-500"
+                  }`}
+                />
+              </div>
+              <Switch
+                checked={factory.isActive}
+                onCheckedChange={() =>
+                  onToggleStatus(factory.id, factory.isActive)
+                }
+              />
+            </div>
             <Button
               variant="default"
               size="sm"

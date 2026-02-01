@@ -6,11 +6,11 @@ import { getServerSession } from "next-auth";
 import { Roboto } from "next/font/google";
 import "./globals.css";
 
-const roboto = Roboto({ 
-  weight: ['300', '400', '500', '700'],
-  subsets: ["latin"], 
+const roboto = Roboto({
+  weight: ["300", "400", "500", "700"],
+  subsets: ["latin"],
   variable: "--font-sans",
-  display: 'swap',
+  display: "swap",
 });
 
 export const metadata: Metadata = {

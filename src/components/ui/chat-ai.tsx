@@ -3,7 +3,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AIService } from "@/lib/ai-service";
 import { cn } from "@/lib/utils";
 import { Bot, Loader2, Send, User, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -25,7 +24,6 @@ export function ChatAI() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const aiService = AIService.getInstance();
 
   // Faire défiler vers le bas à chaque nouveau message
   useEffect(() => {
@@ -44,10 +42,22 @@ export function ChatAI() {
     setIsLoading(true);
 
     try {
-      const response = await aiService.getResponse(userMessage);
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message: userMessage }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Erreur lors de la communication avec l'API");
+      }
+
+      const data = await res.json();
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: response },
+        { role: "assistant", content: data.response },
       ]);
     } catch (error) {
       console.error("Erreur lors de la communication avec l'IA:", error);

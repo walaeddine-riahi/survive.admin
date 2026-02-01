@@ -62,6 +62,16 @@ export function FactoryAddReportDialog({
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    // Validation : au moins un processus doit être sélectionné
+    if (selectedProcesses.length === 0) {
+      toast.error("Erreur de validation", {
+        description:
+          "Veuillez sélectionner au moins un processus pour le rapport",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     const formData = new FormData(e.currentTarget);
@@ -86,8 +96,17 @@ export function FactoryAddReportDialog({
         throw new Error(error.error || "Erreur lors de la création");
       }
 
+      const processNames = factoryProcesses
+        .filter((p) => selectedProcesses.includes(p.id))
+        .map((p) => p.name)
+        .join(", ");
+
       toast.success("Rapport BIA créé avec succès", {
-        description: `Le rapport a été associé à l'usine ${factoryName} avec ${selectedProcesses.length} processus`,
+        description: `${
+          selectedProcesses.length
+        } processus inclus : ${processNames.substring(0, 100)}${
+          processNames.length > 100 ? "..." : ""
+        }`,
       });
       setIsOpen(false);
       setSelectedProcesses([]);
@@ -186,6 +205,21 @@ export function FactoryAddReportDialog({
                   </Button>
                 </div>
               </div>
+
+              {selectedProcesses.length > 0 && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="text-sm font-medium text-blue-900 mb-1">
+                    ✓ {selectedProcesses.length} processus sélectionné
+                    {selectedProcesses.length > 1 ? "s" : ""} :
+                  </div>
+                  <div className="text-sm text-blue-700">
+                    {factoryProcesses
+                      .filter((p) => selectedProcesses.includes(p.id))
+                      .map((p) => p.name)
+                      .join(", ")}
+                  </div>
+                </div>
+              )}
 
               {factoryProcesses.length === 0 ? (
                 <div className="p-4 border rounded-lg text-center text-muted-foreground">

@@ -9,6 +9,8 @@ import {
   Building2,
   Users,
   Shield,
+  Factory,
+  FileText,
 } from "lucide-react";
 import { BiaProcessChart } from "@/components/bia/bia-process-chart";
 import { BiaCriticalityChart } from "@/components/bia/bia-criticality-chart";
@@ -17,6 +19,8 @@ import { BiaMetricsOverview } from "@/components/bia/bia-metrics-overview";
 import { BiaProcessTable } from "@/components/bia/bia-process-table";
 import { BiaExportButtons } from "@/components/bia/bia-export-buttons";
 import Link from "next/link";
+import { prisma } from "@/lib/prisma";
+import { Badge } from "@/components/ui/badge";
 
 // Types pour les métriques
 type ProcessStats = {
@@ -378,106 +382,281 @@ export default async function BiaDashboardPage() {
   const processes: Process[] = Array.isArray(result.data) ? result.data : [];
   const stats = calculateProcessStats(processes);
 
+  // Récupérer les usines avec leurs statistiques
+  const factories = await prisma.factory.findMany({
+    include: {
+      _count: {
+        select: {
+          processes: true,
+          biaReports: true,
+        },
+      },
+      manager: {
+        select: {
+          firstName: true,
+          lastName: true,
+        },
+      },
+    },
+    orderBy: [{ isActive: "desc" }, { name: "asc" }],
+  });
+
+  // Récupérer les rapports BIA récents
+  const recentReports = await prisma.biaReport.findMany({
+    take: 5,
+    orderBy: {
+      createdAt: "desc",
+    },
+    include: {
+      author: {
+        select: {
+          firstName: true,
+          lastName: true,
+        },
+      },
+      factory: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
+
+  // Calculer les statistiques par usine
+  const factoryStats = factories.map((factory) => {
+    const factoryProcesses = processes.filter(
+      (p) => p.factoryId === factory.id
+    );
+    const criticalProcesses = factoryProcesses.filter(
+      (p) => p.criticality === "critical" || p.criticality === "high"
+    );
+    const avgRTO =
+      factoryProcesses.length > 0
+        ? factoryProcesses.reduce((sum, p) => sum + p.rto, 0) /
+          factoryProcesses.length
+        : 0;
+
+    return {
+      ...factory,
+      processCount: factory._count.processes,
+      reportCount: factory._count.biaReports,
+      criticalProcessCount: criticalProcesses.length,
+      avgRTO: Math.round(avgRTO),
+    };
+  });
+
   return (
     <div className="container mx-auto p-6 space-y-6">
-      {/* En-tête */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Dashboard BIA</h1>
-          <p className="text-muted-foreground">
-            Vue d&apos;ensemble de l&apos;analyse d&apos;impact métier
-          </p>
-        </div>
-        <div className="text-sm text-muted-foreground">
-          Dernière mise à jour :{" "}
-          {new Date().toLocaleDateString("fr-FR", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
+      {/* En-tête avec design cohérent plateforme */}
+      <div className="relative overflow-hidden rounded-lg border bg-card p-8 shadow-sm">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div className="flex-1">
+            <div className="flex items-center gap-4 mb-3">
+              <div className="p-3 bg-primary/10 rounded-lg">
+                <BarChart3 className="h-8 w-8 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-foreground mb-1">
+                  Dashboard BIA
+                </h1>
+                <p className="text-muted-foreground">
+                  Business Impact Analysis - Vue stratégique
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 mt-4">
+              <div
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border ${
+                  stats.globalContinuityLevel.score >= 85
+                    ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900"
+                    : stats.globalContinuityLevel.score >= 70
+                    ? "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900"
+                    : stats.globalContinuityLevel.score >= 55
+                    ? "bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900"
+                    : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900"
+                }`}
+              >
+                <Shield
+                  className={`h-5 w-5 ${
+                    stats.globalContinuityLevel.score >= 85
+                      ? "text-green-600 dark:text-green-400"
+                      : stats.globalContinuityLevel.score >= 70
+                      ? "text-blue-600 dark:text-blue-400"
+                      : stats.globalContinuityLevel.score >= 55
+                      ? "text-orange-600 dark:text-orange-400"
+                      : "text-red-600 dark:text-red-400"
+                  }`}
+                />
+                <span
+                  className={`font-semibold ${
+                    stats.globalContinuityLevel.score >= 85
+                      ? "text-green-700 dark:text-green-300"
+                      : stats.globalContinuityLevel.score >= 70
+                      ? "text-blue-700 dark:text-blue-300"
+                      : stats.globalContinuityLevel.score >= 55
+                      ? "text-orange-700 dark:text-orange-300"
+                      : "text-red-700 dark:text-red-300"
+                  }`}
+                >
+                  Niveau: {stats.globalContinuityLevel.level}
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  ({stats.globalContinuityLevel.score}/100)
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            <div className="px-4 py-2 bg-muted rounded-lg">
+              <div className="flex items-center gap-2 text-sm">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span>
+                  {new Date().toLocaleDateString("fr-FR", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </div>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {stats.total} processus analysés
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Cartes de métriques principales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-        <Card>
+      {/* Cartes de métriques principales - style plateforme */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        {/* Total Processus */}
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Total Processus
             </CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Building2 className="h-4 w-4 text-primary" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">Processus analysés</p>
+            <div className="text-3xl font-bold text-foreground">
+              {stats.total}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Processus analysés
+            </p>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Niveau de Continuité */}
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Niveau de Continuité Global
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Niveau Global
             </CardTitle>
-            <Shield
-              className={`h-4 w-4 text-${stats.globalContinuityLevel.color}-500`}
-            />
+            <div
+              className={`p-2 rounded-lg ${
+                stats.globalContinuityLevel.score >= 85
+                  ? "bg-green-100 dark:bg-green-950/30"
+                  : stats.globalContinuityLevel.score >= 70
+                  ? "bg-blue-100 dark:bg-blue-950/30"
+                  : stats.globalContinuityLevel.score >= 55
+                  ? "bg-orange-100 dark:bg-orange-950/30"
+                  : "bg-red-100 dark:bg-red-950/30"
+              }`}
+            >
+              <Shield
+                className={`h-4 w-4 ${
+                  stats.globalContinuityLevel.score >= 85
+                    ? "text-green-600 dark:text-green-400"
+                    : stats.globalContinuityLevel.score >= 70
+                    ? "text-blue-600 dark:text-blue-400"
+                    : stats.globalContinuityLevel.score >= 55
+                    ? "text-orange-600 dark:text-orange-400"
+                    : "text-red-600 dark:text-red-400"
+                }`}
+              />
+            </div>
           </CardHeader>
           <CardContent>
             <div
-              className={`text-2xl font-bold text-${stats.globalContinuityLevel.color}-600`}
+              className={`text-3xl font-bold ${
+                stats.globalContinuityLevel.score >= 85
+                  ? "text-green-600 dark:text-green-400"
+                  : stats.globalContinuityLevel.score >= 70
+                  ? "text-blue-600 dark:text-blue-400"
+                  : stats.globalContinuityLevel.score >= 55
+                  ? "text-orange-600 dark:text-orange-400"
+                  : "text-red-600 dark:text-red-400"
+              }`}
             >
               {stats.globalContinuityLevel.score}/100
             </div>
-            <p
-              className={`text-xs text-${stats.globalContinuityLevel.color}-600 font-medium`}
-            >
+            <p className="text-xs text-muted-foreground mt-1 font-medium">
               {stats.globalContinuityLevel.level}
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* RTO Moyen */}
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">RTO Moyen</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              RTO Moyen
+            </CardTitle>
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Clock className="h-4 w-4 text-primary" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.averageRTO}h</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold text-foreground">
+              {stats.averageRTO}h
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
               Temps de récupération
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Processus Critiques */}
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Processus Critiques
             </CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 bg-red-100 dark:bg-red-950/30 rounded-lg">
+              <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">
+            <div className="text-3xl font-bold text-red-600 dark:text-red-400">
               {stats.byCriticality.critical}
             </div>
-            <p className="text-xs text-muted-foreground">Criticité maximale</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Criticité maximale
+            </p>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Attention Requise */}
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Attention Requise
             </CardTitle>
-            <Shield className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 bg-orange-100 dark:bg-orange-950/30 rounded-lg">
+              <TrendingUp className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
+            <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
               {stats.processesNeedingAttention}
             </div>
-            <p className="text-xs text-muted-foreground">Processus à risque</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Processus à risque
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -488,54 +667,64 @@ export default async function BiaDashboardPage() {
       {/* Graphiques */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Répartition par criticité */}
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Répartition par Criticité
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <BarChart3 className="h-5 w-5 text-primary" />
+              </div>
+              <span className="font-semibold">Répartition par Criticité</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <BiaCriticalityChart data={stats.byCriticality} />
           </CardContent>
         </Card>
 
         {/* Distribution RTO */}
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Distribution RTO
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <TrendingUp className="h-5 w-5 text-primary" />
+              </div>
+              <span className="font-semibold">Distribution RTO</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <BiaRtoChart processes={processes} />
           </CardContent>
         </Card>
       </div>
 
       {/* Répartition par département */}
-      <Card>
+      <Card className="hover:shadow-md transition-shadow">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Processus par Département
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Users className="h-5 w-5 text-primary" />
+            </div>
+            <span className="font-semibold">Processus par Département</span>
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <BiaProcessChart departmentData={stats.byDepartment} />
         </CardContent>
       </Card>
 
       {/* Table des processus critiques */}
-      <Card>
+      <Card className="hover:shadow-md transition-shadow">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-red-500" />
-            Processus Nécessitant une Attention Immédiate
+            <div className="p-2 bg-red-100 dark:bg-red-950/30 rounded-lg">
+              <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+            </div>
+            <span className="font-semibold">
+              Processus Nécessitant une Attention Immédiate
+            </span>
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <BiaProcessTable
             processes={processes.filter(
               (p) => p.rto > 24 || p.criticality === "critical"
@@ -545,51 +734,83 @@ export default async function BiaDashboardPage() {
       </Card>
 
       {/* Risques majeurs */}
-      <Card>
+      <Card className="hover:shadow-md transition-shadow">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-red-500" />
-            Risques Majeurs Identifiés
+            <div className="p-2 bg-orange-100 dark:bg-orange-950/30 rounded-lg">
+              <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+            </div>
+            <span className="font-semibold">Risques Majeurs Identifiés</span>
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {stats.majorRisks.length > 0 ? (
             <div className="space-y-4">
               {stats.majorRisks.map((risk, index) => (
-                <div key={index} className="border rounded-lg p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <h4 className="font-semibold text-sm">{risk.type}</h4>
+                <div
+                  key={index}
+                  className={`border-l-4 rounded-lg p-4 transition-shadow hover:shadow-sm ${
+                    risk.severity === "Critique"
+                      ? "border-red-500 bg-red-50 dark:bg-red-950/20"
+                      : risk.severity === "Élevé"
+                      ? "border-orange-500 bg-orange-50 dark:bg-orange-950/20"
+                      : "border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20"
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`p-1.5 rounded-lg ${
+                          risk.severity === "Critique"
+                            ? "bg-red-100 dark:bg-red-900/30"
+                            : risk.severity === "Élevé"
+                            ? "bg-orange-100 dark:bg-orange-900/30"
+                            : "bg-yellow-100 dark:bg-yellow-900/30"
+                        }`}
+                      >
+                        <AlertTriangle
+                          className={`h-4 w-4 ${
+                            risk.severity === "Critique"
+                              ? "text-red-600 dark:text-red-400"
+                              : risk.severity === "Élevé"
+                              ? "text-orange-600 dark:text-orange-400"
+                              : "text-yellow-600 dark:text-yellow-400"
+                          }`}
+                        />
+                      </div>
+                      <h4 className="font-semibold">{risk.type}</h4>
+                    </div>
                     <span
-                      className={`px-2 py-1 rounded text-xs font-medium ${
+                      className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                         risk.severity === "Critique"
-                          ? "bg-red-100 text-red-800"
+                          ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
                           : risk.severity === "Élevé"
-                          ? "bg-orange-100 text-orange-800"
-                          : "bg-yellow-100 text-yellow-800"
+                          ? "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300"
+                          : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
                       }`}
                     >
                       {risk.severity}
                     </span>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-3">
+                  <p className="text-sm text-muted-foreground mb-3 pl-7">
                     {risk.description}
                   </p>
                   {risk.processes.length > 0 && (
-                    <div>
-                      <p className="text-xs font-medium mb-1">
+                    <div className="pl-7">
+                      <p className="text-xs font-medium mb-2 text-muted-foreground">
                         Processus concernés :
                       </p>
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-wrap gap-2">
                         {risk.processes.slice(0, 3).map((processName, idx) => (
                           <span
                             key={idx}
-                            className="px-2 py-1 bg-gray-100 text-xs rounded"
+                            className="px-2.5 py-1 bg-muted text-xs rounded-full font-medium"
                           >
                             {processName}
                           </span>
                         ))}
                         {risk.processes.length > 3 && (
-                          <span className="px-2 py-1 bg-gray-100 text-xs rounded">
+                          <span className="px-2.5 py-1 bg-muted text-xs rounded-full font-medium">
                             +{risk.processes.length - 3} autres
                           </span>
                         )}
@@ -600,10 +821,13 @@ export default async function BiaDashboardPage() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-8">
-              <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
-              <p className="text-muted-foreground">
-                Aucun risque majeur identifié
+            <div className="text-center py-12">
+              <div className="inline-flex p-4 bg-green-100 dark:bg-green-950/30 rounded-full mb-4">
+                <CheckCircle2 className="h-12 w-12 text-green-600 dark:text-green-400" />
+              </div>
+              <p className="font-medium">Aucun risque majeur identifié</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Excellente gestion de la continuité
               </p>
             </div>
           )}
@@ -611,33 +835,42 @@ export default async function BiaDashboardPage() {
       </Card>
 
       {/* Recommandations détaillées */}
-      <Card>
+      <Card className="hover:shadow-md transition-shadow">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-blue-500" />
-            Recommandations Détaillées
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <TrendingUp className="h-5 w-5 text-primary" />
+            </div>
+            <span className="font-semibold">Recommandations Stratégiques</span>
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {stats.recommendations.length > 0 ? (
             <div className="space-y-3">
               {stats.recommendations.map((recommendation, index) => (
                 <div
                   key={index}
-                  className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg"
+                  className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg border hover:shadow-sm transition-shadow"
                 >
-                  <div className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-xs font-bold">
+                  <div className="flex-shrink-0 w-7 h-7 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">
                     {index + 1}
                   </div>
-                  <p className="text-sm text-blue-800">{recommendation}</p>
+                  <p className="text-sm leading-relaxed pt-0.5">
+                    {recommendation}
+                  </p>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-8">
-              <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
-              <p className="text-muted-foreground">
+            <div className="text-center py-12">
+              <div className="inline-flex p-4 bg-green-100 dark:bg-green-950/30 rounded-full mb-4">
+                <CheckCircle2 className="h-12 w-12 text-green-600 dark:text-green-400" />
+              </div>
+              <p className="font-medium">
                 Toutes les recommandations sont appliquées
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Continuez votre excellent travail !
               </p>
             </div>
           )}
@@ -647,115 +880,360 @@ export default async function BiaDashboardPage() {
       {/* Boutons d'exportation */}
       <BiaExportButtons stats={stats} />
 
-      {/* Résumé global */}
+      {/* Résumé global avec design premium */}
       {processes.length === 0 ? (
-        <Card>
-          <CardContent className="text-center py-12">
-            <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">Aucun processus BIA</h3>
-            <p className="text-muted-foreground mb-4">
+        <Card className="border-none shadow-xl">
+          <CardContent className="text-center py-16">
+            <div className="inline-flex p-6 bg-blue-100 dark:bg-blue-900/30 rounded-full mb-6">
+              <Building2 className="h-16 w-16 text-blue-500" />
+            </div>
+            <h3 className="text-2xl font-bold mb-3">Aucun processus BIA</h3>
+            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
               Commencez par créer votre premier processus d&apos;analyse
-              d&apos;impact métier.
+              d&apos;impact métier pour améliorer la résilience de votre
+              organisation.
             </p>
             <Link
               href="/bia/processes/new"
-              className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+              className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl font-medium"
             >
+              <Building2 className="h-5 w-5 mr-2" />
               Créer un processus
             </Link>
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
-              Résumé Exécutif
+        <Card className="border-none shadow-xl">
+          <CardHeader className="bg-gradient-to-r from-emerald-50 via-green-50 to-teal-50 dark:from-emerald-950 dark:via-green-950 dark:to-teal-950">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <div className="p-2 bg-green-500 rounded-lg">
+                <CheckCircle2 className="h-6 w-6 text-white" />
+              </div>
+              <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent font-bold">
+                Résumé Exécutif
+              </span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="prose prose-sm max-w-none">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <h4 className="font-semibold mb-2">Situation Actuelle :</h4>
-                <ul className="space-y-1 text-sm">
-                  <li>• {stats.total} processus analysés au total</li>
-                  <li>
-                    • Niveau de continuité global :{" "}
-                    <span
-                      className={`font-bold text-${stats.globalContinuityLevel.color}-600`}
-                    >
-                      {stats.globalContinuityLevel.level}
-                    </span>{" "}
-                    ({stats.globalContinuityLevel.score}/100)
+          <CardContent className="pt-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {/* Situation Actuelle */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                    <BarChart3 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <h4 className="font-bold text-lg">Situation Actuelle</h4>
+                </div>
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-2 text-sm">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
+                    <span>
+                      <span className="font-semibold">{stats.total}</span>{" "}
+                      processus analysés au total
+                    </span>
                   </li>
-                  <li>
-                    • {stats.byCriticality.critical + stats.byCriticality.high}{" "}
-                    processus de haute criticité
+                  <li className="flex items-start gap-2 text-sm">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
+                    <span>
+                      Niveau de continuité global :{" "}
+                      <span
+                        className={`font-bold ${
+                          stats.globalContinuityLevel.score >= 85
+                            ? "text-green-600 dark:text-green-400"
+                            : stats.globalContinuityLevel.score >= 70
+                            ? "text-blue-600 dark:text-blue-400"
+                            : stats.globalContinuityLevel.score >= 55
+                            ? "text-orange-600 dark:text-orange-400"
+                            : "text-red-600 dark:text-red-400"
+                        }`}
+                      >
+                        {stats.globalContinuityLevel.level}
+                      </span>{" "}
+                      ({stats.globalContinuityLevel.score}/100)
+                    </span>
                   </li>
-                  <li>• RTO moyen de {stats.averageRTO} heures</li>
-                  <li>
-                    • {Object.keys(stats.byDepartment).length} départements
-                    couverts
+                  <li className="flex items-start gap-2 text-sm">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
+                    <span>
+                      <span className="font-semibold">
+                        {stats.byCriticality.critical +
+                          stats.byCriticality.high}
+                      </span>{" "}
+                      processus de haute criticité
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2 text-sm">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
+                    <span>
+                      RTO moyen de{" "}
+                      <span className="font-semibold">
+                        {stats.averageRTO} heures
+                      </span>
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2 text-sm">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
+                    <span>
+                      <span className="font-semibold">
+                        {Object.keys(stats.byDepartment).length}
+                      </span>{" "}
+                      départements couverts
+                    </span>
                   </li>
                 </ul>
               </div>
-              <div>
-                <h4 className="font-semibold mb-2">Priorités Immédiates :</h4>
-                <ul className="space-y-1 text-sm">
+
+              {/* Priorités Immédiates */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
+                    <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                  </div>
+                  <h4 className="font-bold text-lg">Priorités Immédiates</h4>
+                </div>
+                <ul className="space-y-3">
                   {stats.processesNeedingAttention > 0 && (
-                    <li className="text-red-600">
-                      • {stats.processesNeedingAttention} processus nécessitent
-                      une attention immédiate
+                    <li className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400">
+                      <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <span className="font-medium">
+                        {stats.processesNeedingAttention} processus nécessitent
+                        une attention immédiate
+                      </span>
                     </li>
                   )}
                   {stats.majorRisks.filter((r) => r.severity === "Critique")
                     .length > 0 && (
-                    <li className="text-red-600">
-                      •{" "}
-                      {
-                        stats.majorRisks.filter(
-                          (r) => r.severity === "Critique"
-                        ).length
-                      }{" "}
-                      risques critiques identifiés
+                    <li className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400">
+                      <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <span className="font-medium">
+                        {
+                          stats.majorRisks.filter(
+                            (r) => r.severity === "Critique"
+                          ).length
+                        }{" "}
+                        risques critiques identifiés
+                      </span>
                     </li>
                   )}
                   {stats.averageRTO > 24 && (
-                    <li className="text-orange-600">
-                      • Optimiser les temps de récupération (RTO moyen élevé)
+                    <li className="flex items-start gap-2 text-sm text-orange-600 dark:text-orange-400">
+                      <Clock className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <span className="font-medium">
+                        Optimiser les temps de récupération (RTO moyen élevé)
+                      </span>
                     </li>
                   )}
                   {stats.byCriticality.critical > 0 && (
-                    <li className="text-red-600">
-                      • Réviser les plans de continuité pour les processus
-                      critiques
+                    <li className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400">
+                      <Shield className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <span className="font-medium">
+                        Réviser les plans de continuité pour les processus
+                        critiques
+                      </span>
                     </li>
                   )}
+                  {stats.processesNeedingAttention === 0 &&
+                    stats.majorRisks.filter((r) => r.severity === "Critique")
+                      .length === 0 && (
+                      <li className="flex items-start gap-2 text-sm text-green-600 dark:text-green-400">
+                        <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                        <span className="font-medium">
+                          Aucune priorité critique - Situation sous contrôle
+                        </span>
+                      </li>
+                    )}
                 </ul>
               </div>
-              <div>
-                <h4 className="font-semibold mb-2">Actions Recommandées :</h4>
-                <ul className="space-y-1 text-sm">
-                  <li className="text-blue-600">
-                    • {stats.recommendations.length} recommandations générées
+
+              {/* Actions Recommandées */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                    <TrendingUp className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <h4 className="font-bold text-lg">Actions Recommandées</h4>
+                </div>
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-2 text-sm text-blue-600 dark:text-blue-400">
+                    <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <span className="font-medium">
+                      {stats.recommendations.length} recommandations générées
+                    </span>
                   </li>
-                  <li className="text-green-600">
-                    • Tests de récupération trimestriels
+                  <li className="flex items-start gap-2 text-sm text-green-600 dark:text-green-400">
+                    <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <span>Tests de récupération trimestriels</span>
                   </li>
-                  <li className="text-green-600">
-                    • Formation continue des équipes
+                  <li className="flex items-start gap-2 text-sm text-green-600 dark:text-green-400">
+                    <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <span>Formation continue des équipes</span>
                   </li>
-                  <li className="text-green-600">
-                    • Mise à jour semestrielle de la documentation
+                  <li className="flex items-start gap-2 text-sm text-green-600 dark:text-green-400">
+                    <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <span>Mise à jour semestrielle de la documentation</span>
                   </li>
                   {stats.majorRisks.length > 0 && (
-                    <li className="text-orange-600">
-                      • Traitement des {stats.majorRisks.length} risques
-                      identifiés
+                    <li className="flex items-start gap-2 text-sm text-orange-600 dark:text-orange-400">
+                      <Shield className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <span className="font-medium">
+                        Traitement des {stats.majorRisks.length} risques
+                        identifiés
+                      </span>
                     </li>
                   )}
                 </ul>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Factories Overview */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {factoryStats.map((factory) => (
+          <Card key={factory.id} className="hover:shadow-md transition-shadow">
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Factory className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base font-semibold">
+                      {factory.name}
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Code: {factory.code}
+                    </p>
+                  </div>
+                </div>
+                <Badge
+                  variant={factory.isActive ? "default" : "secondary"}
+                  className="text-xs"
+                >
+                  {factory.isActive ? "Active" : "Inactive"}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {factory.manager && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Users className="h-4 w-4" />
+                    <span>
+                      {factory.manager.firstName} {factory.manager.lastName}
+                    </span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Processus</p>
+                    <p className="text-2xl font-bold">{factory.processCount}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Rapports</p>
+                    <p className="text-2xl font-bold">{factory.reportCount}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Critiques</p>
+                    <p className="text-lg font-semibold text-red-600 dark:text-red-400">
+                      {factory.criticalProcessCount}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">RTO Moyen</p>
+                    <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+                      {factory.avgRTO.toFixed(1)}h
+                    </p>
+                  </div>
+                </div>
+
+                <Link
+                  href={`/factories/${factory.id}`}
+                  className="block w-full mt-3 text-center text-sm text-primary hover:underline"
+                >
+                  Voir les détails →
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Recent Reports */}
+      {recentReports.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <FileText className="h-5 w-5 text-primary" />
+              </div>
+              <CardTitle>Rapports BIA Récents</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {recentReports.map((report) => (
+                <div
+                  key={report.id}
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-start gap-3 flex-1">
+                    <div className="p-2 bg-primary/10 rounded">
+                      <FileText className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="space-y-1 flex-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-semibold text-sm">{report.name}</h4>
+                        <Badge
+                          variant={
+                            report.status === "completed"
+                              ? "default"
+                              : report.status === "in_progress"
+                              ? "secondary"
+                              : "outline"
+                          }
+                          className="text-xs"
+                        >
+                          {report.status === "completed"
+                            ? "Complété"
+                            : report.status === "in_progress"
+                            ? "En cours"
+                            : "Brouillon"}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Factory className="h-3 w-3" />
+                          {report.factory?.name || "N/A"}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Users className="h-3 w-3" />
+                          {report.author
+                            ? `${report.author.firstName} ${report.author.lastName}`
+                            : "N/A"}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {new Date(report.createdAt).toLocaleDateString(
+                            "fr-FR"
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <Link
+                    href={`/bia/reports/${report.id}/view`}
+                    className="text-sm text-primary hover:underline ml-4"
+                  >
+                    Voir →
+                  </Link>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
