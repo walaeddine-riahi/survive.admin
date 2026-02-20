@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, type Path } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import {
 } from "@/lib/validations/process-schema";
 import { createProcess, updateProcess } from "@/actions/bia/process-actions";
 import { toast } from "sonner";
+import { type ExtractedProcessData } from "@/actions/bia/analyze-process-pdf";
 import {
   ChevronDown,
   ChevronRight,
@@ -38,6 +39,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AIDocumentUpload } from "@/components/bia/ai-document-upload";
+import { ConfirmationAssistant } from "@/components/bia/confirmation-assistant";
+import {
+  prepareExtractedFieldsForReview,
+  type ExtractedFieldReview,
+} from "@/lib/confirmation-utils";
 
 type ProcessFormSpreadsheetProps = {
   processId?: string;
@@ -67,6 +73,15 @@ export function ProcessFormSpreadsheet({
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
+  // États pour le ConfirmationAssistant
+  const [showConfirmationAssistant, setShowConfirmationAssistant] =
+    useState(false);
+  const [fieldsToReview, setFieldsToReview] = useState<ExtractedFieldReview[]>(
+    []
+  );
+  const [originalAIData, setOriginalAIData] =
+    useState<Partial<ExtractedProcessData> | null>(null); // Données IA brutes pour les tableaux
+
   // États pour les sections collapsibles
   const [openSections, setOpenSections] = useState({
     general: true,
@@ -89,29 +104,23 @@ export function ProcessFormSpreadsheet({
   const form = useForm<ProcessFormValues>({
     resolver: zodResolver(processFormSchemaEnhanced),
     defaultValues: {
-      name: initialData?.name || "Processus de Production - Ligne A",
-      description:
-        initialData?.description ||
-        "Processus critique de fabrication des produits pharmaceutiques sur la ligne de production A",
-      department: initialData?.department || "Production",
-      location: initialData?.location || "Usine Principale - Bâtiment B",
+      name: initialData?.name || "",
+      description: initialData?.description || "",
+      department: initialData?.department || "",
+      location: initialData?.location || "",
       factoryId: initialData?.factoryId || factories[0]?.id || "",
-      processOwner: initialData?.processOwner || "Ahmed Ben Salem",
-      ownerRole: initialData?.ownerRole || "Responsable Production",
-      ownerEmail: initialData?.ownerEmail || "ahmed.bensalem@entreprise.com",
-      ownerPhone: initialData?.ownerPhone || "+216 71 234 567",
+      processOwner: initialData?.processOwner || "",
+      ownerRole: initialData?.ownerRole || "",
+      ownerEmail: initialData?.ownerEmail || "",
+      ownerPhone: initialData?.ownerPhone || "",
       interimManagers: initialData?.interimManagers || [],
-      impact:
-        initialData?.impact ||
-        "Arrêt complet de la production, perte de revenus de 50 000 DT/jour",
-      criticality: initialData?.criticality || "CRITICAL",
-      rto: initialData?.rto || 4,
-      mtpd: initialData?.mtpd || 8,
-      rpo: initialData?.rpo || 2,
-      mbco: initialData?.mbco || "12 heures maximum avant impact client",
-      criticalTimes:
-        initialData?.criticalTimes ||
-        "Fin de mois (clôture comptable)\nHaute saison (Juin-Septembre)\nPériode de Ramadan",
+      impact: initialData?.impact || "",
+      criticality: initialData?.criticality || "MEDIUM",
+      rto: initialData?.rto || 0,
+      mtpd: initialData?.mtpd || 0,
+      rpo: initialData?.rpo || 0,
+      mbco: initialData?.mbco || "",
+      criticalTimes: initialData?.criticalTimes || "",
 
       // Nouveaux impacts structurés
       impacts: initialData?.impacts || [
@@ -181,27 +190,13 @@ export function ProcessFormSpreadsheet({
       ],
 
       // Anciens champs (deprecated)
-      financialImpact:
-        initialData?.financialImpact ||
-        "Perte de chiffre d'affaires: 50 000 DT/jour\nPénalités contractuelles: 10 000 DT/jour\nCoûts de récupération: 20 000 DT",
-      operationalImpact:
-        initialData?.operationalImpact ||
-        "Arrêt de la ligne de production\nRetard des livraisons clients\nSurcharge des autres lignes de production\nPerte de productivité: 30%",
-      reputationImpact:
-        initialData?.reputationImpact ||
-        "Perte de confiance des clients\nImpact sur l'image de marque\nRisque de perte de parts de marché\nMécontentement des partenaires",
-      operationalCapacityImpact:
-        initialData?.operationalCapacityImpact ||
-        "Réduction de capacité de 40%\nRetards de livraison: 5-7 jours\nImpossibilité de respecter les SLA\nAccumulation du backlog",
-      mainFunctionality:
-        initialData?.mainFunctionality ||
-        "Assurer la production continue des médicaments avec respect des normes GMP et des délais de livraison aux distributeurs",
-      productDependencies:
-        initialData?.productDependencies ||
-        "Médicament A | Dépendance totale - production exclusive\nMédicament B | Dépendance partielle - backup sur Ligne C\nMédicament C | Dépendance critique - 80% de la production",
-      interServiceDependencies:
-        initialData?.interServiceDependencies ||
-        "Maintenance | Support technique quotidien et préventif\nQualité | Contrôle qualité obligatoire à chaque batch\nLogistique | Approvisionnement matières premières\nIT | Système MES pour traçabilité",
+      financialImpact: initialData?.financialImpact || "",
+      operationalImpact: initialData?.operationalImpact || "",
+      reputationImpact: initialData?.reputationImpact || "",
+      operationalCapacityImpact: initialData?.operationalCapacityImpact || "",
+      mainFunctionality: initialData?.mainFunctionality || "",
+      productDependencies: initialData?.productDependencies || "",
+      interServiceDependencies: initialData?.interServiceDependencies || "",
       supplierHasContinuityPlan:
         initialData?.supplierHasContinuityPlan ?? false,
       hasSLAClause: initialData?.hasSLAClause ?? false,
@@ -218,257 +213,17 @@ export function ProcessFormSpreadsheet({
       hasAlternativeAccess: initialData?.hasAlternativeAccess ?? false,
       hasReplacement: initialData?.hasReplacement ?? false,
       hasAlternativeSupplier: initialData?.hasAlternativeSupplier ?? false,
-      activitesCritiques: initialData?.activitesCritiques || [
-        {
-          nom: "Préparation des matières premières",
-          criticite: "critical" as const,
-          delai: "Immédiat",
-          rto: 2,
-          mtpd: 4,
-          rpo: 1,
-          mbco: "Aucune production possible sans cette activité",
-          impactsOperationnels: "Blocage complet de la chaîne",
-          impactsReglementaires: "Non-conformité GMP",
-          impactsImage: "Perte de confiance client",
-        },
-        {
-          nom: "Contrôle qualité en cours de production",
-          criticite: "high" as const,
-          delai: "4 heures",
-          rto: 4,
-          mtpd: 8,
-          rpo: 2,
-          mbco: "Risque de non-conformité produits",
-          impactsOperationnels: "Arrêt ligne si défaut détecté",
-          impactsReglementaires: "Sanctions réglementaires possibles",
-          impactsImage: "Risque rappel produits",
-        },
-      ],
-      fournisseursExternes: initialData?.fournisseursExternes || [
-        {
-          nom: "PharmaChem SARL",
-          servicesOfferts: "Matières premières actives",
-          contactNom: "Mohamed Trabelsi",
-          contactTelephone: "+216 71 123 456",
-          contactEmail: "contact@pharmachem.tn",
-          zoneGeographique: "Tunisie - Sousse",
-          isUniqueSupplier: false,
-          rto: 24,
-          mtpd: 48,
-          planContinuiteActivite: "oui" as const,
-          clauseSLA: "oui" as const,
-        },
-        {
-          nom: "PackTech International",
-          servicesOfferts: "Emballages et étiquettes",
-          contactNom: "Salah Ben Ali",
-          contactTelephone: "+216 71 987 654",
-          contactEmail: "s.benali@packtech.com",
-          zoneGeographique: "Tunisie - Tunis",
-          isUniqueSupplier: false,
-          rto: 48,
-          mtpd: 96,
-          planContinuiteActivite: "non" as const,
-          clauseSLA: "oui" as const,
-        },
-      ],
+      activitesCritiques: initialData?.activitesCritiques || [],
+      fournisseursExternes: initialData?.fournisseursExternes || [],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      obligationsLegales: (initialData as any)?.obligationsLegales || [
-        {
-          domaine: "Santé - Production Pharmaceutique",
-          obligationLegale: "Bonnes Pratiques de Fabrication (GMP)",
-          reference: "Directive 2003/94/CE",
-          autoriteRegulation:
-            "Ministère de la Santé - Direction de la Pharmacie",
-          details:
-            "Respect obligatoire des normes GMP pour la production pharmaceutique",
-          consequencesNonRespect:
-            "Suspension de l'autorisation de production\nAmendes: 50 000 - 500 000 DT\nRetrait produits du marché",
-        },
-        {
-          domaine: "Qualité",
-          obligationLegale: "ISO 9001:2015",
-          reference: "ISO 9001:2015",
-          autoriteRegulation: "INNORPI",
-          details: "Système de management de la qualité certifié",
-          consequencesNonRespect:
-            "Perte de certification\nPerte de marchés publics\nImpact réputation",
-        },
-      ],
-      systemesInformatiques: initialData?.systemesInformatiques || [
-        {
-          nom: "SAP ERP Production",
-          typeSysteme: "ERP",
-          criticite: "critical" as const,
-          impactIndisponibilite: "Arrêt complet gestion production",
-          activitesAssociees: "Planification, suivi production, traçabilité",
-          sauvegardesEnPlace: "oui" as const,
-          rto: 4,
-          rpo: 1,
-          mtpd: 8,
-          solutionsContournement: "Mode dégradé manuel avec formulaires papier",
-          incidentsAnterieurs: "Panne serveur 15/03/2024 - 2h d'arrêt",
-        },
-        {
-          nom: "Siemens SCADA",
-          typeSysteme: "SCADA/Supervision",
-          criticite: "high" as const,
-          impactIndisponibilite: "Perte de supervision temps réel",
-          activitesAssociees: "Supervision équipements, alarmes",
-          sauvegardesEnPlace: "oui" as const,
-          rto: 2,
-          rpo: 0.5,
-          mtpd: 4,
-          solutionsContournement: "Supervision locale sur automates",
-          incidentsAnterieurs: "Aucun incident majeur",
-        },
-      ],
-      infrastructuresPhysiques: initialData?.infrastructuresPhysiques || [
-        {
-          nom: "Alimentation électrique principale",
-          categorie: "electricite" as const,
-          criticite: "critical" as const,
-          rto: 0.5,
-          mtpd: 2,
-          possibiliteTravailDistance: "non" as const,
-          alternativesDisponibles:
-            "Groupe électrogène 500 kVA\nUPS 100 kVA pour équipements critiques",
-        },
-        {
-          nom: "Système de climatisation salle blanche",
-          categorie: "climatisation" as const,
-          criticite: "high" as const,
-          rto: 2,
-          mtpd: 4,
-          possibiliteTravailDistance: "non" as const,
-          alternativesDisponibles:
-            "Système de climatisation redondant\nProcédure arrêt production si température > 25°C",
-        },
-      ],
+      obligationsLegales: (initialData as any)?.obligationsLegales || [],
+      systemesInformatiques: initialData?.systemesInformatiques || [],
+      infrastructuresPhysiques: initialData?.infrastructuresPhysiques || [],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      rolesPersonnel: (initialData as any)?.rolesPersonnel || [
-        {
-          role: "Opérateur de production ligne A",
-          effectif: 8,
-          tachesResponsabilites:
-            "Conduite ligne production\nContrôles en cours\nEnregistrement données",
-          competenceUnique: "non" as const,
-          delaiDisponibiliteNecessaire: "Immédiat (équipes 3x8)",
-          remplacable: "oui" as const,
-          remplacePar: "Opérateurs formés des lignes B et C",
-          formationNecessaire: "oui" as const,
-          dureeFormation: "2 semaines formation + 1 mois tutorat",
-          solutionsContournement: "Polyvalence opérateurs autres lignes",
-        },
-        {
-          role: "Technicien maintenance",
-          effectif: 3,
-          tachesResponsabilites:
-            "Maintenance préventive\nDépannage\nRéglages machines",
-          competenceUnique: "oui" as const,
-          delaiDisponibiliteNecessaire: "Moins de 2 heures",
-          remplacable: "oui" as const,
-          remplacePar: "Techniciens équipe centrale",
-          formationNecessaire: "oui" as const,
-          dureeFormation: "3 mois",
-          solutionsContournement: "Appel technicien astreinte",
-        },
-      ],
-      equipementsIndustriels: initialData?.equipementsIndustriels || [
-        {
-          designation: "Mélangeur principal V-200",
-          modeleReference: "GERICKE GCM 200",
-          tachesRealise: "Mélange matières premières poudre",
-          criticite: "critical" as const,
-          rto: 8,
-          mtpd: 24,
-          possibiliteReaffectation: "non" as const,
-          solutionsContournement:
-            "Utilisation mélangeur ligne B (capacité réduite)",
-          tension: "400V",
-          typeCourant: "Triphasé",
-          puissanceNominale: "15 kW",
-          consommationJournaliere: "120 kWh",
-          compatibiliteSecours: "oui" as const,
-          alternativesDisponibles: "Mélangeur ligne B (50% capacité)",
-        },
-        {
-          designation: "Comprimé presse rotative PR-45",
-          modeleReference: "FETTE 3090",
-          tachesRealise: "Compression comprimés",
-          criticite: "critical" as const,
-          rto: 12,
-          mtpd: 48,
-          possibiliteReaffectation: "non" as const,
-          solutionsContournement: "Sous-traitance externe",
-          tension: "400V",
-          typeCourant: "Triphasé",
-          puissanceNominale: "22 kW",
-          consommationJournaliere: "176 kWh",
-          compatibiliteSecours: "oui" as const,
-          alternativesDisponibles: "Ligne C (30% capacité)",
-        },
-      ],
-      equipementsBureautiques: initialData?.equipementsBureautiques || [
-        {
-          type: "PC de supervision production",
-          quantiteActuelle: 4,
-          tachesUtilisation:
-            "Supervision temps réel\nSaisie données production",
-          criticite: "high" as const,
-          rto: 4,
-          mtpd: 8,
-          quantiteRequiseApresIncident: 2,
-          possibiliteReaffectation: "oui" as const,
-          fournisseur: "Dell Technologies",
-          solutionsContournement: "PC portables de secours (3 unités)",
-        },
-        {
-          type: "Imprimante étiquettes production",
-          quantiteActuelle: 2,
-          tachesUtilisation: "Impression étiquettes produits et lots",
-          criticite: "critical" as const,
-          rto: 2,
-          mtpd: 4,
-          quantiteRequiseApresIncident: 1,
-          possibiliteReaffectation: "oui" as const,
-          fournisseur: "Zebra Technologies",
-          solutionsContournement:
-            "Imprimante backup + étiquettes pré-imprimées",
-        },
-      ],
-      documentationsCritiques: initialData?.documentationsCritiques || [
-        {
-          type: "Procédures de fabrication (Batch Records)",
-          format: "les_deux" as const,
-          emplacementPrincipal:
-            "Serveur documentaire GED + Classeur salle production",
-          emplacementsSecondaires: "Backup cloud + Coffre-fort archives",
-          necessaireApresIncident: "oui" as const,
-          rto: 1,
-          criticite: "critical" as const,
-          modalitesAcces: "Accès GED + copies papier sécurisées",
-          possibiliteRemplacement: "oui" as const,
-          procedureRecuperation:
-            "Impression depuis GED ou utilisation backup cloud",
-          responsable: "Responsable Qualité",
-          notes: "Documents validés et approuvés - versions contrôlées",
-        },
-        {
-          type: "Plans de maintenance préventive",
-          format: "numerique" as const,
-          emplacementPrincipal: "Serveur maintenance GMAO",
-          emplacementsSecondaires: "Backup quotidien sur NAS",
-          necessaireApresIncident: "oui" as const,
-          rto: 4,
-          criticite: "high" as const,
-          modalitesAcces: "Logiciel GMAO - accès réseau",
-          possibiliteRemplacement: "oui" as const,
-          procedureRecuperation: "Restauration depuis backup NAS",
-          responsable: "Chef maintenance",
-          notes: "Historique interventions critique pour reprise",
-        },
-      ],
+      rolesPersonnel: (initialData as any)?.rolesPersonnel || [],
+      equipementsIndustriels: initialData?.equipementsIndustriels || [],
+      equipementsBureautiques: initialData?.equipementsBureautiques || [],
+      documentationsCritiques: initialData?.documentationsCritiques || [],
     },
   });
 
@@ -555,9 +310,37 @@ export function ProcessFormSpreadsheet({
   };
 
   // Fonction pour remplir automatiquement le formulaire avec les données extraites par l'IA
-  const handleAIDataExtracted = (aiData: any) => {
+  const handleAIDataExtracted = (aiData: Partial<ExtractedProcessData>) => {
     console.log("📋 Données IA reçues:", aiData);
 
+    // Stocker les données originales pour accéder aux tableaux JSON
+    setOriginalAIData(aiData);
+
+    // Préparer les champs pour la validation
+    const fieldsForReview = prepareExtractedFieldsForReview(aiData);
+    console.log("📝 Champs préparés pour validation:", fieldsForReview);
+    console.log("🔢 Nombre de champs:", fieldsForReview.length);
+
+    if (fieldsForReview.length > 0) {
+      // Ouvrir l'assistant de confirmation
+      console.log("🚀 Ouverture de l'assistant de confirmation");
+      setFieldsToReview(fieldsForReview);
+      setShowConfirmationAssistant(true);
+      console.log("✅ État mis à jour - showConfirmationAssistant: true");
+
+      toast.success("✅ Extraction terminée !", {
+        description: `${fieldsForReview.length} informations extraites. L'assistant IA va vous les présenter pour validation.`,
+        duration: 4000,
+      });
+    } else {
+      console.log("⚠️ Aucun champ préparé");
+      toast.warning("⚠️ Aucune donnée extraite", {
+        description: "Le PDF ne contient pas d'informations exploitables.",
+      });
+    }
+
+    // Ancien code commenté (auto-remplissage direct)
+    /*
     // Remplir les champs simples
     if (aiData.name) form.setValue("name", aiData.name);
     if (aiData.description) form.setValue("description", aiData.description);
@@ -674,6 +457,7 @@ export function ProcessFormSpreadsheet({
     toast.success(
       "✨ Formulaire rempli automatiquement ! Vérifiez et ajustez les données si nécessaire."
     );
+    */
   };
 
   const onSubmit = async (data: ProcessFormValues) => {
@@ -1490,10 +1274,10 @@ export function ProcessFormSpreadsheet({
                       {activitesFields.length} activités
                     </Badge>
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-3"
                     onClick={(e) => {
                       e.stopPropagation();
                       appendActivite({
@@ -1504,9 +1288,21 @@ export function ProcessFormSpreadsheet({
                         rpo: 0,
                       });
                     }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.stopPropagation();
+                        appendActivite({
+                          nom: "",
+                          criticite: "medium",
+                          rto: 0,
+                          mtpd: 0,
+                          rpo: 0,
+                        });
+                      }
+                    }}
                   >
                     <Plus className="h-4 w-4 mr-1" /> Ajouter
-                  </Button>
+                  </div>
                 </div>
               </CardHeader>
             </CollapsibleTrigger>
@@ -1712,10 +1508,10 @@ export function ProcessFormSpreadsheet({
                       {fournisseursFields.length} fournisseurs
                     </Badge>
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-3"
                     onClick={(e) => {
                       e.stopPropagation();
                       appendFournisseur({
@@ -1728,9 +1524,23 @@ export function ProcessFormSpreadsheet({
                         mtpd: 0,
                       });
                     }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.stopPropagation();
+                        appendFournisseur({
+                          nom: "",
+                          servicesOfferts: "",
+                          isUniqueSupplier: false,
+                          planContinuiteActivite: "non",
+                          clauseSLA: "non",
+                          rto: 0,
+                          mtpd: 0,
+                        });
+                      }
+                    }}
                   >
                     <Plus className="h-4 w-4 mr-1" /> Ajouter
-                  </Button>
+                  </div>
                 </div>
               </CardHeader>
             </CollapsibleTrigger>
@@ -2016,10 +1826,10 @@ export function ProcessFormSpreadsheet({
                       {systemesFields.length} systèmes
                     </Badge>
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-3"
                     onClick={(e) => {
                       e.stopPropagation();
                       appendSysteme({
@@ -2034,7 +1844,7 @@ export function ProcessFormSpreadsheet({
                     }}
                   >
                     <Plus className="h-4 w-4 mr-1" /> Ajouter
-                  </Button>
+                  </div>
                 </div>
               </CardHeader>
             </CollapsibleTrigger>
@@ -2221,10 +2031,10 @@ export function ProcessFormSpreadsheet({
                       {infrastructuresFields.length} infrastructures
                     </Badge>
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-3"
                     onClick={(e) => {
                       e.stopPropagation();
                       appendInfrastructure({
@@ -2238,7 +2048,7 @@ export function ProcessFormSpreadsheet({
                     }}
                   >
                     <Plus className="h-4 w-4 mr-1" /> Ajouter
-                  </Button>
+                  </div>
                 </div>
               </CardHeader>
             </CollapsibleTrigger>
@@ -2413,10 +2223,10 @@ export function ProcessFormSpreadsheet({
                     </CardTitle>
                     <Badge variant="outline">{rolesFields.length} rôles</Badge>
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-3"
                     onClick={(e) => {
                       e.stopPropagation();
                       appendRole({
@@ -2429,7 +2239,7 @@ export function ProcessFormSpreadsheet({
                     }}
                   >
                     <Plus className="h-4 w-4 mr-1" /> Ajouter
-                  </Button>
+                  </div>
                 </div>
               </CardHeader>
             </CollapsibleTrigger>
@@ -2603,10 +2413,10 @@ export function ProcessFormSpreadsheet({
                       {equipIndusFields.length} équipements
                     </Badge>
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-3"
                     onClick={(e) => {
                       e.stopPropagation();
                       appendEquipIndus({
@@ -2620,7 +2430,7 @@ export function ProcessFormSpreadsheet({
                     }}
                   >
                     <Plus className="h-4 w-4 mr-1" /> Ajouter
-                  </Button>
+                  </div>
                 </div>
               </CardHeader>
             </CollapsibleTrigger>
@@ -2792,10 +2602,10 @@ export function ProcessFormSpreadsheet({
                       {equipBuroFields.length} équipements
                     </Badge>
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-3"
                     onClick={(e) => {
                       e.stopPropagation();
                       appendEquipBuro({
@@ -2809,7 +2619,7 @@ export function ProcessFormSpreadsheet({
                     }}
                   >
                     <Plus className="h-4 w-4 mr-1" /> Ajouter
-                  </Button>
+                  </div>
                 </div>
               </CardHeader>
             </CollapsibleTrigger>
@@ -3003,10 +2813,10 @@ export function ProcessFormSpreadsheet({
                       {docsFields.length} documents
                     </Badge>
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-3"
                     onClick={(e) => {
                       e.stopPropagation();
                       appendDoc({
@@ -3020,7 +2830,7 @@ export function ProcessFormSpreadsheet({
                     }}
                   >
                     <Plus className="h-4 w-4 mr-1" /> Ajouter
-                  </Button>
+                  </div>
                 </div>
               </CardHeader>
             </CollapsibleTrigger>
@@ -3193,10 +3003,10 @@ export function ProcessFormSpreadsheet({
                       {obligationsFields.length} obligations
                     </Badge>
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-3"
                     onClick={(e) => {
                       e.stopPropagation();
                       appendObligation({
@@ -3210,7 +3020,7 @@ export function ProcessFormSpreadsheet({
                     }}
                   >
                     <Plus className="h-4 w-4 mr-1" /> Ajouter
-                  </Button>
+                  </div>
                 </div>
               </CardHeader>
             </CollapsibleTrigger>
@@ -3375,6 +3185,112 @@ export function ProcessFormSpreadsheet({
           </div>
         </div>
       </form>
+
+      {/* Assistant de confirmation des données extraites */}
+      <ConfirmationAssistant
+        isOpen={showConfirmationAssistant}
+        onClose={() => setShowConfirmationAssistant(false)}
+        extractedFields={fieldsToReview}
+        onComplete={(confirmedData) => {
+          // Appliquer les données confirmées au formulaire (ignorer les valeurs vides)
+          let filledCount = 0;
+
+          // Liste des champs qui sont des tableaux (à prendre depuis originalAIData)
+          const arrayFieldNames = [
+            "activitesCritiques",
+            "fournisseursExternes",
+            "systemesInformatiques",
+            "infrastructuresPhysiques",
+            "rolesPersonnel",
+            "equipementsIndustriels",
+            "equipementsBureautiques",
+            "documentationsCritiques",
+            "obligationsLegales",
+          ];
+
+          console.log("📝 Données confirmées reçues:", confirmedData);
+          console.log("📦 Données IA originales:", originalAIData);
+
+          Object.entries(confirmedData).forEach(([key, value]) => {
+            console.log(`🔍 Traitement du champ: ${key}`, {
+              value,
+              type: typeof value,
+            });
+
+            // Pour les tableaux, prendre les données JSON originales au lieu du texte formaté
+            if (
+              arrayFieldNames.includes(key) &&
+              originalAIData &&
+              Array.isArray(originalAIData[key as keyof ExtractedProcessData])
+            ) {
+              const arrayData = originalAIData[
+                key as keyof ExtractedProcessData
+              ] as unknown as unknown[];
+              if (arrayData.length > 0) {
+                form.setValue(
+                  key as Path<ProcessFormValues>,
+                  arrayData as never
+                );
+                filledCount++;
+                console.log(
+                  `✅ Tableau ${key} appliqué:`,
+                  arrayData.length,
+                  "éléments"
+                );
+              }
+              return;
+            }
+
+            // Pour les champs simples, vérifier si la valeur n'est pas vide
+            const isNotEmpty =
+              value !== null &&
+              value !== undefined &&
+              value !== "" &&
+              String(value).trim() !== "";
+
+            if (isNotEmpty) {
+              console.log(`✅ Application du champ ${key}:`, value);
+              form.setValue(key as Path<ProcessFormValues>, value as never);
+              filledCount++;
+            } else {
+              console.log(`⚠️ Champ ${key} ignoré (vide ou null)`);
+            }
+          });
+
+          const totalFields = fieldsToReview.length;
+          const emptyCount = Object.keys(confirmedData).length - filledCount;
+          const rejectedCount = totalFields - Object.keys(confirmedData).length;
+
+          toast.success("✅ Validation terminée !", {
+            description: `${filledCount} champs remplis${
+              emptyCount > 0 ? `, ${emptyCount} vides ignorés` : ""
+            }${
+              rejectedCount > 0 ? `, ${rejectedCount} rejetés` : ""
+            }. Vérifiez le formulaire avant d'enregistrer.`,
+          });
+
+          setShowConfirmationAssistant(false);
+
+          // Ouvrir toutes les sections pour voir les données
+          setOpenSections({
+            general: true,
+            responsable: true,
+            criticite: true,
+            impacts: true,
+            dependencies: true,
+            scope: true,
+            activitesCritiques: true,
+            fournisseursExternes: true,
+            legal: true,
+            systemes: true,
+            infrastructure: true,
+            personnel: true,
+            equipIndus: true,
+            equipBuro: true,
+            docs: true,
+          });
+        }}
+      />
     </div>
   );
 }

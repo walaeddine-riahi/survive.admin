@@ -1,0 +1,162 @@
+{
+  "name": "Assurance Qualité",
+  "description": "Le processus Assurance Qualité (AQ) est essentiel pour la libération des produits, la validation des paramètres critiques et la gestion des non-conformités. Il garantit la conformité réglementaire, la maîtrise des risques sanitaires et la satisfaction des exigences clients.",
+  "department": "AQ",
+  "location": "Local administratif (2ème étage)",
+  "processOwner": "Fedia Ben Younes",
+  "ownerRole": "Responsable AQ",
+  "ownerEmail": "Fedia.benyounes@groupedelice.com.tn",
+  "ownerPhone": "98108561",
+  "criticality": "high",
+  "rto": 4,
+  "mtpd": 48,
+  "rpo": null,
+  "mbco": "100%",
+  "criticalTimes": "Révision des lignes/audit/concours (élu service client)/Food safety day/Périodes estivales",
+  "financialImpact": "Une défaillance du système AQ peut entraîner des dérives non détectées → production de lots non conformes → destruction ou retrait produit → pertes économiques.",
+  "operationalImpact": "Sans AQ, les déviations qualité peuvent passer inaperçues → risques de rejet tardif, de blocage en aval, et d’arrêt de production en cas de non-conformité majeure.",
+  "reputationImpact": "Une absence de surveillance qualité peut conduire à la mise sur le marché de produits non conformes → rappels, méfiance client, dégradation de l’image.",
+  "operationalCapacityImpact": "Accumulation des non-conformités non traitées, retard dans les validations qualité, blocage des livraisons → ralentissement du flux.",
+  "mainFunctionality": "Supervision et gestion de la qualité des produits, validation des paramètres critiques, gestion des non-conformités, et respect des exigences réglementaires et normatives.",
+  "productDependencies": "Les produits finis (boissons gazeuses, jus, boissons végétales) dépendent directement du processus AQ pour leur libération et leur conformité.",
+  "interServiceDependencies": "Production, Logistique/Expédition, Approvisionnement, Maintenance, R&D/Marketing, Direction/QHSE Groupe, HSE/Sécurité alimentaire, Service Client/Réclamations, RH/Formation.",
+  "activitesCritiques": [
+    {
+      "nom": "Audit interne",
+      "criticite": "high",
+      "delai": "1 semaine",
+      "rto": 168,
+      "mtpd": 720,
+      "rpo": 168,
+      "mbco": "70%",
+      "impactsOperationnels": "Perte de visibilité sur les écarts internes, décalage dans les plans d’amélioration.",
+      "impactsReglementaires": "Non-conformité potentielle lors des audits externes.",
+      "impactsImage": "Impact sur la gouvernance qualité du site."
+    },
+    {
+      "nom": "Gestion de la traçabilité",
+      "criticite": "critical",
+      "delai": "1 heure",
+      "rto": 1,
+      "mtpd": 4,
+      "rpo": 0.5,
+      "mbco": "100%",
+      "impactsOperationnels": "Indisponibilité = incapacité à tracer/retracer.",
+      "impactsReglementaires": "Non-conformité immédiate en cas de retrait ou incident.",
+      "impactsImage": "Impact direct sur la confiance des clients."
+    }
+  ],
+  "fournisseursExternes": [
+    {
+      "nom": "Veritas",
+      "servicesOfferts": "Analyse nutritionnelle annuelle toutes les gammes, audits/missions de certification.",
+      "contactNom": null,
+      "contactTelephone": null,
+      "contactEmail": null,
+      "zoneGeographique": null,
+      "isUniqueSupplier": true,
+      "rto": null,
+      "mtpd": null,
+      "planContinuiteActivite": "inconnu",
+      "clauseSLA": "inconnu"
+    },
+    {
+      "nom": "INSSPA",
+      "servicesOfferts": "Obtention de certificats sanitaires.",
+      "contactNom": null,
+      "contactTelephone": null,
+      "contactEmail": null,
+      "zoneGeographique": null,
+      "isUniqueSupplier": true,
+      "rto": null,
+      "mtpd": null,
+      "planContinuiteActivite": "inconnu",
+      "clauseSLA": "inconnu"
+    }
+  ],
+  "systemesInformatiques": [
+    {
+      "nom": "Qualipro",
+      "typeSysteme": "Gestion qualité",
+      "criticite": "critical",
+      "impactIndisponibilite": "Arrêt partiel des activités.",
+      "activitesAssociees": "Traitement des non-conformités, audits internes, sélection et évaluation des fournisseurs.",
+      "sauvegardesEnPlace": "oui",
+      "rto": 8,
+      "rpo": 0,
+      "mtpd": 24
+    },
+    {
+      "nom": "JDE",
+      "typeSysteme": "ERP",
+      "criticite": "high",
+      "impactIndisponibilite": "Blocage des achats / commandes.",
+      "activitesAssociees": "Gestion des commandes et approvisionnements qualité.",
+      "sauvegardesEnPlace": "oui",
+      "rto": 12,
+      "rpo": 4,
+      "mtpd": 48
+    }
+  ],
+  "infrastructuresPhysiques": [
+    {
+      "nom": "Laboratoire Qualité",
+      "type": "Opérationnel critique",
+      "activites": "Contrôle qualité MP (matières premières), PF (produits finis), eau et surfaces.",
+      "rto": 4,
+      "mtpd": 48,
+      "alternatives": "Recours aux laboratoires externes (accrédités ISO 17025).",
+      "recommandations": "Renforcer contrats avec laboratoires partenaires ; disposer d’un plan de priorisation des analyses en crise.",
+      "solutionsDeRepli": "Externaliser analyses critiques, utiliser kits de tests rapides sur site."
+    }
+  ],
+  "rolesPersonnel": [
+    {
+      "role": "Responsable AQ",
+      "effectif": 1,
+      "taches": "Supervision du système qualité (ISO 22000, AIB, audits internes/externes), validation des certificats, gestion des réclamations.",
+      "competenceUnique": "Non",
+      "critiqueImmediate": "Oui",
+      "delaiReprise": 24,
+      "remplacable": "Oui",
+      "remplacePar": "Responsable Contrôle Qualité",
+      "repliSiNonRemplace": "DG ou Responsable Production prend temporairement le relais pour valider les lots prioritaires."
+    }
+  ],
+  "equipementsIndustriels": [],
+  "equipementsBureautiques": [
+    {
+      "equipement": "PC (poste de supervision / suivi prod)",
+      "qte": 1,
+      "tache": "Suivi de la production, saisie des données, reporting qualité et maintenance.",
+      "critiqueApresRupture": "Oui",
+      "rto": 4,
+      "mtpd": 48,
+      "qteRequiseEnCrise": 1,
+      "reaffectationPossible": "Oui",
+      "solutionsDeRepli": "Utiliser PC portable de secours ; accès distant via VPN ; saisie manuelle temporaire des données (fiches papier)."
+    }
+  ],
+  "documentationsCritiques": [
+    {
+      "document": "Dossiers de traçabilité (lots MP & PF)",
+      "emplacement": "Bureau AQ / ERP (JDE)",
+      "necessaireApresRupture": "Oui",
+      "rto": 4,
+      "accesAlternatif": "Oui (ERP / copies scannées)",
+      "remplacementDispo": "Partiel (recréation via ERP)",
+      "solutionsDeRepli": "Numérisation quotidienne ; sauvegarde SharePoint/OneDrive."
+    }
+  ],
+  "obligationsLegales": [
+    {
+      "activite": "Étude HACCP",
+      "obligationsLegales": "Oui (légal et normatif)",
+      "reference": "Décret 2005-1718 / Codex Alimentarius",
+      "autorite": "INSSPA / Ministère de la Santé",
+      "details": "Obligation d’analyse des dangers, maîtrise des CCP, tenue à jour du plan HACCP.",
+      "consequences": "Fermeture de ligne, retrait produit, sanction administrative."
+    }
+  ],
+  "confidence": 100
+}

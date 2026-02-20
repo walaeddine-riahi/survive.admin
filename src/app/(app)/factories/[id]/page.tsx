@@ -599,11 +599,13 @@ export default async function FactoryDetailPage({
               {factory.biaReports.map(
                 (report: {
                   id: string;
-                  title: string;
                   name: string;
                   status: string;
                   createdAt: Date;
-                  author: { firstName: string; lastName: string } | null;
+                  author: {
+                    firstName: string | null;
+                    lastName: string | null;
+                  } | null;
                 }) => (
                   <Link
                     key={report.id}

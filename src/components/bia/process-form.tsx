@@ -1,5 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-nocheck
 "use client";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -56,9 +54,17 @@ import { Badge } from "@/components/ui/badge";
 import { analyzeProcessPdf } from "@/actions/bia/analyze-process-pdf";
 import type { ExtractedProcessData } from "@/actions/bia/analyze-process-pdf";
 import { toast } from "sonner";
+import { MissingFieldsAssistant } from "@/components/bia/missing-fields-assistant";
+import { ConfirmationAssistant } from "@/components/bia/confirmation-assistant";
+import type { MissingField } from "@/lib/missing-fields-utils";
+import {
+  prepareExtractedFieldsForReview,
+  type ExtractedFieldReview,
+} from "@/lib/confirmation-utils";
 
 // Type pour un responsable intérimaire
 export interface InterimManager {
+  id?: string;
   name: string;
   role: string;
   email: string;
@@ -85,7 +91,7 @@ export interface DependencyItem {
   dependencyType: string;
 }
 
-// Définition du type Process pour éviter la dépendance à @prisma/client
+// Définition du type Process conforme au schéma Prisma
 export interface Process {
   // Informations de base
   id: string;
@@ -93,7 +99,6 @@ export interface Process {
   description?: string | null;
   department: string;
   location: string;
-  manager: string;
   criticalTimes?: string | null;
 
   // Responsable principal
@@ -238,6 +243,20 @@ const processFormSchema = z.object({
   ownerRole: z.string().optional(),
   ownerEmail: z.string().email().optional().or(z.literal("")),
   ownerPhone: z.string().optional(),
+
+  // Responsables intérimaires
+  interimManagers: z
+    .array(
+      z.object({
+        id: z.string().optional(),
+        name: z.string(),
+        role: z.string(),
+        email: z.string(),
+        phone: z.string(),
+        isActive: z.boolean(),
+      })
+    )
+    .optional(),
 
   // 2. Activités et dépendances
   mainFunctionality: z.string().optional(),
@@ -404,7 +423,6 @@ type ProcessFormValues = {
   description?: string;
   department: string;
   location: string;
-  manager: string;
   criticalTimes?: string;
 
   // Responsable principal
@@ -434,32 +452,111 @@ type ProcessFormValues = {
   rpo: number;
   mbco: string;
 
-  // Autres champs booléens
+  // Périmètre et Dépendances
+  mainFunctionality?: string;
+  productDependencies?: string;
+  interServiceDependencies?: string;
+
+  // Activités externalisées
+  externalSuppliers?: string;
+  supplierTasks?: string;
+  supplierContact?: string;
   supplierContinuityPlan: boolean;
   hasSLAClause: boolean;
+  supplierRTO?: number;
+  supplierMTPD?: number;
+
+  // Cadre légal et réglementaire
+  legalObligations?: string;
+  legalReferences?: string;
+  legalAuthority?: string;
+  legalDetails?: string;
+  nonComplianceConsequences?: string;
+  legalRequirements?: string;
+  regulatoryBodies?: string;
+  complianceRequired?: boolean;
+  complianceDetails?: string;
+  penalties?: string;
+  legalDocuments?: string;
+  legalContact?: string;
+
+  // MES - Applications IT
+  itSystems?: string;
+  systemCriticality?: string;
+  systemImpact?: string;
+  supportedActivities?: string;
   hasBackupSystems: boolean;
+  systemRTO?: number;
+  systemRPO?: number;
+  systemMTPD?: number;
+  workarounds?: string;
+  previousIncidents?: string;
+
+  // Infrastructure
   dependsOnPhysicalInfra: boolean;
+  infrastructureType?: string;
+  infraRTO?: number;
+  infraMTPD?: number;
   canWorkRemotely: boolean;
   canUseOtherInfra: boolean;
+
+  // Personnel / Compétences
+  staffRoles?: string;
+  staffCount?: number;
+  staffTasks?: string;
+  uniqueSkills?: string;
+  criticalityAfterDisruption?: string;
+  roleRecoveryTime?: string;
   canBeReplaced: boolean;
+  replacementBy?: string;
+  staffWorkarounds?: string;
+
+  // Équipement industriel
+  industrialEquipment?: string;
+  equipmentTasks?: string;
+  equipmentCriticality?: string;
   canReassignEquipment: boolean;
+  equipmentRTO?: number;
+  equipmentMTPD?: number;
+  equipmentWorkarounds?: string;
+  voltage?: string;
+  currentType?: string;
+  powerRating?: string;
+  dailyConsumption?: string;
   backupCompatible: boolean;
+
+  // Équipement bureautique
+  officeEquipment?: string;
+  equipmentQuantity?: number;
+  officeEquipmentTasks?: string;
+  officeEquipmentCriticality?: string;
+  officeRTO?: number;
+  officeMTPD?: number;
+  requiredAfterDisruption?: number;
   canReassignOfficeEquipment: boolean;
+  officeWorkarounds?: string;
+
+  // Documentation
+  requiredDocumentation?: string;
+  documentationLocation?: string;
   neededAfterDisruption: boolean;
+  documentationRTO?: number;
   hasAlternativeAccess: boolean;
   hasReplacement: boolean;
+  replacementMeasures?: string;
+
+  // Fournisseurs
+  keySuppliers?: string;
+  providedService?: string;
+  supplierDetails?: string;
+  supplierCriticality?: string;
   hasAlternativeSupplier: boolean;
   supplierHasContinuityPlan: boolean;
-
-  // Autres champs optionnels
-  [key: string]: unknown; // Pour les champs supplémentaires non typés explicitement
 };
 
 interface ProcessFormProps {
   processId?: string;
   initialData?: Partial<Process>;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  factories?: Array<{ id: string; name: string; code: string }>;
 }
 
 export function ProcessForm({ processId, initialData }: ProcessFormProps) {
@@ -500,7 +597,6 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
     description: "",
     department: "",
     location: "",
-    manager: "",
     criticalTimes: "",
 
     // Responsable principal
@@ -615,12 +711,20 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
     externalSuppliers: "",
     supplierTasks: "",
     supplierContact: "",
+    supplierRTO: 0,
     supplierMTPD: 0,
     legalObligations: "",
     legalReferences: "",
     legalAuthority: "",
     legalDetails: "",
     nonComplianceConsequences: "",
+    legalRequirements: "",
+    regulatoryBodies: "",
+    complianceRequired: false,
+    complianceDetails: "",
+    penalties: "",
+    legalDocuments: "",
+    legalContact: "",
     itSystems: "",
     systemCriticality: "",
     systemImpact: "",
@@ -667,7 +771,6 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
     providedService: "",
     supplierDetails: "",
     supplierCriticality: "",
-    supplierRTO: 0,
   };
 
   // Création des valeurs par défaut fusionnées
@@ -691,7 +794,10 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
     fields: interimFields,
     append: appendInterim,
     remove: removeInterim,
-  } = useFieldArray({ control: form.control, name: "interimManagers" });
+  } = useFieldArray<ProcessFormValues, "interimManagers">({
+    control: form.control as any,
+    name: "interimManagers",
+  });
 
   // Field array pour les dépendances
   const {
@@ -699,7 +805,10 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
     append: appendDependency,
     remove: removeDependency,
     update: updateDependency,
-  } = useFieldArray({ control: form.control, name: "dependencies" });
+  } = useFieldArray<ProcessFormValues, "dependencies">({
+    control: form.control as any,
+    name: "dependencies",
+  });
 
   // Field array pour les impacts
   const {
@@ -707,7 +816,10 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
     append: appendImpact,
     remove: removeImpact,
     update: updateImpact,
-  } = useFieldArray({ control: form.control, name: "impacts" });
+  } = useFieldArray<ProcessFormValues, "impacts">({
+    control: form.control as any,
+    name: "impacts",
+  });
 
   // Forcer le typage pour les contrôles du formulaire
   const typedControl = form.control as unknown as Control<ProcessFormValues>;
@@ -974,6 +1086,21 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
     message?: string;
   } | null>(null);
 
+  // États pour l'assistant de confirmation
+  const [showConfirmationAssistant, setShowConfirmationAssistant] =
+    React.useState(false);
+  const [fieldsToReview, setFieldsToReview] = React.useState<
+    ExtractedFieldReview[]
+  >([]);
+
+  // États pour l'assistant de champs manquants (conservé pour compatibilité future)
+  const [showMissingFieldsAssistant, setShowMissingFieldsAssistant] =
+    React.useState(false);
+  const [missingFieldsList] = React.useState<MissingField[]>([]);
+  const [extractedFieldsCount] = React.useState(0);
+  const [currentExtractedData] =
+    React.useState<Partial<ExtractedProcessData> | null>(null);
+
   return (
     <Form {...form}>
       <form
@@ -1012,8 +1139,8 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
                 Remplissage automatique depuis PDF
               </CardTitle>
               <CardDescription>
-                Uploadez un rapport BIA au format PDF (ex: Rapport BIA - RH -
-                SBC - V1.0.pdf) pour remplir automatiquement les champs du
+                Uploadez un rapport BIA au format PDF ou DOCX (ex: Rapport BIA -
+                RH - SBC - V1.0.pdf) pour remplir automatiquement les champs du
                 formulaire
               </CardDescription>
             </CardHeader>
@@ -1022,7 +1149,7 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
               <div className="flex items-center gap-4">
                 <Input
                   type="file"
-                  accept=".pdf"
+                  accept=".pdf,.docx"
                   id="pdf-upload"
                   disabled={uploadingPdf}
                   onChange={async (e) => {
@@ -1041,130 +1168,45 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
 
                       if (result.success && result.data) {
                         setPdfAnalysisResult(result);
-                        toast.success(
-                          result.message || "PDF analysé avec succès !"
-                        );
-
-                        // Remplir les champs du formulaire
                         const data = result.data;
 
-                        if (data.name) form.setValue("name", data.name);
-                        if (data.description)
-                          form.setValue("description", data.description);
-                        if (data.department)
-                          form.setValue("department", data.department);
-                        if (data.location)
-                          form.setValue("location", data.location);
-                        if (data.manager)
-                          form.setValue("manager", data.manager);
+                        console.log("📋 Données extraites:", data);
 
-                        // Métriques
-                        if (data.criticality)
-                          form.setValue("criticality", data.criticality);
-                        if (data.rto !== undefined)
-                          form.setValue("rto", data.rto);
-                        if (data.mtpd !== undefined)
-                          form.setValue("mtpd", data.mtpd);
-                        if (data.rpo !== undefined)
-                          form.setValue("rpo", data.rpo);
-                        if (data.mbco) form.setValue("mbco", data.mbco);
-                        if (data.impact) form.setValue("impact", data.impact);
+                        // Préparer les champs pour la validation
+                        const fieldsForReview =
+                          prepareExtractedFieldsForReview(data);
 
-                        // Impacts
-                        if (data.financialImpact)
-                          form.setValue(
-                            "financialImpact",
-                            data.financialImpact
-                          );
-                        if (data.operationalImpact)
-                          form.setValue(
-                            "operationalImpact",
-                            data.operationalImpact
-                          );
-                        if (data.reputationImpact)
-                          form.setValue(
-                            "reputationImpact",
-                            data.reputationImpact
-                          );
-
-                        // Périmètre
-                        if (data.mainFunctionality)
-                          form.setValue(
-                            "mainFunctionality",
-                            data.mainFunctionality
-                          );
-                        if (data.productDependencies)
-                          form.setValue(
-                            "productDependencies",
-                            data.productDependencies
-                          );
-                        if (data.interServiceDependencies)
-                          form.setValue(
-                            "interServiceDependencies",
-                            data.interServiceDependencies
-                          );
-
-                        // Fournisseurs
-                        if (data.externalSuppliers)
-                          form.setValue(
-                            "externalSuppliers",
-                            data.externalSuppliers
-                          );
-                        if (data.keySuppliers)
-                          form.setValue("keySuppliers", data.keySuppliers);
-
-                        // Personnel
-                        if (data.staffRoles)
-                          form.setValue("staffRoles", data.staffRoles);
-                        if (data.staffCount !== undefined)
-                          form.setValue("staffCount", data.staffCount);
-
-                        // IT
-                        if (data.itSystems)
-                          form.setValue("itSystems", data.itSystems);
-                        if (data.systemCriticality)
-                          form.setValue(
-                            "systemCriticality",
-                            data.systemCriticality
-                          );
-
-                        // Infrastructure
-                        if (data.dependsOnPhysicalInfra !== undefined)
-                          form.setValue(
-                            "dependsOnPhysicalInfra",
-                            data.dependsOnPhysicalInfra
-                          );
-                        if (data.infrastructureType)
-                          form.setValue(
-                            "infrastructureType",
-                            data.infrastructureType
-                          );
-
-                        // Documentation et équipements
-                        if (data.requiredDocumentation)
-                          form.setValue(
-                            "requiredDocumentation",
-                            data.requiredDocumentation
-                          );
-                        if (data.industrialEquipment)
-                          form.setValue(
-                            "industrialEquipment",
-                            data.industrialEquipment
-                          );
-                        if (data.officeEquipment)
-                          form.setValue(
-                            "officeEquipment",
-                            data.officeEquipment
-                          );
-
-                        toast.success(
-                          "✅ Formulaire rempli automatiquement !",
-                          {
-                            description: `Confiance: ${
-                              data.confidence || 0
-                            }% - Vérifiez et complétez les informations`,
-                          }
+                        console.log(
+                          "📝 Champs préparés pour validation:",
+                          fieldsForReview
                         );
+                        console.log(
+                          "🔢 Nombre de champs:",
+                          fieldsForReview.length
+                        );
+
+                        if (fieldsForReview.length > 0) {
+                          // Ouvrir l'assistant de confirmation
+                          console.log(
+                            "🚀 Ouverture de l'assistant de confirmation"
+                          );
+                          setFieldsToReview(fieldsForReview);
+                          setShowConfirmationAssistant(true);
+                          console.log(
+                            "✅ État mis à jour - showConfirmationAssistant: true"
+                          );
+
+                          toast.success("✅ Extraction terminée !", {
+                            description: `${fieldsForReview.length} informations extraites. L'assistant IA va vous les présenter pour validation.`,
+                            duration: 4000,
+                          });
+                        } else {
+                          console.log("⚠️ Aucun champ préparé");
+                          toast.warning("⚠️ Aucune donnée extraite", {
+                            description:
+                              "Le PDF ne contient pas d'informations exploitables.",
+                          });
+                        }
                       } else {
                         toast.error(result.error || "Erreur lors de l'analyse");
                         setPdfAnalysisResult(result);
@@ -2438,7 +2480,7 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
               <div className="space-y-4">
                 <FormField
                   control={typedControl}
-                  name="requiredEquipment"
+                  name="industrialEquipment"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Équipements nécessaires</FormLabel>
@@ -2455,23 +2497,6 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
                 />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={typedControl}
-                    name="equipmentLocation"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Localisation des équipements</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Où sont situés les équipements ?"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
                   <FormField
                     control={typedControl}
                     name="equipmentCriticality"
@@ -2532,7 +2557,7 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
                 <div className="space-y-4 pt-2">
                   <FormField
                     control={typedControl}
-                    name="hasBackupEquipment"
+                    name="hasBackupSystems"
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
                         <FormControl>
@@ -2554,10 +2579,10 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
                     )}
                   />
 
-                  {form.watch("hasBackupEquipment") && (
+                  {form.watch("hasBackupSystems") && (
                     <FormField
                       control={typedControl}
-                      name="backupDetails"
+                      name="equipmentWorkarounds"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>
@@ -2566,50 +2591,6 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
                           <FormControl>
                             <Textarea
                               placeholder="Décrivez les équipements de secours disponibles..."
-                              className="min-h-[80px]"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
-
-                  <FormField
-                    control={typedControl}
-                    name="maintenanceRequired"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>
-                            Une maintenance particulière est-elle requise ?
-                          </FormLabel>
-                          <FormDescription>
-                            Cochez cette case si des procédures de maintenance
-                            spécifiques sont nécessaires
-                          </FormDescription>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-
-                  {form.watch("maintenanceRequired") && (
-                    <FormField
-                      control={typedControl}
-                      name="maintenanceDetails"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Détails de la maintenance</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Décrivez les besoins en maintenance..."
                               className="min-h-[80px]"
                               {...field}
                             />
@@ -3214,7 +3195,7 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
 
                 <FormField
                   control={typedControl}
-                  name="isUniqueSupplier"
+                  name="hasAlternativeSupplier"
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
                       <FormControl>
@@ -3224,7 +3205,7 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
                         />
                       </FormControl>
                       <div className="space-y-1 leading-none">
-                        <FormLabel>Fournisseur unique</FormLabel>
+                        <FormLabel>Fournisseur alternatif disponible</FormLabel>
                         <FormDescription>
                           Ce processus dépend-il d&apos;un seul fournisseur ?
                         </FormDescription>
@@ -3521,6 +3502,71 @@ export function ProcessForm({ processId, initialData }: ProcessFormProps) {
           </Button>
         </div>
       </form>
+
+      {/* Assistant de confirmation des données extraites */}
+      <ConfirmationAssistant
+        isOpen={showConfirmationAssistant}
+        onClose={() => setShowConfirmationAssistant(false)}
+        extractedFields={fieldsToReview}
+        onComplete={(confirmedData) => {
+          // Appliquer les données confirmées au formulaire (ignorer les valeurs vides)
+          let filledCount = 0;
+          Object.entries(confirmedData).forEach(([key, value]) => {
+            // Vérifier si la valeur n'est pas vide
+            const isNotEmpty =
+              value !== null &&
+              value !== undefined &&
+              value !== "" &&
+              String(value).trim() !== "";
+
+            if (isNotEmpty) {
+              form.setValue(key as any, value);
+              filledCount++;
+            }
+          });
+
+          const totalFields = fieldsToReview.length;
+          const emptyCount = Object.keys(confirmedData).length - filledCount;
+          const rejectedCount = totalFields - Object.keys(confirmedData).length;
+
+          toast.success("✅ Validation terminée !", {
+            description: `${filledCount} champs remplis${
+              emptyCount > 0 ? `, ${emptyCount} vides ignorés` : ""
+            }${
+              rejectedCount > 0 ? `, ${rejectedCount} rejetés` : ""
+            }. Vérifiez le formulaire avant d'enregistrer.`,
+          });
+
+          setShowConfirmationAssistant(false);
+        }}
+      />
+
+      {/* Assistant de champs manquants */}
+      <MissingFieldsAssistant
+        isOpen={showMissingFieldsAssistant}
+        onClose={() => setShowMissingFieldsAssistant(false)}
+        missingFields={missingFieldsList}
+        extractedFieldsCount={extractedFieldsCount}
+        totalFieldsCount={Object.keys(currentExtractedData || {}).length}
+        onComplete={(filledData) => {
+          // Appliquer les données au formulaire
+          if (currentExtractedData) {
+            // Appliquer les données fusionnées au formulaire
+            Object.entries(filledData).forEach(([key, value]) => {
+              if (value !== null && value !== undefined && value !== "") {
+                form.setValue(key as any, value);
+              }
+            });
+
+            toast.success("✅ Champs complétés avec succès !", {
+              description: `${
+                Object.keys(filledData).length
+              } champs ont été ajoutés. Vérifiez avant d'enregistrer.`,
+            });
+          }
+          setShowMissingFieldsAssistant(false);
+        }}
+      />
     </Form>
   );
 }

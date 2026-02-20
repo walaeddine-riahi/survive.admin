@@ -126,15 +126,9 @@ export function BiaReportViewer({ report }: BiaReportViewerProps) {
   const PageHeader = ({ pageNumber }: { pageNumber: number | string }) => (
     <div className="border-2 border-black mb-8">
       <div className="flex items-stretch">
-        <div
-          className="border-r-2 border-black p-4 flex items-center justify-center"
-          style={{ width: "120px" }}
-        >
+        <div className="border-r-2 border-black p-4 flex items-center justify-center w-[120px]">
           <div className="text-center">
-            <div
-              className="font-bold text-2xl text-blue-600"
-              style={{ fontFamily: "Arial" }}
-            >
+            <div className="font-bold text-2xl text-blue-600 font-sans">
               SURVIVE
             </div>
             <div className="text-xs">BCM Platform</div>
@@ -148,7 +142,7 @@ export function BiaReportViewer({ report }: BiaReportViewerProps) {
             </div>
           </div>
         </div>
-        <div className="p-2" style={{ width: "100px" }}>
+        <div className="p-2 w-[100px]">
           <table className="w-full text-xs">
             <tbody>
               <tr>
@@ -388,15 +382,9 @@ export function BiaReportViewer({ report }: BiaReportViewerProps) {
           <div className="border-2 border-black mb-12">
             <div className="flex items-stretch">
               {/* Logo gauche */}
-              <div
-                className="border-r-2 border-black p-4 flex items-center justify-center"
-                style={{ width: "120px" }}
-              >
+              <div className="border-r-2 border-black p-4 flex items-center justify-center w-[120px]">
                 <div className="text-center">
-                  <div
-                    className="font-bold text-2xl text-blue-600"
-                    style={{ fontFamily: "Arial" }}
-                  >
+                  <div className="font-bold text-2xl text-blue-600 font-sans">
                     SURVIVE
                   </div>
                   <div className="text-xs">BCM Platform</div>
@@ -414,7 +402,7 @@ export function BiaReportViewer({ report }: BiaReportViewerProps) {
               </div>
 
               {/* Info droite */}
-              <div className="p-2" style={{ width: "100px" }}>
+              <div className="p-2 w-[100px]">
                 <table className="w-full text-xs">
                   <tbody>
                     <tr>
@@ -460,24 +448,18 @@ export function BiaReportViewer({ report }: BiaReportViewerProps) {
               </div>
 
               {/* Tableau informations document */}
-              <div className="mx-auto" style={{ width: "400px" }}>
+              <div className="mx-auto w-[400px]">
                 <table className="w-full border-2 border-black text-sm">
                   <tbody>
                     <tr>
-                      <td
-                        className="border border-black px-3 py-2 font-bold bg-gray-100"
-                        style={{ width: "150px" }}
-                      >
+                      <td className="border border-black px-3 py-2 font-bold bg-gray-100 w-[150px]">
                         Réf Document
                       </td>
                       <td className="border border-black px-3 py-2">
                         {metadata.reference ||
                           `BIA-${report.id.slice(0, 8).toUpperCase()}`}
                       </td>
-                      <td
-                        className="border border-black px-3 py-2 font-bold bg-gray-100"
-                        style={{ width: "120px" }}
-                      >
+                      <td className="border border-black px-3 py-2 font-bold bg-gray-100 w-[120px]">
                         Classification
                       </td>
                       <td className="border border-black px-3 py-2">

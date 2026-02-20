@@ -1,0 +1,42 @@
+# ========================================
+# VARIABLES D'ENVIRONNEMENT POUR VERCEL
+# ========================================
+# Copiez ces clés dans Vercel Dashboard:
+# Settings → Environment Variables
+# ========================================
+
+DATABASE_URL=mongodb+srv://walaeddinneriahii_db_user:yKBK1pwroKxfyLVB@cluster0.lllpea7.mongodb.net/myapp?retryWrites=true&w=majority&appName=Cluster0
+
+NEXTAUTH_SECRET=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+
+NEXTAUTH_URL=https://survive-admin.vercel.app
+
+EMAIL_USER=prenetflix99@gmail.com
+
+EMAIL_PASS=trkgaaxkcymanafr
+
+AZURE_OPENAI_API_KEY=7MK8FIGgJNCSV48Jqliml9dtoqs0cutq2b2e6lNpq0DhAXA238TsJQQJ99CAACfhMk5XJ3w3AAABACOGtcXO
+
+AZURE_OPENAI_ENDPOINT=https://survive-openai.openai.azure.com/
+
+AZURE_OPENAI_DEPLOYMENT=gpt-4o
+
+AZURE_OPENAI_API_VERSION=2024-02-15-preview
+
+AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=https;AccountName=survive;AccountKey=vCNaNOYv00GRxQ6ZOR0a/CzEAsLYrO2yIhjPmiCn2ftvB71cVPuvh00n0wIeH1zIuC+G4TF0JfUl+AStcbKBEw==;EndpointSuffix=core.windows.net
+
+AZURE_STORAGE_CONTAINER_NAME=uploads
+
+AZURE_COMMUNICATION_CONNECTION_STRING=endpoint=https://survive-communication.unitedstates.communication.azure.com/;accesskey=A92DpYPoGhtx6fUtFaBnpCo43DBqBYT2oMtecFeH842wlFNxcoQFJQQJ99CAACULyCp8Ca2JAAAAAZCSbyWm
+
+AZURE_COMMUNICATION_EMAIL_FROM=DoNotReply@d8adc9c3-6c94-4807-a333-819faa691da5.azurecomm.net
+
+TWILIO_ACCOUNT_SID=ACc917c8a2905d254fa7c5ebf486dc4ca7
+
+TWILIO_AUTH_TOKEN=12e0630322aa81f30d625c3648f38983
+
+TWILIO_PHONE_NUMBER=+15707554683
+
+NEXT_PUBLIC_APP_URL=https://survive-admin.vercel.app
+
+NODE_ENV=production
