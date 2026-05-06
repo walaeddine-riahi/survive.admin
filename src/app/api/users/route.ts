@@ -12,7 +12,7 @@ const createUserSchema = z.object({
   password: z
     .string()
     .min(6, "Le mot de passe doit contenir au moins 6 caractères"),
-  role: z.enum(["USER", "ADMIN"]).default("ADMIN"),
+  role: z.enum(["USER", "ADMIN"]).default("USER"),
   phone: z.string().optional(),
   avatar: z.string().url("L'URL de l'avatar n'est pas valide").optional(),
 });
