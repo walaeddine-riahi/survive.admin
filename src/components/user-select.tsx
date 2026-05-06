@@ -13,6 +13,7 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
+  CommandList,
 } from "@/components/ui/command";
 import {
   Popover,
@@ -193,48 +194,55 @@ export function UserSelect({
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-full p-0">
+                <PopoverContent className="w-full p-0 z-[200]">
                   <Command>
                     <CommandInput placeholder="Rechercher un utilisateur..." />
-                    <CommandEmpty>Aucun utilisateur trouvé.</CommandEmpty>
-                    <CommandGroup className="max-h-60 overflow-auto">
-                      {users.map((user) => {
-                        const selected = formIsSelected(user.id);
-                        return (
-                          <CommandItem
-                            key={user.id}
-                            onSelect={() => formHandleSelect(user)}
-                          >
-                            <div className="flex items-center gap-2 w-full">
-                              <div
-                                className={cn(
-                                  "flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                                  selected
-                                    ? "bg-primary text-primary-foreground"
-                                    : "opacity-50 [&_svg]:invisible"
-                                )}
-                              >
-                                <Check className={"h-4 w-4"} />
-                              </div>
-                              <div className="flex-1">
-                                <div className="font-medium">
-                                  {user.firstName} {user.lastName}
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {user.email}
-                                  {user.phone && (
-                                    <div className="mt-1">
-                                      <Phone className="inline h-3 w-3 mr-1" />
-                                      {user.phone}
-                                    </div>
+                    <CommandList>
+                      <CommandEmpty>Aucun utilisateur trouvé.</CommandEmpty>
+                      <CommandGroup className="max-h-60 overflow-auto">
+                        {users.map((user) => {
+                          const selected = formIsSelected(user.id);
+                          return (
+                            <CommandItem
+                              key={user.id}
+                              onSelect={() => formHandleSelect(user)}
+                              onPointerDown={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                formHandleSelect(user);
+                              }}
+                            >
+                              <div className="flex items-center gap-2 w-full">
+                                <div
+                                  className={cn(
+                                    "flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                                    selected
+                                      ? "bg-primary text-primary-foreground"
+                                      : "opacity-50 [&_svg]:invisible"
                                   )}
+                                >
+                                  <Check className={"h-4 w-4"} />
+                                </div>
+                                <div className="flex-1">
+                                  <div className="font-medium">
+                                    {user.firstName} {user.lastName}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {user.email}
+                                    {user.phone && (
+                                      <div className="mt-1">
+                                        <Phone className="inline h-3 w-3 mr-1" />
+                                        {user.phone}
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </CommandItem>
-                        );
-                      })}
-                    </CommandGroup>
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
                   </Command>
                 </PopoverContent>
               </Popover>
@@ -276,42 +284,49 @@ export function UserSelect({
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-full p-0">
+          <PopoverContent className="w-full p-0 z-[200]">
             <Command>
               <CommandInput placeholder="Rechercher un utilisateur..." />
-              <CommandEmpty>Aucun utilisateur trouvé.</CommandEmpty>
-              <CommandGroup className="max-h-60 overflow-auto">
-                {users.map((user) => {
-                  const selected = isSelected(user.id);
-                  return (
-                    <CommandItem
-                      key={user.id}
-                      onSelect={() => handleSelect(user)}
-                    >
-                      <div className="flex items-center gap-2 w-full">
-                        <div
-                          className={cn(
-                            "flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                            selected
-                              ? "bg-primary text-primary-foreground"
-                              : "opacity-50 [&_svg]:invisible"
-                          )}
-                        >
-                          <Check className={"h-4 w-4"} />
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-medium">
-                            {user.firstName} {user.lastName}
+              <CommandList>
+                <CommandEmpty>Aucun utilisateur trouvé.</CommandEmpty>
+                <CommandGroup className="max-h-60 overflow-auto">
+                  {users.map((user) => {
+                    const selected = isSelected(user.id);
+                    return (
+                      <CommandItem
+                        key={user.id}
+                        onSelect={() => handleSelect(user)}
+                        onPointerDown={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleSelect(user);
+                        }}
+                      >
+                        <div className="flex items-center gap-2 w-full">
+                          <div
+                            className={cn(
+                              "flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                              selected
+                                ? "bg-primary text-primary-foreground"
+                                : "opacity-50 [&_svg]:invisible"
+                            )}
+                          >
+                            <Check className={"h-4 w-4"} />
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            {user.email}
+                          <div className="flex-1">
+                            <div className="font-medium">
+                              {user.firstName} {user.lastName}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {user.email}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              </CommandList>
             </Command>
           </PopoverContent>
         </Popover>
