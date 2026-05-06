@@ -368,6 +368,11 @@ export default function ParticipantViewFixedPage() {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [data, setData] = useState<ParticipantViewData | null>(null);
+  const dataRef = useRef<ParticipantViewData | null>(null);
+
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
 
   const [selectedChannel, setSelectedChannel] = useState<
     keyof ParticipantViewData["communications"] | null
@@ -629,7 +634,7 @@ export default function ParticipantViewFixedPage() {
         Object.keys(newData.simulation || {})
       );
 
-      if (data) {
+      if (dataRef.current) {
         const newMessages: Record<string, number> = {};
 
         const communicationTypes = [
@@ -645,7 +650,7 @@ export default function ParticipantViewFixedPage() {
 
         communicationTypes.forEach((channel) => {
           const currentMessages = newData.communications[channel] || [];
-          const previousMessages = data.communications[channel] || [];
+          const previousMessages = dataRef.current?.communications?.[channel] || [];
           const newMessagesCount =
             currentMessages.length - previousMessages.length;
 
@@ -665,9 +670,9 @@ export default function ParticipantViewFixedPage() {
           }
         );
 
-        if (newData.injections.length > (data.injections?.length || 0)) {
+        if (newData.injections.length > (dataRef.current?.injections?.length || 0)) {
           const newInjections = newData.injections.slice(
-            data.injections?.length || 0
+            dataRef.current?.injections?.length || 0
           );
           newInjections.forEach((injection: Injection) => {
             playNotification(injection.type);
@@ -715,7 +720,7 @@ export default function ParticipantViewFixedPage() {
     } finally {
       setLoading(false);
     }
-  }, [simulationId, toast, getUserRole, data, playNotification]);
+  }, [simulationId, toast, getUserRole, playNotification]);
 
   useEffect(() => {
     return () => {
@@ -2196,6 +2201,8 @@ export default function ParticipantViewFixedPage() {
                     handleNewspaperSubmit={handleNewspaperSubmit}
                     handleSocialSubmit={handleSocialSubmit}
                     setIsComposing={setIsComposing}
+                    simulationId={simulationId}
+                    teamId={currentTeamId}
                   />
                 </div>
               </TabsContent>
@@ -2228,6 +2235,8 @@ export default function ParticipantViewFixedPage() {
               // Form handlers
               handleEmailSubmit={handleEmailSubmit}
               handleSmsSubmit={handleSmsSubmit}
+              simulationId={simulationId}
+              teamId={currentTeamId}
               handleCallSubmit={handleCallSubmit}
               handleAlertSubmit={handleAlertSubmit}
               handleMemoSubmit={handleMemoSubmit}
@@ -2549,6 +2558,8 @@ interface MobileCommunicationsSectionProps {
   handleNewspaperSubmit: (formData: NewspaperFormData) => Promise<void>;
   handleSocialSubmit: (formData: SocialFormData) => Promise<void>;
   setIsComposing: (isComposing: boolean) => void;
+  simulationId: string;
+  teamId: string | null;
 }
 
 function MobileCommunicationsSection({
@@ -2569,6 +2580,8 @@ function MobileCommunicationsSection({
   handleNewspaperSubmit,
   handleSocialSubmit,
   setIsComposing,
+  simulationId,
+  teamId,
 }: MobileCommunicationsSectionProps) {
   const [isChannelsExpanded, setIsChannelsExpanded] = React.useState(true);
 
@@ -2809,7 +2822,7 @@ function MobileCommunicationsSection({
                     onSubmit={handleEmailSubmit}
                     onCancel={() => setIsComposing(false)}
                     simulationId={simulationId}
-                    teamId={currentTeamId}
+                    teamId={teamId}
                   />
                 )}
                 {selectedChannel === "sms" && (
@@ -2817,7 +2830,7 @@ function MobileCommunicationsSection({
                     onSubmit={handleSmsSubmit}
                     onCancel={() => setIsComposing(false)}
                     simulationId={simulationId}
-                    teamId={currentTeamId}
+                    teamId={teamId}
                   />
                 )}
                 {selectedChannel === "call" && (
@@ -2825,7 +2838,7 @@ function MobileCommunicationsSection({
                     onSubmit={handleCallSubmit}
                     onCancel={() => setIsComposing(false)}
                     simulationId={simulationId}
-                    teamId={currentTeamId}
+                    teamId={teamId}
                   />
                 )}
                 {selectedChannel === "alert" && (
@@ -2833,7 +2846,7 @@ function MobileCommunicationsSection({
                     onSubmit={handleAlertSubmit}
                     onCancel={() => setIsComposing(false)}
                     simulationId={simulationId}
-                    teamId={currentTeamId}
+                    teamId={teamId}
                   />
                 )}
                 {selectedChannel === "memo" && (
@@ -2841,7 +2854,7 @@ function MobileCommunicationsSection({
                     onSubmit={handleMemoSubmit}
                     onCancel={() => setIsComposing(false)}
                     simulationId={simulationId}
-                    teamId={currentTeamId}
+                    teamId={teamId}
                   />
                 )}
                 {selectedChannel === "newsBroadcast" && (
@@ -2919,6 +2932,8 @@ interface DesktopLayoutProps {
   handleNewspaperSubmit: (formData: NewspaperFormData) => Promise<void>;
   handleSocialSubmit: (formData: SocialFormData) => Promise<void>;
   setIsComposing: (isComposing: boolean) => void;
+  simulationId: string;
+  teamId: string | null;
 }
 
 function DesktopLayout({
@@ -2950,6 +2965,8 @@ function DesktopLayout({
   handleNewspaperSubmit,
   handleSocialSubmit,
   setIsComposing,
+  simulationId,
+  teamId,
 }: DesktopLayoutProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -3214,7 +3231,7 @@ function DesktopLayout({
                           onSubmit={handleEmailSubmit}
                           onCancel={() => setIsComposing(false)}
                           simulationId={simulationId}
-                          teamId={currentTeamId}
+                          teamId={teamId}
                         />
                       )}
                       {selectedChannel === "sms" && (
@@ -3222,7 +3239,7 @@ function DesktopLayout({
                           onSubmit={handleSmsSubmit}
                           onCancel={() => setIsComposing(false)}
                           simulationId={simulationId}
-                          teamId={currentTeamId}
+                          teamId={teamId}
                         />
                       )}
                       {selectedChannel === "call" && (
@@ -3230,7 +3247,7 @@ function DesktopLayout({
                           onSubmit={handleCallSubmit}
                           onCancel={() => setIsComposing(false)}
                           simulationId={simulationId}
-                          teamId={currentTeamId}
+                          teamId={teamId}
                         />
                       )}
                       {selectedChannel === "alert" && (
@@ -3238,7 +3255,7 @@ function DesktopLayout({
                           onSubmit={handleAlertSubmit}
                           onCancel={() => setIsComposing(false)}
                           simulationId={simulationId}
-                          teamId={currentTeamId}
+                          teamId={teamId}
                         />
                       )}
                       {selectedChannel === "memo" && (

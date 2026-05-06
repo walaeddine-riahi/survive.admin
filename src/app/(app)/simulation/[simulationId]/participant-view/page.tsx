@@ -55,6 +55,18 @@ const inter = Inter({
 
 // Utility functions moved to constants.ts or components
 
+const defaultCounts = {
+  email: 0,
+  call: 0,
+  sms: 0,
+  alert: 0,
+  memo: 0,
+  newsBroadcast: 0,
+  newspaper: 0,
+  social: 0,
+  report: 0,
+};
+
 export default function ParticipantViewFixedPage() {
   const { data: session } = useSession();
   const { theme, resolvedTheme } = useTheme();
@@ -62,6 +74,11 @@ export default function ParticipantViewFixedPage() {
   const simulationId = params.simulationId as string;
   const { toast } = useToast();
   const [data, setData] = useState<ParticipantViewData | null>(null);
+  const dataRef = useRef<ParticipantViewData | null>(null);
+
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
 
   const [selectedChannel, setSelectedChannel] = useState<
     keyof ParticipantViewData["communications"] | null
@@ -321,7 +338,7 @@ export default function ParticipantViewFixedPage() {
       );
 
       // Vérifier s'il y a des nouvelles données par rapport à la dernière récupération
-      if (data) {
+      if (dataRef.current) {
         // Vérifier les nouveaux messages
         const newMessages: Record<string, number> = {};
 
@@ -339,7 +356,7 @@ export default function ParticipantViewFixedPage() {
 
         communicationTypes.forEach((channel) => {
           const currentMessages = newData.communications[channel] || [];
-          const previousMessages = data.communications[channel] || [];
+          const previousMessages = dataRef.current?.communications?.[channel] || [];
           const newMessagesCount =
             currentMessages.length - previousMessages.length;
 
@@ -368,9 +385,9 @@ export default function ParticipantViewFixedPage() {
         }
 
         // Vérifier les nouvelles injections
-        if (newData.injections.length > (data.injections?.length || 0)) {
+        if (newData.injections.length > (dataRef.current?.injections?.length || 0)) {
           const newInjections = newData.injections.slice(
-            data.injections?.length || 0
+            dataRef.current?.injections?.length || 0
           );
           newInjections.forEach((injection: Injection) => {
             // Jouer la notification sonore
@@ -425,7 +442,6 @@ export default function ParticipantViewFixedPage() {
     simulationId,
     toast,
     getUserRole,
-    data,
     playNotification,
     playCommunicationNotification,
   ]);
@@ -1555,7 +1571,7 @@ export default function ParticipantViewFixedPage() {
           <div className="flex flex-col items-center">
             <span className="text-[10px] text-[#78716C]">Équipe</span>
             <span className="text-[13px] font-medium text-[#FAFAF9]">
-              {session?.user?.teamName || "Équipe de sécurité"}
+              {currentTeamName || "Équipe de sécurité"}
             </span>
           </div>
           <div className="w-px h-6 bg-[#33302D]"></div>
@@ -1763,7 +1779,7 @@ export default function ParticipantViewFixedPage() {
             <ChannelSidebar
               selectedChannel={selectedChannel}
               onChannelClick={setSelectedChannel}
-              counts={data?.counts || {}}
+              counts={data?.counts || defaultCounts}
               resolvedTheme={resolvedTheme}
             />
           </div>
