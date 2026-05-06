@@ -266,12 +266,12 @@ export default function SimulationPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-6">
-          {selectedSimulation.scenarios.length === 0 ? (
+          {(selectedSimulation.scenarios?.length ?? 0) === 0 ? (
             <div className="glass-card p-12 text-center border-dashed">
               <p className="text-muted-foreground font-medium">Aucun scénario opérationnel détecté pour cette simulation.</p>
             </div>
           ) : (
-            selectedSimulation.scenarios.map((scenario) => (
+            (selectedSimulation.scenarios || []).map((scenario) => (
               <Card key={scenario.id} className="glass-card hover:border-primary/30 transition-all duration-300">
                 <CardHeader className="flex flex-row items-center justify-between border-b border-white/5 pb-4">
                   <div>
@@ -290,13 +290,13 @@ export default function SimulationPage() {
                 <CardContent className="pt-6">
                   <div className="bg-white/5 rounded-2xl p-6 border border-white/5">
                     <h4 className="text-xs font-black uppercase tracking-widest text-primary mb-4 flex items-center gap-2">
-                      <div className="h-1.5 w-1.5 rounded-full bg-primary" /> Injections de Données ({scenario.injections.length})
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary" /> Injections de Données ({scenario.injections?.length ?? 0})
                     </h4>
-                    {scenario.injections.length === 0 ? (
+                    {(!scenario.injections || scenario.injections.length === 0) ? (
                       <p className="text-[10px] text-muted-foreground italic uppercase tracking-tighter">Séquence d'injection vide.</p>
                     ) : (
                       <div className="space-y-3">
-                        {scenario.injections.map((inj, idx) => (
+                        {(scenario.injections || []).map((inj, idx) => (
                           <div key={idx} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5 text-xs">
                             <span className="font-mono text-primary font-bold">#{idx+1}</span>
                             <span className="flex-1 font-medium">{inj.name}</span>

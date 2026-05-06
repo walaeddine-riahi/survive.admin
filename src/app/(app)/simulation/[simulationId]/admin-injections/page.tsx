@@ -264,7 +264,7 @@ export default function AdminInjectionsPage({
     try {
       const results = await Promise.allSettled(
         ids.map((id) =>
-          fetch(`/api/simulations/${simulationId}/injections/${id}`, {
+          fetch(`/api/injections/${id}`, {
             method: "DELETE",
           })
         )
@@ -315,7 +315,7 @@ export default function AdminInjectionsPage({
 
       const isUpdate = !!editingInjection;
       const url = isUpdate
-        ? `/api/simulations/${simulationId}/injections/${editingInjection.id}`
+        ? `/api/injections/${editingInjection.id}`
         : `/api/simulations/${simulationId}/injections`;
 
       // Préparer les données selon le format attendu par l'API
@@ -327,6 +327,7 @@ export default function AdminInjectionsPage({
         isActive: formData.isActive ?? true,
         scenarioName: formData.scenarioName || "default",
         simulationId: simulationId,
+        scenarioId: editingInjection?.scenarioId,
         timeOffset: 0,
         isRepeating: false,
         repeatInterval: 0,

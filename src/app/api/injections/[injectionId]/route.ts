@@ -40,17 +40,18 @@ async function getInjectionWithRelations(id: string) {
 
 export async function GET(
   request: Request,
-  { params }: { params: { injectionId: string } }
+  { params }: { params: Promise<{ injectionId: string }> }
 ) {
   try {
-    if (!params?.injectionId) {
+    const { injectionId } = await params;
+    if (!injectionId) {
       return NextResponse.json(
         { error: "Injection ID is required" },
         { status: 400 }
       );
     }
 
-    const injection = await getInjectionWithRelations(params.injectionId);
+    const injection = await getInjectionWithRelations(injectionId);
 
     if (!injection) {
       return NextResponse.json(
@@ -74,11 +75,12 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { injectionId: string } }
+  { params }: { params: Promise<{ injectionId: string }> }
 ) {
   try {
+    const { injectionId } = await params;
     // Vérifier que l'ID est présent dans les paramètres
-    if (!params?.injectionId) {
+    if (!injectionId) {
       return NextResponse.json(
         { error: "Injection ID is required" },
         { status: 400 }
@@ -123,7 +125,7 @@ export async function PUT(
 
     // Vérifier que l'injection existe
     const existingInjection = await prisma.injection.findUnique({
-      where: { id: params.injectionId }
+      where: { id: injectionId }
     });
 
     if (!existingInjection) {
@@ -154,13 +156,13 @@ export async function PUT(
         attachments: attachments ? (typeof attachments === 'string' ? JSON.parse(attachments) : attachments) : null 
       }),
       ...(targetUserId !== undefined && { 
-        targetUserId: targetUserId || null 
+        targetUser: targetUserId ? { connect: { id: targetUserId } } : { disconnect: true }
       }),
     };
 
     // Mettre à jour l'injection
     const updatedInjection = await prisma.injection.update({
-      where: { id: params.injectionId },
+      where: { id: injectionId },
       data: updateData,
       include: {
         scenario: {
@@ -200,7 +202,7 @@ export async function PUT(
       }
       
       // Gestion des erreurs de validation Prisma
-      if (error instanceof Error && error.name === 'PrismaClientValidationError') {
+      if (error.name === 'PrismaClientValidationError') {
         return NextResponse.json(
           { 
             error: "Validation error",
@@ -223,11 +225,12 @@ export async function PUT(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { injectionId: string } }
+  { params }: { params: Promise<{ injectionId: string }> }
 ) {
   try {
+    const { injectionId } = await params;
     // Vérifier que l'ID est présent dans les paramètres
-    if (!params?.injectionId) {
+    if (!injectionId) {
       return NextResponse.json(
         { error: "ID de l'injection requis" },
         { status: 400 }
@@ -247,7 +250,7 @@ export async function PATCH(
 
     // Vérifier que l'injection existe
     const existingInjection = await prisma.injection.findUnique({
-      where: { id: params.injectionId },
+      where: { id: injectionId },
     });
 
     if (!existingInjection) {
@@ -259,7 +262,7 @@ export async function PATCH(
 
     // Mettre à jour uniquement le statut
     const updatedInjection = await prisma.injection.update({
-      where: { id: params.injectionId },
+      where: { id: injectionId },
       data: { isActive },
       include: {
         scenario: {
@@ -293,10 +296,11 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { injectionId: string } }
+  { params }: { params: Promise<{ injectionId: string }> }
 ) {
   try {
-    if (!params?.injectionId) {
+    const { injectionId } = await params;
+    if (!injectionId) {
       return NextResponse.json(
         { error: "Injection ID is required" },
         { status: 400 }
@@ -305,7 +309,7 @@ export async function DELETE(
 
     // Vérifier que l'injection existe
     const existingInjection = await prisma.injection.findUnique({
-      where: { id: params.injectionId }
+      where: { id: injectionId }
     });
 
     if (!existingInjection) {
@@ -317,7 +321,7 @@ export async function DELETE(
 
     // Supprimer l'injection
     await prisma.injection.delete({
-      where: { id: params.injectionId }
+      where: { id: injectionId }
     });
 
     return NextResponse.json({ 

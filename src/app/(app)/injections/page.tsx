@@ -356,8 +356,9 @@ export default function InjectionsPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erreur lors de la mise à jour de l\'injection');
+        const errorData = await response.json().catch(() => ({}));
+        const detailedError = errorData.error || errorData.message || errorData.details || 'Erreur lors de la mise à jour de l\'injection';
+        throw new Error(detailedError);
       }
 
       toast({
@@ -594,7 +595,7 @@ export default function InjectionsPage() {
                           {injection.type === 'SMS' && <MessageSquare className="h-4 w-4 text-blue-500" />}
                           {injection.type === 'ALERT' && <Bell className="h-4 w-4 text-amber-500" />}
                           {injection.type === 'NEWS_BROADCAST' && <Newspaper className="h-4 w-4 text-purple-500" />}
-                          {injection.type === 'CALL_LOG' && <PhoneCall className="h-4 w-4 text-green-500" />}
+                          {injection.type === InjectionTypeEnum.CALL && <PhoneCall className="h-4 w-4 text-green-500" />}
                           <span>{injection.title}</span>
                         </div>
                       </TableCell>
