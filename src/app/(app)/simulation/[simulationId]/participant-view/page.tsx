@@ -47,6 +47,7 @@ import MemoComposeForm, { MemoFormData } from "@/components/participant-mode/com
 import NewsBroadcastComposeForm, { NewsBroadcastFormData } from "@/components/participant-mode/communication-forms/NewsBroadcastComposeForm";
 import NewspaperComposeForm, { NewspaperFormData } from "@/components/participant-mode/communication-forms/NewspaperComposeForm";
 import SocialComposeForm, { SocialFormData } from "@/components/participant-mode/communication-forms/SocialComposeForm";
+import Logo from "@/components/Logo";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -1546,19 +1547,11 @@ export default function ParticipantViewFixedPage() {
       >
         {/* Logo zone (gauche) */}
         <div className="flex items-center gap-3">
-          <div 
-            className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden"
-            style={{ backgroundColor: "#2E2B28", border: "1px solid #3C3835" }}
-          >
-            {participantLogo ? (
-              <Image src={participantLogo} alt="Logo" width={24} height={24} className="object-contain" />
-            ) : (
-              <Zap className="w-4 h-4 text-[#D97706]" />
-            )}
-          </div>
+          <Logo size="sm" />
+          <div className="w-px h-6 bg-[#33302D] mx-1 hidden sm:block"></div>
           <div className="flex flex-col leading-tight">
             <span className="text-[14px] font-semibold text-[#FAFAF9]">
-              {data?.simulation?.title?.substring(0, 10) || "Simulation"}
+              {data?.simulation?.title || "Simulation"}
             </span>
             <span className="text-[11px] text-[#78716C]">
               Espace opérationnel
