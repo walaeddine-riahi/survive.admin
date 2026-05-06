@@ -164,35 +164,35 @@ export default function DashboardPage() {
     return (
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         {/* Hero Section */}
-        <div className="bg-[#252220] border border-[#3C3835] rounded-2xl p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-xl">
+        <div className="bg-white dark:bg-[#252220] border border-[#E7E5E4] dark:border-[#3C3835] rounded-2xl p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-xl shadow-stone-200/10 dark:shadow-stone-950/20">
           <div className="space-y-2">
-            <span className="text-[11px] text-[#78716C] font-semibold tracking-wider uppercase">
+            <span className="text-[11px] text-[#78716C] dark:text-[#87807C] font-semibold tracking-wider uppercase">
               {dateTimeStr || "Chargement..."}
             </span>
-            <h1 className="text-2xl md:text-3xl font-bold text-[#FAFAF9] tracking-tight">
+            <h1 className="text-2xl md:text-3xl font-bold text-[#1C1917] dark:text-[#FAFAF9] tracking-tight">
               Bonjour, {user?.firstName} {user?.lastName}
             </h1>
-            <p className="text-sm text-[#A8A29E] leading-relaxed">
-              Vous participez à <strong className="text-[#FAFAF9]">{stats.totalSimulations} simulation(s)</strong>. Vos dernières directives tactiques sont prêtes.
+            <p className="text-sm text-[#57534E] dark:text-[#A8A29E] leading-relaxed">
+              Vous participez à <strong className="text-[#D97706] dark:text-[#FAFAF9]">{stats.totalSimulations} simulation(s)</strong>. Vos dernières directives tactiques sont prêtes.
             </p>
           </div>
           <div className="flex flex-col items-start md:items-end gap-3 shrink-0">
             {activeAssignment ? (
               <>
-                <div className="flex items-center gap-2 bg-[#2C2118] border border-orange-500/20 rounded-full px-4 py-1.5">
+                <div className="flex items-center gap-2 bg-[#FEF3C7] dark:bg-[#2C2118] border border-orange-200 dark:border-orange-500/20 rounded-full px-4 py-1.5">
                   <span className="w-2 h-2 rounded-full bg-[#D97706] animate-pulse" />
                   <span className="text-xs font-semibold text-[#D97706] uppercase tracking-wider">Simulation en cours</span>
                 </div>
                 <Link
                   href={`/simulation/${activeAssignment.simulationId}/participant-view`}
-                  className="bg-[#D97706] hover:bg-[#B45309] text-[#78350F] font-bold text-sm px-5 py-2.5 rounded-xl transition duration-150 shadow-lg shadow-orange-500/10 flex items-center gap-2"
+                  className="bg-[#D97706] hover:bg-[#B45309] text-white dark:text-[#78350F] font-bold text-sm px-5 py-2.5 rounded-xl transition duration-150 shadow-lg shadow-orange-500/10 flex items-center gap-2"
                 >
                   <Play className="w-4 h-4 fill-current" />
                   Accéder à la simulation
                 </Link>
               </>
             ) : (
-              <div className="text-sm text-[#78716C]">Aucune simulation active</div>
+              <div className="text-sm text-[#78716C] dark:text-[#57534E]">Aucune simulation active</div>
             )}
           </div>
         </div>
@@ -200,13 +200,13 @@ export default function DashboardPage() {
         {/* Stats Grid */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {statCards.map(({ label, value, delta, icon: Icon }) => (
-            <div key={label} className="bg-[#252220] border border-[#3C3835] rounded-2xl p-5 flex flex-col gap-3 shadow-md hover:border-[#4E4945] transition duration-150">
+            <div key={label} className="bg-white dark:bg-[#252220] border border-[#E7E5E4] dark:border-[#3C3835] rounded-2xl p-5 flex flex-col gap-3 shadow-md hover:border-[#D97706]/30 dark:hover:border-[#4E4945] transition duration-150 group">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-[#78716C] tracking-wide uppercase">{label}</span>
-                <Icon className="w-4 h-4 text-[#3C3835]" strokeWidth={1.5} />
+                <span className="text-xs font-medium text-[#78716C] dark:text-[#87807C] tracking-wide uppercase">{label}</span>
+                <Icon className="w-4 h-4 text-[#A8A29E] dark:text-[#3C3835] group-hover:text-[#D97706] transition duration-150" strokeWidth={1.5} />
               </div>
-              <div className="text-3xl font-extrabold text-[#FAFAF9] tracking-tight">{value}</div>
-              <span className="text-[11px] text-[#57534E] font-medium">{delta}</span>
+              <div className="text-3xl font-extrabold text-[#1C1917] dark:text-[#FAFAF9] tracking-tight">{value}</div>
+              <span className="text-[11px] text-[#78716C] dark:text-[#57534E] font-medium">{delta}</span>
             </div>
           ))}
         </div>
@@ -217,53 +217,53 @@ export default function DashboardPage() {
           <div className="space-y-6">
             {/* Active Simulation Card */}
             {activeAssignment ? (
-              <div className="bg-[#2C2118] border border-orange-500/25 rounded-2xl p-6 flex flex-col gap-4 shadow-lg shadow-orange-500/5">
+              <div className="bg-[#FAF9F6] dark:bg-[#2C2118] border border-[#E7E5E4] dark:border-orange-500/25 rounded-2xl p-6 flex flex-col gap-4 shadow-lg shadow-orange-500/[0.02] dark:shadow-orange-500/5">
                 <span className="text-[10px] font-bold text-[#D97706] tracking-wider uppercase">SIMULATION ACTIVE</span>
-                <h3 className="text-lg font-bold text-[#FAFAF9] tracking-tight">{activeAssignment.title}</h3>
+                <h3 className="text-lg font-bold text-[#1C1917] dark:text-[#FAFAF9] tracking-tight">{activeAssignment.title}</h3>
                 
                 <div className="space-y-3">
-                  <div className="flex items-center gap-3 text-xs text-[#A8A29E]">
-                    <Users className="w-4 h-4 text-[#78716C]" />
+                  <div className="flex items-center gap-3 text-xs text-[#78716C] dark:text-[#A8A29E]">
+                    <Users className="w-4 h-4 text-[#A8A29E] dark:text-[#78716C]" />
                     <span>{activeAssignment.teamName}</span>
                   </div>
                   <div className="flex items-center gap-3 text-xs text-[#D97706] font-medium">
-                    <Shield className="w-4 h-4 text-[#78716C]" />
+                    <Shield className="w-4 h-4 text-[#D97706]/80 dark:text-[#78716C]" />
                     <span>Rôle : {activeAssignment.role}</span>
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-[#A8A29E]">
-                    <Clock className="w-4 h-4 text-[#78716C]" />
+                  <div className="flex items-center gap-3 text-xs text-[#78716C] dark:text-[#A8A29E]">
+                    <Clock className="w-4 h-4 text-[#A8A29E] dark:text-[#78716C]" />
                     <span>Débutée le : {new Date(activeAssignment.startDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}</span>
                   </div>
                 </div>
 
                 <div className="space-y-2 mt-2">
-                  <div className="w-full bg-[#3C3835] h-1.5 rounded-full overflow-hidden">
+                  <div className="w-full bg-[#E7E5E4] dark:bg-[#3C3835] h-1.5 rounded-full overflow-hidden">
                     <div className="bg-[#D97706] h-1.5 rounded-full" style={{ width: "35%" }} />
                   </div>
                   <div className="flex justify-between text-[11px] text-[#78716C]">
                     <span>Progression globale</span>
-                    <span className="font-semibold text-[#FAFAF9]">35%</span>
+                    <span className="font-semibold text-[#1C1917] dark:text-[#FAFAF9]">35%</span>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="bg-[#252220] border border-[#3C3835] rounded-2xl p-6 text-center text-sm text-[#78716C]">
+              <div className="bg-white dark:bg-[#252220] border border-[#E7E5E4] dark:border-[#3C3835] rounded-2xl p-6 text-center text-sm text-[#78716C] dark:text-[#78716C]">
                 Aucune simulation active pour le moment.
               </div>
             )}
 
             {/* Quick Actions Card */}
-            <div className="bg-[#252220] border border-[#3C3835] rounded-2xl p-6 shadow-md">
-              <h3 className="text-sm font-bold text-[#FAFAF9] mb-4 uppercase tracking-wider">Actions rapides</h3>
+            <div className="bg-white dark:bg-[#252220] border border-[#E7E5E4] dark:border-[#3C3835] rounded-2xl p-6 shadow-md">
+              <h3 className="text-sm font-bold text-[#1C1917] dark:text-[#FAFAF9] mb-4 uppercase tracking-wider">Actions rapides</h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {quickActions.map(({ icon: Icon, label, url }) => (
                   <Link
                     key={label}
                     href={url}
-                    className="bg-[#2E2B28] border border-[#3C3835] hover:border-[#D97706]/30 hover:bg-[#322E2B] rounded-xl p-4 flex flex-col items-center justify-center gap-2 text-center transition duration-150 group"
+                    className="bg-[#FAF9F6] dark:bg-[#2E2B28] border border-[#E7E5E4] dark:border-[#3C3835] hover:border-[#D97706]/30 dark:hover:border-[#D97706]/30 hover:bg-orange-50/50 dark:hover:bg-[#322E2B] rounded-xl p-4 flex flex-col items-center justify-center gap-2 text-center transition duration-150 group"
                   >
-                    <Icon className="w-5 h-5 text-[#A8A29E] group-hover:text-[#D97706] transition duration-150" strokeWidth={1.5} />
-                    <span className="text-[11px] font-medium text-[#78716C] group-hover:text-[#FAFAF9] leading-tight transition duration-150">{label}</span>
+                    <Icon className="w-5 h-5 text-[#78716C] dark:text-[#A8A29E] group-hover:text-[#D97706] transition duration-150" strokeWidth={1.5} />
+                    <span className="text-[11px] font-medium text-[#78716C] group-hover:text-[#1C1917] dark:group-hover:text-[#FAFAF9] leading-tight transition duration-150">{label}</span>
                   </Link>
                 ))}
               </div>
@@ -273,14 +273,14 @@ export default function DashboardPage() {
           {/* Right Column */}
           <div className="space-y-6">
             {/* Simulations List */}
-            <div className="bg-[#252220] border border-[#3C3835] rounded-2xl p-6 shadow-md">
+            <div className="bg-white dark:bg-[#252220] border border-[#E7E5E4] dark:border-[#3C3835] rounded-2xl p-6 shadow-md">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-[#FAFAF9] uppercase tracking-wider">Mes simulations récentes</h3>
+                <h3 className="text-sm font-bold text-[#1C1917] dark:text-[#FAFAF9] uppercase tracking-wider">Mes simulations récentes</h3>
                 <Link href="/participations" className="text-xs font-semibold text-[#D97706] hover:text-[#B45309] flex items-center gap-1">
                   Voir tout <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
-              <div className="divide-y divide-[#2E2B28]">
+              <div className="divide-y divide-[#E7E5E4] dark:divide-[#2E2B28]">
                 {simulations.length > 0 ? (
                   simulations.map((sim: any) => (
                     <div key={sim.id} className="flex items-center justify-between py-3.5 first:pt-0 last:pb-0 gap-4">
@@ -296,7 +296,7 @@ export default function DashboardPage() {
                           )}
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-sm font-semibold text-[#FAFAF9] tracking-tight">{sim.name}</span>
+                          <span className="text-sm font-semibold text-[#1C1917] dark:text-[#FAFAF9] tracking-tight">{sim.name}</span>
                           <span className="text-xs text-[#78716C] mt-0.5">{sim.meta}</span>
                         </div>
                       </div>
@@ -319,16 +319,16 @@ export default function DashboardPage() {
             </div>
 
             {/* Notifications Feed */}
-            <div className="bg-[#252220] border border-[#3C3835] rounded-2xl p-6 shadow-md">
-              <h3 className="text-sm font-bold text-[#FAFAF9] mb-4 uppercase tracking-wider">Notifications récentes</h3>
+            <div className="bg-white dark:bg-[#252220] border border-[#E7E5E4] dark:border-[#3C3835] rounded-2xl p-6 shadow-md">
+              <h3 className="text-sm font-bold text-[#1C1917] dark:text-[#FAFAF9] mb-4 uppercase tracking-wider">Notifications récentes</h3>
               <div className="space-y-4">
                 {notifications.length > 0 ? (
                   notifications.map((n: any, i: number) => (
                     <div key={i} className="flex gap-3 items-start">
-                      <span className={cn("w-2 h-2 rounded-full shrink-0 mt-1.5", n.read ? "bg-[#3C3835]" : "bg-[#D97706]")} />
+                      <span className={cn("w-2 h-2 rounded-full shrink-0 mt-1.5", n.read ? "bg-[#E7E5E4] dark:bg-[#3C3835]" : "bg-[#D97706]")} />
                       <div className="flex-1 space-y-1">
-                        <p className={cn("text-xs leading-relaxed", n.read ? "text-[#57534E]" : "text-[#A8A29E]")}>{n.text}</p>
-                        <span className="text-[10px] text-[#57534E] font-medium block">{n.time}</span>
+                        <p className={cn("text-xs leading-relaxed", n.read ? "text-[#78716C] dark:text-[#57534E]" : "text-[#1C1917] dark:text-[#A8A29E]")}>{n.text}</p>
+                        <span className="text-[10px] text-[#A8A29E] dark:text-[#57534E] font-medium block">{n.time}</span>
                       </div>
                     </div>
                   ))
