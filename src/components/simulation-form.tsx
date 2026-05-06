@@ -34,7 +34,7 @@ import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { X } from "lucide-react";
+import { X, Plus, Calendar as CalendarIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -76,408 +76,282 @@ interface Team {
 }
 
 interface SimulationFormProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSubmit: (data: SimulationFormValues) => void;
-  initialData?: SimulationFormValues;
+  initialData?: any;
+  onSave: (data: SimulationFormValues) => void;
+  onCancel: () => void;
 }
 
 export function SimulationForm({
-  open,
-  onOpenChange,
-  onSubmit,
   initialData,
+  onSave,
+  onCancel,
 }: SimulationFormProps) {
   const [users, setUsers] = useState<User[]>([]);
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [selectedUsers, setSelectedUsers] = useState<
-    { id: string; role: string; teamId?: string }[]
-  >([]);
+  const [selectedUsers, setSelectedUsers] = useState<{ id: string; role: "participant" | "observer" | "facilitator" }[]>([]);
 
   const form = useForm<SimulationFormValues>({
     resolver: zodResolver(simulationFormSchema),
-    defaultValues: initialData || {
+    defaultValues: initialData ? {
+      title: initialData.title,
+      description: initialData.description || "",
+      status: initialData.status,
+      startDate: new Date(initialData.startDate),
+      endDate: new Date(initialData.endDate),
+    } : {
       title: "",
       description: "",
       status: "planned",
       startDate: new Date(),
-      endDate: new Date(),
-      assignments: [],
+      endDate: new Date(new Date().setDate(new Date().getDate() + 7)),
     },
   });
 
   useEffect(() => {
-    const fetchUsersAndTeams = async () => {
+    if (initialData) {
+      form.reset({
+        title: initialData.title,
+        description: initialData.description || "",
+        status: initialData.status,
+        startDate: new Date(initialData.startDate),
+        endDate: new Date(initialData.endDate),
+      });
+      if (initialData.assignments) {
+        setSelectedUsers(initialData.assignments.map((a: any) => ({
+          id: a.userId,
+          role: a.role
+        })));
+      } else {
+        setSelectedUsers([]);
+      }
+    } else {
+      form.reset({
+        title: "",
+        description: "",
+        status: "planned",
+        startDate: new Date(),
+        endDate: new Date(new Date().setDate(new Date().getDate() + 7)),
+      });
+      setSelectedUsers([]);
+    }
+  }, [initialData, form]);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
       try {
-        const usersResponse = await fetch("/api/users");
-        if (!usersResponse.ok) throw new Error("Failed to fetch users");
-        const usersData = await usersResponse.json();
-        setUsers(
-          usersData
-            .filter((user: User | null | undefined) => user && user.id !== "")
-            .map((user: User) => ({ ...user, id: String(user.id) }))
-        );
-
-        const teamsResponse = await fetch("/api/teams");
-        if (!teamsResponse.ok) throw new Error("Failed to fetch teams");
-        const teamsData = await teamsResponse.json();
-        setTeams(
-          teamsData
-            .filter((team: Team | null | undefined) => team && team.id !== "")
-            .map((team: Team) => ({ ...team, id: String(team.id) }))
-        );
-
-        if (initialData?.assignments) {
-          setSelectedUsers(
-            initialData.assignments
-              .filter(
-                (assignment) =>
-                  assignment.userId !== "" &&
-                  (assignment.teamId === undefined || assignment.teamId !== "")
-              )
-              .map((assignment) => ({
-                id: assignment.userId,
-                role: assignment.role,
-                teamId: assignment.teamId,
-              }))
-          );
+        const response = await fetch("/api/users");
+        if (response.ok) {
+          const data = await response.json();
+          setUsers(data);
         }
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error fetching users:", error);
       }
     };
-
-    fetchUsersAndTeams();
-  }, [initialData]);
+    fetchUsers();
+  }, []);
 
   const handleFormSubmit = (data: SimulationFormValues) => {
-    const formData = {
+    onSave({
       ...data,
-      assignments: selectedUsers.map((user) => ({
-        userId: user.id,
-        role: user.role as "participant" | "observer" | "facilitator",
-        status: "pending" as const,
-        teamId: user.teamId,
-      })),
-    };
-    onSubmit(formData);
-    form.reset();
-    setSelectedUsers([]);
+      assignments: selectedUsers.map(u => ({
+        userId: u.id,
+        role: u.role,
+        status: "pending"
+      }))
+    });
   };
 
   const addUser = (userId: string) => {
-    const user = users.find((u) => u.id === userId);
-    if (user && !selectedUsers.some((su) => su.id === userId)) {
-      setSelectedUsers([
-        ...selectedUsers,
-        { id: userId, role: "participant", teamId: undefined },
-      ]);
+    if (userId === "none") return;
+    if (!selectedUsers.find(u => u.id === userId)) {
+      setSelectedUsers([...selectedUsers, { id: userId, role: "participant" }]);
     }
   };
 
   const removeUser = (userId: string) => {
-    setSelectedUsers(selectedUsers.filter((user) => user.id !== userId));
+    setSelectedUsers(selectedUsers.filter(u => u.id !== userId));
   };
 
   const updateUserRole = (userId: string, role: string) => {
-    setSelectedUsers(
-      selectedUsers.map((user) =>
-        user.id === userId ? { ...user, role } : user
-      )
-    );
-  };
-
-  const updateUserTeam = (userId: string, teamId: string) => {
-    setSelectedUsers(
-      selectedUsers.map((user) =>
-        user.id === userId
-          ? { ...user, teamId: teamId === "no-team" ? undefined : teamId }
-          : user
-      )
-    );
+    setSelectedUsers(selectedUsers.map(u => 
+      u.id === userId ? { ...u, role: role as any } : u
+    ));
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>
-            {initialData ? "Modifier la simulation" : "Créer une simulation"}
-          </DialogTitle>
-        </DialogHeader>
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(handleFormSubmit)}
-            className="space-y-4"
-          >
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Titre</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Titre de la simulation" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+    <div className="p-8">
+      <DialogHeader className="mb-8">
+        <DialogTitle className="text-3xl font-black tracking-tight text-[var(--text-primary)]">
+          {initialData ? "Configuration Simulation" : "Nouvelle Simulation"}
+        </DialogTitle>
+        <p className="text-[var(--text-muted)] text-sm uppercase tracking-widest font-bold">Protocole de résilience augmentée</p>
+      </DialogHeader>
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-6">
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-[var(--accent)]">Titre du Projet</FormLabel>
+                    <FormControl>
+                      <Input placeholder="S.U.R.V.I.V.E. Alpha" className="bg-[var(--bg-surface)] border-[var(--border)] h-12" {...field} />
+                    </FormControl>
+                    <FormMessage className="text-[10px] uppercase font-bold" />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-[var(--accent)]">Niveau d'Activation</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="bg-[var(--bg-surface)] border-[var(--border)] h-12">
+                          <SelectValue placeholder="Sélectionner" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="bg-[var(--bg-surface)] border-[var(--border)]">
+                        <SelectItem value="planned">⚪ Planifié</SelectItem>
+                        <SelectItem value="ongoing">🔵 En cours</SelectItem>
+                        <SelectItem value="completed">🟢 Terminé</SelectItem>
+                        <SelectItem value="cancelled">🔴 Annulé</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <FormField
               control={form.control}
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel className="text-[10px] font-black uppercase tracking-widest text-[var(--accent)]">Briefing Opérationnel</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="Description de la simulation"
-                      {...field}
+                    <Textarea 
+                      placeholder="Détails stratégiques de la simulation..." 
+                      className="bg-[var(--bg-surface)] border-[var(--border)] min-h-[150px] resize-none pt-4" 
+                      {...field} 
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-8 p-6 bg-[var(--bg-tertiary)]/30 rounded-[12px] border border-[var(--border)]">
             <FormField
               control={form.control}
-              name="status"
+              name="startDate"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Statut</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner un statut" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="planned">Planifié</SelectItem>
-                      <SelectItem value="ongoing">En cours</SelectItem>
-                      <SelectItem value="completed">Terminé</SelectItem>
-                      <SelectItem value="cancelled">Annulé</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
+                <FormItem className="flex flex-col">
+                  <FormLabel className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-2">Début Séquence</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button variant="ghost" className="bg-[var(--bg-surface)] border-[var(--border)] h-12 justify-start font-bold">
+                          <CalendarIcon className="mr-3 h-4 w-4 text-[var(--accent)]" />
+                          {field.value ? format(field.value, "PPP", { locale: fr }) : "Choisir date"}
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="bg-[var(--bg-surface)] p-0 border-[var(--border)]" align="start">
+                      <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus className="text-[var(--text-primary)]" />
+                    </PopoverContent>
+                  </Popover>
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="startDate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Date de début</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP", { locale: fr })
-                            ) : (
-                              <span>Choisir une date</span>
-                            )}
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="endDate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Date de fin</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP", { locale: fr })
-                            ) : (
-                              <span>Choisir une date</span>
-                            )}
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Assignments Section */}
-            <div className="space-y-4 rounded-md border p-4">
-              <h3 className="text-lg font-medium">Affectations</h3>
-              <div className="flex items-center space-x-2">
-                <Select onValueChange={addUser} defaultValue="none">
-                  <SelectTrigger className="w-[240px]">
-                    <SelectValue placeholder="Ajouter un utilisateur" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none" disabled>
-                      Sélectionner un utilisateur
-                    </SelectItem>
-                    {users.length === 0 ? (
-                      <SelectItem value="no-users" disabled>
-                        Aucun utilisateur disponible
-                      </SelectItem>
-                    ) : (
-                      users
-                        .filter(
-                          (user) =>
-                            user.id !== "" &&
-                            !selectedUsers.some(
-                              (selected) => selected.id === user.id
-                            )
-                        )
-                        .map((user) => {
-                          if (!user.id || String(user.id) === "") return null;
-                          return (
-                            <SelectItem key={user.id} value={String(user.id)}>
-                              {user.firstName} {user.lastName} ({user.email})
-                            </SelectItem>
-                          );
-                        })
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {selectedUsers.length > 0 && (
-                <div className="space-y-4">
-                  {selectedUsers.map((assignment) => {
-                    const user = users.find((u) => u.id === assignment.id);
-                    return (
-                      user && (
-                        <div
-                          key={user.id}
-                          className="flex items-center justify-between rounded-md border p-3"
-                        >
-                          <div className="flex flex-col">
-                            <span>
-                              {user.firstName} {user.lastName} ({user.email})
-                            </span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Select
-                              onValueChange={(value) =>
-                                updateUserRole(user.id, value)
-                              }
-                              value={assignment.role}
-                            >
-                              <SelectTrigger className="w-[140px]">
-                                <SelectValue placeholder="Sélectionner un rôle" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="participant">
-                                  Participant
-                                </SelectItem>
-                                <SelectItem value="observer">
-                                  Observateur
-                                </SelectItem>
-                                <SelectItem value="facilitator">
-                                  Facilitateur
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-
-                            <Select
-                              onValueChange={(value) =>
-                                updateUserTeam(user.id, value)
-                              }
-                              value={
-                                teams.some(
-                                  (team) => team.id === assignment.teamId
-                                )
-                                  ? String(assignment.teamId)
-                                  : "no-team"
-                              }
-                            >
-                              <SelectTrigger className="w-[140px]">
-                                <SelectValue placeholder="Sélectionner une équipe" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="no-team">
-                                  Aucune équipe
-                                </SelectItem>
-                                {teams.map((team) => {
-                                  console.log(
-                                    "Team ID being rendered:",
-                                    team.id
-                                  );
-                                  if (!team.id || String(team.id) === "")
-                                    return null;
-                                  return (
-                                    <SelectItem
-                                      key={team.id}
-                                      value={String(team.id)}
-                                    >
-                                      {team.name}
-                                    </SelectItem>
-                                  );
-                                })}
-                              </SelectContent>
-                            </Select>
-
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeUser(user.id)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      )
-                    );
-                  })}
-                </div>
+            <FormField
+              control={form.control}
+              name="endDate"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-2">Fin Séquence</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button variant="ghost" className="bg-[var(--bg-surface)] border-[var(--border)] h-12 justify-start font-bold">
+                          <CalendarIcon className="mr-3 h-4 w-4 text-secondary" />
+                          {field.value ? format(field.value, "PPP", { locale: fr }) : "Choisir date"}
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="bg-[var(--bg-surface)] p-0 border-[var(--border)]" align="start">
+                      <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                    </PopoverContent>
+                  </Popover>
+                </FormItem>
               )}
+            />
+          </div>
+
+          {/* Assignments */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--accent)]">Unités Opérationnelles</h3>
+              <Select onValueChange={addUser} defaultValue="none">
+                <SelectTrigger className="w-[280px] bg-[var(--bg-tertiary)]/50 border-[var(--border)] h-10 rounded-[12px] text-xs font-bold">
+                  <Plus className="h-3 w-3 mr-2" /> <SelectValue placeholder="Ajouter un membre" />
+                </SelectTrigger>
+                <SelectContent className="bg-[var(--bg-surface)] border-[var(--border)]">
+                  {users.filter(u => !selectedUsers.some(su => su.id === u.id)).map(user => (
+                    <SelectItem key={user.id} value={user.id}>{user.firstName} {user.lastName}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            <Button type="submit" className="w-full">
-              {initialData ? "Modifier" : "Créer"}
+            <div className="grid grid-cols-1 gap-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+              {selectedUsers.map((assignment) => {
+                const user = users.find((u) => u.id === assignment.id);
+                return user && (
+                  <div key={user.id} className="group flex items-center justify-between bg-[var(--bg-tertiary)]/20 hover:bg-[var(--bg-hover)] border border-[var(--border)] rounded-[12px] p-4 transition-all duration-300">
+                    <div className="flex flex-col">
+                      <span className="font-bold text-sm text-[var(--text-primary)]">{user.firstName} {user.lastName}</span>
+                      <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest">{user.email}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Select onValueChange={(v) => updateUserRole(user.id, v)} value={assignment.role}>
+                        <SelectTrigger className="h-9 w-32 bg-transparent border-[var(--border)] text-[10px] font-bold uppercase">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[var(--bg-surface)] border-[var(--border)]">
+                          <SelectItem value="participant">Participant</SelectItem>
+                          <SelectItem value="observer">Observateur</SelectItem>
+                          <SelectItem value="facilitator">Facilitateur</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button variant="ghost" size="icon" onClick={() => removeUser(user.id)} className="h-8 w-8 rounded-full hover:bg-red-500/20 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex gap-4 pt-4">
+            <Button variant="ghost" type="button" className="flex-1 h-14 rounded-[12px] hover:bg-[var(--bg-hover)] font-black uppercase tracking-widest" onClick={onCancel}>
+              Annuler
             </Button>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+            <Button type="submit" className="flex-[2] bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white h-14 rounded-[12px] font-black uppercase tracking-[0.3em]">
+              {initialData ? "Mettre à jour" : "Lancer Simulation"}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </div>
   );
 }

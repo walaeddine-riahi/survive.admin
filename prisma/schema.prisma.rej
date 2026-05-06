@@ -1,0 +1,536 @@
+diff a/prisma/schema.prisma b/prisma/schema.prisma	(rejected hunks)
+@@ -63,6 +63,9 @@ model User {
+   targetedInjections     Injection[]            @relation("TargetedInjection")
+   managedFactories       Factory[]              @relation("ManagedFactories")
+   createdFactories       Factory[]              @relation("CreatedFactories")
++  ownedGaps              ContinuityGap[]        @relation("GapOwner")
++  ownedStrategies        ContinuityStrategy[]   @relation("StrategyOwner")
++  ownedRisks             RiskAssessment[]       @relation("RiskOwner")
+ 
+   @@map("users")
+ }
+@@ -310,6 +313,12 @@ model Simulation {
+   communications Communication[]
+   participations Participation[]        @relation("SimulationParticipation")
+   injections     Injection[]            @relation("SimulationToInjections")
++  crisisPlan     SimulationCrisisPlan?
++  criteria       EvaluationCriteria[]
++  injectResponses InjectResponse[]
++  participantScores ParticipantScore[]
++  debrief        SimulationDebrief?
++  dashboardConfig Json?   // { instructor: [...widgets], participant: [...], observer: [...] }
+ 
+   @@map("simulations")
+ }
+@@ -327,6 +336,9 @@ model SimulationAssignment {
+   simulation   Simulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
+   team         Team?      @relation(fields: [teamId], references: [id])
+ 
++  scores         ParticipantScore[]
++  injectResponses InjectResponse[]
++
+   @@unique([userId, simulationId])
+   @@map("simulation_assignments")
+ }
+@@ -486,6 +499,10 @@ model Factory {
+   // Relations avec d'autres entités
+   processes       Process[]  @relation("FactoryProcesses")
+   biaReports      BiaReport[] @relation("FactoryReports")
++  continuitySettings ContinuitySettings?
++  continuityGaps     ContinuityGap[]
++  continuityStrategies ContinuityStrategy[]
++  riskAssessments    RiskAssessment[]
+   
+   // Métadonnées
+   createdById     String    @db.ObjectId
+@@ -673,6 +690,9 @@ model Process {
+   personnels                      Personnel[]
+   suppliers                       Supplier[]
+   legalRequirements               LegalRequirement[]
++  continuityGaps                  ContinuityGap[]
++  continuityStrategies            ContinuityStrategy[]
++  riskAssessments                 RiskAssessment[]
+   
+   @@map("processes")
+ }
+@@ -863,3 +883,480 @@ model BiaReport {
+   
+   @@map("bia_reports")
+ }
++
++// =====================================
++// BCM - Gap Analysis, Strategies & Risk
++// =====================================
++
++enum GapStatus {
++  IDENTIFIED
++  IN_PROGRESS
++  RESOLVED
++  ACCEPTED
++}
++
++enum GapSeverity {
++  CRITICAL
++  HIGH
++  MEDIUM
++  LOW
++}
++
++enum StrategyStatus {
++  PLANNED
++  IN_PROGRESS
++  IMPLEMENTED
++  TESTED
++  VALIDATED
++}
++
++enum ResourceCategory {
++  RH_COMPETENCES   // RH & Compétences
++  EQUIPEMENTS      // Équipements industriels & bureautiques
++  INFRASTRUCTURE   // Infrastructure physique / Locaux / Bureaux
++  APPLICATIONS_IT  // Applications & Systèmes IT
++  DOCUMENTATION    // Documentation critique
++  SUPPLY_CHAIN     // Supply Chain / Fournisseurs
++}
++
++enum RiskStatus {
++  OPEN
++  MITIGATED
++  ACCEPTED
++  CLOSED
++}
++
++// Paramètres de continuité & méthodologie risque — par organisation/site
++model ContinuitySettings {
++  id                    String   @id @default(auto()) @map("_id") @db.ObjectId
++  factoryId             String   @unique @db.ObjectId
++  factory               Factory  @relation(fields: [factoryId], references: [id], onDelete: Cascade)
++
++  // Seuils ISO 22301 personnalisables
++  maxRtoHours           Int      @default(4)
++  maxRpoHours           Int      @default(2)
++  maxMtpdHours          Int      @default(72)
++  minMbcoPercent        Int      @default(60)
++
++  // Seuils d'alerte
++  rtoWarningThreshold   Int      @default(8)
++  rpoWarningThreshold   Int      @default(4)
++  mtpdWarningThreshold  Int      @default(120)
++
++  // Méthodologie de risque — 100% personnalisable
++  riskMethodology       String   @default("ISO_31000")
++  riskMethodologyLabel  String?
++
++  // Matrice de risque configurable (JSON complet)
++  // Structure: {
++  //   axeX: { label: "Vraisemblance", levels: [{value:1,label:"Rare",...}] },
++  //   axeY: { label: "Impact", levels: [{value:1,label:"Négligeable",...}] },
++  //   thirdAxis: { enabled: bool, label: "Vitesse", levels: [...] } | null,
++  //   formula: "X*Y" | "X*Y*Z" | "custom",
++  //   thresholds: [{min:1,max:5,label:"Faible",color:"#16a34a"},{...},...],
++  //   treatmentOptions: [{value:"REDUCE",label:"Réduire",...}]
++  // }
++  riskMatrixConfig      Json?
++
++  // Standards de conformité applicables
++  applicableStandards   String[] @default(["ISO 22301"])
++
++  createdAt             DateTime @default(now())
++  updatedAt             DateTime @updatedAt
++
++  @@map("continuity_settings")
++}
++
++// Écart de continuité identifié
++model ContinuityGap {
++  id              String      @id @default(auto()) @map("_id") @db.ObjectId
++  title           String
++  description     String
++  gapType         String
++  severity        GapSeverity
++  status          GapStatus   @default(IDENTIFIED)
++  currentValue    String?
++  targetValue     String?
++  gap             String?
++  processId       String      @db.ObjectId
++  process         Process     @relation(fields: [processId], references: [id], onDelete: Cascade)
++  factoryId       String?     @db.ObjectId
++  factory         Factory?    @relation(fields: [factoryId], references: [id])
++  strategies      ContinuityStrategy[]
++  aiAnalysis      String?
++  recommendation  String?
++  ownerId         String?     @db.ObjectId
++  owner           User?       @relation("GapOwner", fields: [ownerId], references: [id])
++  identifiedAt    DateTime    @default(now())
++  targetClosureDate DateTime?
++  closedAt        DateTime?
++  createdAt       DateTime    @default(now())
++  updatedAt       DateTime    @updatedAt
++
++  @@map("continuity_gaps")
++}
++
++// Stratégie de continuité — structurée par catégorie de ressource
++model ContinuityStrategy {
++  id                  String           @id @default(auto()) @map("_id") @db.ObjectId
++  title               String
++  description         String
++  resourceCategory    ResourceCategory // RH | IT | LOCAUX | FOURNISSEURS
++  status              StrategyStatus   @default(PLANNED)
++
++  // Lien écart
++  gapId               String?          @db.ObjectId
++  gap                 ContinuityGap?   @relation(fields: [gapId], references: [id])
++
++  // Lien processus
++  processId           String           @db.ObjectId
++  process             Process          @relation(fields: [processId], references: [id], onDelete: Cascade)
++
++  // Lien site
++  factoryId           String?          @db.ObjectId
++  factory             Factory?         @relation(fields: [factoryId], references: [id])
++
++  // Référence à la ressource BIA source
++  sourceResourceType  String?  // personnel|equipement_industriel|equipement_bureautique|infrastructure|application_it|documentation|fournisseur
++  sourceResourceName  String?  // Nom de la ressource source
++
++  // Détails JSON par catégorie — ISO 22317
++  resourceDetails     Json?
++
++  // Solution de repli principale
++  fallbackSolution    String?
++  fallbackLocation    String?
++  activationDelayHours Int?
++
++  // Coût
++  estimatedCost       Float?
++  currency            String?          @default("TND")
++
++  // Gap closure
++  gapClosurePercent   Int              @default(0)
++
++  // Responsable
++  ownerId             String?          @db.ObjectId
++  owner               User?            @relation("StrategyOwner", fields: [ownerId], references: [id])
++
++  // Dates
++  plannedDate         DateTime?
++  implementedAt       DateTime?
++  testedAt            DateTime?
++  nextReviewDate      DateTime?
++
++  notes               String?
++  testResults         String?
++
++  createdAt           DateTime         @default(now())
++  updatedAt           DateTime         @updatedAt
++
++  @@map("continuity_strategies")
++}
++
++// Appréciation du risque orientée continuité — matrice entièrement configurable
++model RiskAssessment {
++  id                  String      @id @default(auto()) @map("_id") @db.ObjectId
++  title               String
++  description         String
++  scenario            String
++  threatSource        String?
++
++  // Processus impacté
++  processId           String      @db.ObjectId
++  process             Process     @relation(fields: [processId], references: [id], onDelete: Cascade)
++
++  // Site
++  factoryId           String?     @db.ObjectId
++  factory             Factory?    @relation(fields: [factoryId], references: [id])
++
++  // Scores de la matrice — valeurs numériques brutes (interprétées via riskMatrixConfig)
++  axeXValue           Int         @default(1)   // ex: vraisemblance (1-N)
++  axeYValue           Int         @default(1)   // ex: impact (1-N)
++  axeZValue           Int?                      // 3ème axe optionnel (ex: vitesse)
++
++  // Score calculé (formule définie dans riskMatrixConfig)
++  riskScore           Int         @default(0)
++  riskLevelLabel      String?     // Label calculé: "Faible", "Moyen", "Élevé", "Critique" (selon config)
++  riskLevelColor      String?     // Couleur HEX selon config
++
++  // Score résiduel (après traitement)
++  residualAxeX        Int?
++  residualAxeY        Int?
++  residualAxeZ        Int?
++  residualScore       Int?
++  residualLevelLabel  String?
++  residualLevelColor  String?
++
++  // Impact sur la continuité
++  rtoImpactHours      Int?
++  rpoImpactHours      Int?
++  mbcoImpactPercent   Int?
++
++  // Statut
++  status              RiskStatus  @default(OPEN)
++
++  // Traitement
++  treatmentOption     String?
++  treatmentPlan       String?
++
++  // Responsable
++  ownerId             String?     @db.ObjectId
++  owner               User?       @relation("RiskOwner", fields: [ownerId], references: [id])
++
++  aiAnalysis          String?
++  assessedAt          DateTime    @default(now())
++  nextReviewDate      DateTime?
++  createdAt           DateTime    @default(now())
++  updatedAt           DateTime    @updatedAt
++
++  @@map("risk_assessments")
++}
++
++
++// =====================================
++// SIMULATION — Analyse & Évaluation
++// =====================================
++
++enum CrisisPlanStatus {
++  UPLOADING
++  PARSING
++  READY
++  ERROR
++}
++
++enum ScoreLevel {
++  EXCELLENT   // 90-100
++  GOOD        // 70-89
++  ACCEPTABLE  // 50-69
++  INSUFFICIENT // 30-49
++  CRITICAL    // 0-29
++}
++
++enum ConformityStatus {
++  CONFORMANT
++  PARTIAL
++  NON_CONFORMANT
++  NOT_APPLICABLE
++}
++
++// Plan de gestion de crise uploadé pour la simulation
++model SimulationCrisisPlan {
++  id             String            @id @default(auto()) @map("_id") @db.ObjectId
++  simulationId   String            @unique @db.ObjectId
++  simulation     Simulation        @relation(fields: [simulationId], references: [id], onDelete: Cascade)
++
++  // Fichier source
++  fileName       String
++  fileUrl        String?
++  fileSize       Int?
++
++  // Contenu extrait
++  rawText        String?           // Texte brut extrait (PDF/Word)
++  status         CrisisPlanStatus  @default(UPLOADING)
++  
++  // Structure parsée par IA (JSON)
++  // { 
++  //   procedures: [{ id, type_incident, titre, etapes: [{ordre, action, responsable, delai_max_min}], declencheurs }],
++  //   roles: [{ role, responsabilites }],
++  //   escalade: [...],
++  //   communication_externe: [...],
++  //   seuils_activation: [...]
++  // }
++  parsedStructure Json?
++
++  // Résumé IA du plan
++  aiSummary      String?
++  
++  // Mots-clés extraits pour matching
++  keywords       String[]          @default([])
++
++  uploadedAt     DateTime          @default(now())
++  parsedAt       DateTime?
++  createdAt      DateTime          @default(now())
++  updatedAt      DateTime          @updatedAt
++
++  @@map("simulation_crisis_plans")
++}
++
++// Grille d'évaluation personnalisable par simulation
++model EvaluationCriteria {
++  id             String     @id @default(auto()) @map("_id") @db.ObjectId
++  simulationId   String     @db.ObjectId
++  simulation     Simulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
++
++  // Critère
++  name           String     // Ex: "Délai de réaction", "Conformité au plan"
++  description    String?
++  category       String     // "timing" | "communication" | "decision" | "conformity" | "leadership"
++  
++  // Pondération (total doit = 100 sur toute la grille)
++  weight         Int        @default(20)  // %
++  maxScore       Int        @default(10)  // Score max pour ce critère
++  
++  // Seuils d'évaluation
++  excellentThreshold Int    @default(90)  // % du score max
++  goodThreshold     Int     @default(70)
++  acceptableThreshold Int   @default(50)
++
++  // Applicable à
++  appliesTo      String     @default("all") // "all" | "individual" | "team"
++  
++  isActive       Boolean    @default(true)
++  sortOrder      Int        @default(0)
++
++  createdAt      DateTime   @default(now())
++  updatedAt      DateTime   @updatedAt
++
++  @@map("evaluation_criteria")
++}
++
++// Réponse structurée à un inject — cœur de l'analyse par inject
++model InjectResponse {
++  id               String             @id @default(auto()) @map("_id") @db.ObjectId
++  simulationId     String             @db.ObjectId
++  simulation       Simulation         @relation(fields: [simulationId], references: [id], onDelete: Cascade)
++  injectionId      String             @db.ObjectId
++  injection        Injection          @relation("InjectToResponses", fields: [injectionId], references: [id])
++
++  // Qui a répondu
++  assignmentId     String?            @db.ObjectId
++  assignment       SimulationAssignment? @relation(fields: [assignmentId], references: [id])
++
++  // Timing
++  injectedAt       DateTime           // Heure d'envoi de l'inject
++  firstResponseAt  DateTime?          // Première réaction détectée
++  resolvedAt       DateTime?          // Inject considéré traité
++  reactionDelayMin Int?               // Délai réaction en minutes
++  resolutionTimeMin Int?              // Temps de résolution total
++
++  // Action attendue vs réelle (extrait du plan de crise)
++  expectedAction   String?            // Ce que le plan prescrit pour cet inject
++  expectedActor    String?            // Rôle censé réagir selon le plan
++  expectedDelayMin Int?               // Délai max selon le plan (minutes)
++  
++  // Ce qui s'est passé réellement
++  actualAction     String?            // Description de ce qui a été fait
++  actualActor      String?            // Qui a réagi en premier
++  
++  // Évaluation IA
++  conformity       ConformityStatus   @default(NOT_APPLICABLE)
++  conformityScore  Int?               // 0-100
++  conformityNotes  String?            // Explication de l'écart
++  
++  // Analyse IA complète de la gestion de cet inject
++  aiAnalysis       Json?
++  // {
++  //   reaction_quality: { score: 0-100, notes: "..." },
++  //   decision_quality: { score: 0-100, notes: "..." },
++  //   communication_quality: { score: 0-100, notes: "..." },
++  //   plan_conformity: { score: 0-100, gaps: ["..."], notes: "..." },
++  //   key_observations: ["..."],
++  //   improvement_points: ["..."]
++  // }
++  
++  // Communications liées à cet inject (IDs des messages pertinents)
++  linkedCommunicationIds String[]     @default([])
++
++  analyzedAt       DateTime?
++  createdAt        DateTime           @default(now())
++  updatedAt        DateTime           @updatedAt
++
++  @@map("inject_responses")
++}
++
++// Score individuel d'un participant — mis à jour en temps réel
++model ParticipantScore {
++  id             String               @id @default(auto()) @map("_id") @db.ObjectId
++  simulationId   String               @db.ObjectId
++  simulation     Simulation           @relation(fields: [simulationId], references: [id], onDelete: Cascade)
++  assignmentId   String               @db.ObjectId
++  assignment     SimulationAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
++
++  // Scores par dimension (0-100 chacun)
++  scoreTonality      Int    @default(0)  // Tonalité & gestion du stress
++  scoreDecision      Int    @default(0)  // Qualité décisionnelle
++  scoreConformity    Int    @default(0)  // Conformité au plan
++  scoreCommunication Int    @default(0)  // Clarté des communications
++  scoreLeadership    Int    @default(0)  // Leadership (pour les leaders)
++  scoreTimeliness    Int    @default(0)  // Réactivité / respect des délais
++  
++  // Score global pondéré
++  scoreGlobal    Int        @default(0)  // 0-100
++
++  // Niveau global
++  level          ScoreLevel @default(ACCEPTABLE)
++
++  // Analyse IA individuelle
++  strengths      String[]   @default([])   // Points forts identifiés
++  weaknesses     String[]   @default([])   // Points d'amélioration
++  aiNarrative    String?    // Synthèse narrative IA sur le participant
++
++  // Nombre d'injects traités / total
++  injectsHandled Int        @default(0)
++  injectsTotal   Int        @default(0)
++
++  // Comparaison inter-simulations
++  previousScore  Int?       // Score simulation précédente si disponible
++  progressDelta  Int?       // Évolution en points
++
++  lastUpdated    DateTime   @default(now())
++  createdAt      DateTime   @default(now())
++  updatedAt      DateTime   @updatedAt
++
++  @@unique([simulationId, assignmentId])
++  @@map("participant_scores")
++}
++
++// Debrief final de la simulation — généré à la fin
++model SimulationDebrief {
++  id             String     @id @default(auto()) @map("_id") @db.ObjectId
++  simulationId   String     @unique @db.ObjectId
++  simulation     Simulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
++
++  // Scores collectifs
++  teamScoreGlobal      Int    @default(0)   // 0-100
++  teamScoreTonality    Int    @default(0)
++  teamScoreDecision    Int    @default(0)
++  teamScoreConformity  Int    @default(0)
++  teamScoreCommunication Int  @default(0)
++  teamScoreTimeliness  Int    @default(0)
++  teamLevel            ScoreLevel @default(ACCEPTABLE)
++
++  // Métriques clés
++  totalInjects         Int    @default(0)
++  injectsHandledOnTime Int    @default(0)
++  avgReactionDelayMin  Int?
++  avgResolutionTimeMin Int?
++  conformantInjects    Int    @default(0)
++  nonConformantInjects Int    @default(0)
++  
++  // Analyse IA collective
++  executiveSummary     String?  // Synthèse pour le CODIR
++  teamStrengths        String[] @default([])
++  teamWeaknesses       String[] @default([])
++  criticalGaps         String[] @default([])  // Lacunes critiques identifiées
++  
++  // Comparaison plan de crise
++  planConformityScore  Int?     // Conformité globale au plan (0-100)
++  planGaps             Json?    // Écarts identifiés dans le plan lui-même
++  // [{ section, gap, recommendation }]
++  
++  // Plan d'amélioration IA
++  improvementPlan      Json?
++  // {
++  //   individual: [{ participantId, name, actions: ["..."] }],
++  //   team: ["..."],
++  //   plan_updates: ["Recommandation de mise à jour du plan..."],
++  //   next_simulation_focus: ["..."]
++  // }
++  
++  // Statut
++  status         String     @default("draft")  // draft | final
++  generatedAt    DateTime   @default(now())
++  finalizedAt    DateTime?
++  createdAt      DateTime   @default(now())
++  updatedAt      DateTime   @updatedAt
++
++  @@map("simulation_debriefs")
++}

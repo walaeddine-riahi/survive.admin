@@ -8,6 +8,7 @@ import GoogleProvider from "next-auth/providers/google";
 
 declare module "next-auth" {
   interface User {
+    id: string;
     profile?: Profile | null;
     role?: Role;
   }
@@ -15,8 +16,9 @@ declare module "next-auth" {
   interface Session {
     user: {
       id: string;
-      name: string;
-      email: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
       phone?: string | null;
       profile?: Profile | null;
       role?: Role;
@@ -26,6 +28,7 @@ declare module "next-auth" {
 
 declare module "next-auth/jwt" {
   interface JWT {
+    id: string;
     profile?: Profile | null;
     role?: Role;
     phone?: string | null;
@@ -78,9 +81,9 @@ export const authOptions: NextAuthOptions = {
         // Récupérer le numéro de téléphone depuis le profil si disponible
         const userWithProfile = await prisma.user.findUnique({
           where: { id: user.id },
-          include: { profile: true }
+          include: { profile: true },
         });
-        
+
         return {
           id: user.id,
           email: user.email,
@@ -104,33 +107,15 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async jwt({ token, user }) {
-      const dbUser = await prisma.user.findFirst({
-        where: {
-          email: token.email,
-        },
-        include: {
-          profile: true,
-        },
-      });
-
-      if (!dbUser) {
-        if (user) {
-          token.id = user?.id;
-        }
-        return token;
+      // Si l'utilisateur vient de se connecter (première fois après credentials), on peuple le token
+      if (user) {
+        token.id = user.id;
+        token.role = user.role;
+        token.phone = (user as any).phone;
       }
-
-      // Utiliser le numéro de téléphone du profil s'il existe, sinon utiliser le champ phone de l'utilisateur
-      const userPhone = dbUser.profile?.phone || (dbUser as any).phone || null;
       
-      return {
-        id: dbUser.id,
-        name: `${dbUser.firstName || ""} ${dbUser.lastName || ""}`.trim(),
-        email: dbUser.email,
-        role: dbUser.role,
-        phone: userPhone,
-        profile: dbUser.profile,
-      };
+      // On retourne le token tel quel pour les appels suivants (plus rapide, pas de DB)
+      return token;
     },
   },
 };

@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import SimulationFinalReport from "./simulation-final-report";
 import {
   Card,
   CardContent,
@@ -22,7 +23,7 @@ import {
   Bell,
   Download,
   Share2,
-  // FileText,
+  FileText,
   AlertCircle,
   CheckCircle2,
   Activity,
@@ -705,6 +706,19 @@ export default function SimulationReportPage({
                   ))}
                 </TabsContent>
               </Tabs>
+
+              {/* Rapport Final */}
+              <Card className="bg-[oklch(0.145_0_0)] border-[oklch(0.269_0_0)]">
+                <CardHeader>
+                  <CardTitle className="text-xl text-[oklch(0.922_0_0)] flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-[#008080]" />
+                    Rapport Final de Simulation
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <SimulationFinalReport simulationId={simulationId} />
+                </CardContent>
+              </Card>
 
               {/* Conclusion */}
               <Card className="bg-[oklch(0.145_0_0)] border-[oklch(0.269_0_0)]">

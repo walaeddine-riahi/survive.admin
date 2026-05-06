@@ -21,10 +21,12 @@ export default function MemoComposeForm({
   onSubmit,
   onCancel,
   simulationId,
+  teamId,
 }: {
   onSubmit: (data: MemoFormData) => void;
   onCancel: () => void;
   simulationId?: string;
+  teamId?: string | null;
 }) {
   const { data: session } = useSession();
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
@@ -46,7 +48,12 @@ export default function MemoComposeForm({
         if (response.ok) {
           const data = await response.json();
           const allUsers = simulationId
-            ? data.map((assignment: { user: User }) => assignment.user)
+            ? data
+                .filter(
+                  (assignment: { user: User; teamId?: string | null }) =>
+                    !teamId || assignment.teamId === teamId
+                )
+                .map((assignment: { user: User }) => assignment.user)
             : data;
           const otherUsers = allUsers.filter(
             (u: User) => u.id !== session?.user?.id
@@ -59,7 +66,7 @@ export default function MemoComposeForm({
     };
 
     if (session?.user?.id) fetchUsers();
-  }, [session, simulationId]);
+  }, [session?.user?.id, simulationId, teamId]);
 
   useEffect(() => {
     const selectedUsers = users.filter((u) => selectedUserIds.includes(u.id));

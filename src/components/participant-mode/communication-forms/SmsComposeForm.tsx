@@ -19,10 +19,12 @@ export default function SmsComposeForm({
   onSubmit,
   onCancel,
   simulationId,
+  teamId,
 }: {
   onSubmit: (data: SmsFormData) => void;
   onCancel: () => void;
   simulationId?: string;
+  teamId?: string | null;
 }) {
   const { data: session } = useSession();
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
@@ -50,6 +52,10 @@ export default function SmsComposeForm({
           const usersList =
             simulationId && Array.isArray(data)
               ? data
+                  .filter(
+                    (assignment: { user: User; teamId?: string | null }) =>
+                      !teamId || assignment.teamId === teamId
+                  )
                   .map((assignment: { user: User }) => assignment.user)
                   .filter(Boolean)
               : data;
@@ -68,7 +74,7 @@ export default function SmsComposeForm({
     if (session?.user?.id) {
       fetchUsers();
     }
-  }, [session, simulationId]);
+  }, [session?.user?.id, simulationId, teamId]);
 
   // Mettre à jour les données du formulaire quand des utilisateurs sont sélectionnés
   useEffect(() => {

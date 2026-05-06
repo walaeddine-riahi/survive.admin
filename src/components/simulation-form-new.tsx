@@ -100,6 +100,24 @@ export function SimulationForm({
   });
 
   useEffect(() => {
+    if (open) {
+      form.reset(initialData || {
+        title: "",
+        description: "",
+        status: "planned",
+        startDate: new Date(),
+        endDate: new Date(),
+        assignments: [],
+      });
+      if (initialData?.assignments) {
+        setSelectedUsers(initialData.assignments.map(a => ({ id: a.userId, role: a.role })));
+      } else {
+        setSelectedUsers([]);
+      }
+    }
+  }, [open, initialData, form]);
+
+  useEffect(() => {
     const fetchUsers = async () => {
       try {
         const response = await fetch("/api/users");
@@ -197,7 +215,7 @@ export function SimulationForm({
                   <FormLabel>Statut</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>

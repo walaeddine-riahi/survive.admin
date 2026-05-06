@@ -45,6 +45,13 @@ export async function POST(req: Request) {
       return new NextResponse("Non autorisé", { status: 401 });
     }
 
+    // Seuls les ADMINS peuvent créer des incidents
+    if (session.user.role !== "ADMIN") {
+      return new NextResponse("Accès refusé - Réservé aux administrateurs", {
+        status: 403,
+      });
+    }
+
     const body = await req.json();
     const {
       name,

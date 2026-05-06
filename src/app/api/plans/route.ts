@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 // GET /api/plans
 export async function GET() {
@@ -32,7 +34,17 @@ export async function GET() {
 // POST /api/plans
 export async function POST(request: Request) {
   try {
-    const data = await request.json();
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return new NextResponse("Non autorisé", { status: 401 });
+    }
+
+    // Seuls les ADMINS peuvent créer des plans
+    if (session.user.role !== "ADMIN") {
+      return new NextResponse("Accès refusé - Réservé aux administrateurs", {
+        status: 403,
+      });
+    }
     const { assignedTaskIds, ...planData } = data;
 
     const plan = await prisma.plan.create({

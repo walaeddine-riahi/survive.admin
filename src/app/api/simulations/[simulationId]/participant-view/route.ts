@@ -21,8 +21,9 @@ interface Communication {
     email: string;
   };
   createdAt: string;
-  subject?: string; // Added: subject field
-  team?: { id: string; name: string } | null; // Added: team field
+  subject?: string;
+  team?: { id: string; name: string } | null;
+  payload?: Record<string, unknown> | null;
 }
 
 // Redefined type for Simulation with included relations, without the runtime 'where' clause
@@ -38,6 +39,19 @@ interface SimulationWithRelations {
     role: string;
     status: string;
     teamId: string | null;
+    team?: {
+      id: string;
+      name: string;
+    } | null;
+    user?: {
+      teams: {
+        teamId: string;
+        team: {
+          id: string;
+          name: string;
+        };
+      }[];
+    };
   }[];
   communications: Communication[];
   injections: ({ scenario: { name: string } | null } & {
@@ -63,16 +77,18 @@ interface SimulationWithRelations {
 
 export async function GET(
   req: Request,
-  { params }: { params: { simulationId: string } }
+  { params }: { params: Promise<{ simulationId: string }> }
 ) {
   try {
+    const { simulationId } = await params;
+    console.log(`[PARTICIPANT_VIEW] Fetching data for simulation: ${simulationId}`);
+    
     const session = await getServerSession(authOptions);
 
     if (!session) {
+      console.log("[PARTICIPANT_VIEW] No session found");
       return new NextResponse("Unauthorized", { status: 401 });
     }
-
-    const { simulationId } = await Promise.resolve(params);
 
     // Get the current user's simulation assignment to find their teamId
     const userAssignment = await prisma.simulationAssignment.findFirst({
@@ -85,7 +101,20 @@ export async function GET(
       },
     });
 
-    const userTeamId = userAssignment?.teamId || null;
+    const fallbackTeamMember = await prisma.teamMember.findFirst({
+      where: {
+        userId: session.user.id,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        teamId: true,
+      },
+    });
+
+    const userTeamId =
+      userAssignment?.teamId || fallbackTeamMember?.teamId || null;
 
     const simulation: SimulationWithRelations | null =
       (await prisma.simulation.findUnique({
@@ -99,6 +128,30 @@ export async function GET(
               role: true,
               status: true,
               teamId: true,
+              team: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+              user: {
+                select: {
+                  teams: {
+                    orderBy: {
+                      createdAt: "desc",
+                    },
+                    select: {
+                      teamId: true,
+                      team: {
+                        select: {
+                          id: true,
+                          name: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
             },
           },
           communications: {
@@ -138,6 +191,7 @@ export async function GET(
               subject: true,
               createdAt: true,
               updatedAt: true,
+              payload: true,
               recipientId: true,
               senderId: true,
               sender: {
@@ -188,6 +242,25 @@ export async function GET(
       return new NextResponse("Simulation not found", { status: 404 });
     }
 
+    const normalizedAssignments = simulation.assignments.map((assignment) => {
+      const fallbackTeam = assignment.user?.teams?.[0]?.team || null;
+      const effectiveTeam = assignment.team || fallbackTeam;
+      const effectiveTeamId = assignment.teamId || fallbackTeam?.id || null;
+
+      return {
+        userId: assignment.userId,
+        role: assignment.role,
+        status: assignment.status,
+        teamId: effectiveTeamId,
+        team: effectiveTeam
+          ? {
+              id: effectiveTeam.id,
+              name: effectiveTeam.name,
+            }
+          : null,
+      };
+    });
+
     // Normalize communication types to canonical keys matching the frontend
     const canonicalKeyForType = (t: string) => {
       const normalized = (t || "").replace(/[^a-zA-Z]/g, "").toLowerCase();
@@ -210,6 +283,9 @@ export async function GET(
         case "social":
         case "socialmedia":
           return "social";
+        case "report":
+        case "rapport":
+          return "report";
         default:
           return normalized || "other";
       }
@@ -224,6 +300,7 @@ export async function GET(
       newsBroadcast: [],
       newspaper: [],
       social: [],
+      report: [],
     };
 
     for (const comm of simulation.communications) {
@@ -241,6 +318,7 @@ export async function GET(
       newsBroadcast: (communications.newsBroadcast || []).length,
       newspaper: (communications.newspaper || []).length,
       social: (communications.social || []).length,
+      report: (communications.report || []).length,
     };
 
     const formattedInjections = simulation.injections.map(
@@ -251,7 +329,10 @@ export async function GET(
     );
 
     return NextResponse.json({
-      simulation,
+      simulation: {
+        ...simulation,
+        assignments: normalizedAssignments,
+      },
       counts,
       communications,
       injections: formattedInjections,

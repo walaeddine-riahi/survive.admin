@@ -36,37 +36,52 @@ export function SimulationSidebar() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-muted text-muted-foreground border-r">
-      <div className="p-6">
-        <Link href="/simulation" className="flex items-center">
-          <h1 className="text-2xl font-bold">Simulation</h1>
+    <div className="flex flex-col h-full bg-[var(--bg-secondary)] border-r border-[var(--border)] w-[220px]">
+      <div className="h-[52px] px-6 flex items-center border-b border-[var(--bg-tertiary)]">
+        <Link href="/simulation" className="flex items-center gap-2">
+          <div className="h-8 w-8 rounded-[8px] bg-gradient-to-br from-[#A54D32] to-[#DA7757] flex items-center justify-center shrink-0">
+            <Briefcase size={16} strokeWidth={1.5} className="text-white" />
+          </div>
+          <span className="font-bold text-[13px] tracking-tight text-[var(--text-primary)]">Simulation</span>
         </Link>
       </div>
-      <Separator />
-      <ScrollArea className="flex-1 px-3">
-        <div className="space-y-1 py-2">
+      
+      <ScrollArea className="flex-1 px-3 py-4">
+        <div className="flex flex-col gap-[4px]">
           {simulationRoutes.map((route) => (
             <Link
               key={route.href}
               href={route.href}
               className={cn(
-                "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-accent-foreground hover:bg-accent rounded-lg transition",
+                "flex items-center gap-[10px] px-3 py-2 rounded-[8px] text-[14px] transition-[var(--transition)]",
                 isActive(route.href)
-                  ? "text-accent-foreground bg-accent" // Active state color
-                  : "text-muted-foreground" // Inactive state color
+                  ? "bg-[var(--bg-hover)] text-[var(--text-primary)] border-l-2 border-[var(--accent)] rounded-l-none pl-[10px]"
+                  : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]/10 hover:text-[var(--text-primary)]"
               )}
             >
-              <div className="flex items-center flex-1">
-                <route.icon className="h-5 w-5 mr-3 shrink-0" />
-                <span className="truncate">{route.title}</span>
-              </div>
+              <route.icon 
+                size={16} 
+                strokeWidth={1.5} 
+                className={cn(
+                  "shrink-0",
+                  isActive(route.href) ? "text-[var(--accent)]" : "text-[var(--text-secondary)]"
+                )} 
+              />
+              <span className="truncate">{route.title}</span>
             </Link>
           ))}
         </div>
       </ScrollArea>
-      {/* Optionnellement, ajouter un séparateur et d'autres éléments spécifiques à la simulation ici */}
-      {/* <Separator /> */}
-      {/* <div className="p-3">...</div> */}
+      
+      <div className="p-4 border-t border-[var(--border)]">
+        <div className="bg-[var(--bg-hover)]/30 rounded-[8px] p-3 border border-[var(--border)]">
+          <p className="text-[11px] font-medium text-[var(--text-muted)] tracking-[0.05em] mb-2">Statut simulation</p>
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-[#10B981]" />
+            <span className="text-[12px] font-medium text-[var(--text-primary)]">Système opérationnel</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

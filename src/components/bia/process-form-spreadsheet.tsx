@@ -18,6 +18,7 @@ import {
   type ProcessFormValues,
 } from "@/lib/validations/process-schema";
 import { createProcess, updateProcess } from "@/actions/bia/process-actions";
+import { suggestProcessData } from "@/actions/bia/suggest-process-data";
 import { toast } from "sonner";
 import { type ExtractedProcessData } from "@/actions/bia/analyze-process-pdf";
 import {
@@ -29,6 +30,8 @@ import {
   Trash2,
   FileSpreadsheet,
   AlertCircle,
+  Wand2,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -42,6 +45,7 @@ import { AIDocumentUpload } from "@/components/bia/ai-document-upload";
 import { ConfirmationAssistant } from "@/components/bia/confirmation-assistant";
 import {
   prepareExtractedFieldsForReview,
+  prepareErrorFieldsForReview,
   type ExtractedFieldReview,
 } from "@/lib/confirmation-utils";
 
@@ -81,6 +85,12 @@ export function ProcessFormSpreadsheet({
   );
   const [originalAIData, setOriginalAIData] =
     useState<Partial<ExtractedProcessData> | null>(null); // Données IA brutes pour les tableaux
+  const [assistantTitle, setAssistantTitle] = useState(
+    "Validation des Données"
+  );
+  const [assistantDescription, setAssistantDescription] = useState(
+    "Vérifiez et validez les données."
+  );
 
   // États pour les sections collapsibles
   const [openSections, setOpenSections] = useState({
@@ -323,10 +333,10 @@ export function ProcessFormSpreadsheet({
 
     if (fieldsForReview.length > 0) {
       // Ouvrir l'assistant de confirmation
-      console.log("🚀 Ouverture de l'assistant de confirmation");
+      setAssistantTitle("Validation des Données Extraites");
+      setAssistantDescription("L'IA a extrait ces informations du PDF. Veuillez les valider.");
       setFieldsToReview(fieldsForReview);
       setShowConfirmationAssistant(true);
-      console.log("✅ État mis à jour - showConfirmationAssistant: true");
 
       toast.success("✅ Extraction terminée !", {
         description: `${fieldsForReview.length} informations extraites. L'assistant IA va vous les présenter pour validation.`,
@@ -339,8 +349,6 @@ export function ProcessFormSpreadsheet({
       });
     }
 
-    // Ancien code commenté (auto-remplissage direct)
-    /*
     // Remplir les champs simples
     if (aiData.name) form.setValue("name", aiData.name);
     if (aiData.description) form.setValue("description", aiData.description);
@@ -351,75 +359,113 @@ export function ProcessFormSpreadsheet({
     if (aiData.ownerEmail) form.setValue("ownerEmail", aiData.ownerEmail);
     if (aiData.ownerPhone) form.setValue("ownerPhone", aiData.ownerPhone);
     if (aiData.impact) form.setValue("impact", aiData.impact);
-    if (aiData.criticality) form.setValue("criticality", aiData.criticality);
+    if (aiData.criticality) form.setValue("criticality", aiData.criticality as any);
     if (aiData.rto) form.setValue("rto", Number(aiData.rto));
     if (aiData.mtpd) form.setValue("mtpd", Number(aiData.mtpd));
     if (aiData.rpo) form.setValue("rpo", Number(aiData.rpo));
     if (aiData.mbco) form.setValue("mbco", aiData.mbco);
-    if (aiData.criticalTimes)
-      form.setValue("criticalTimes", aiData.criticalTimes);
+    if (aiData.criticalTimes) form.setValue("criticalTimes", aiData.criticalTimes);
 
-    // Remplir les impacts si disponibles
-    if (
-      aiData.impacts &&
-      Array.isArray(aiData.impacts) &&
-      aiData.impacts.length > 0
-    ) {
-      const currentImpacts = form.getValues("impacts");
-      aiData.impacts.forEach((impact: any, index: number) => {
-        if (currentImpacts[index]) {
-          if (impact.type) currentImpacts[index].type = impact.type;
+    // Remplir les impacts structurés (IA: impacts)
+    const aiImpacts = (aiData as any).impacts;
+    if (aiImpacts && Array.isArray(aiImpacts) && aiImpacts.length > 0) {
+      const currentImpacts = [...(form.getValues("impacts") || [])];
+      aiImpacts.forEach((impact: any) => {
+        const index = currentImpacts.findIndex(i => 
+          i.type.toLowerCase() === (impact.type || "").toLowerCase()
+        );
+        if (index !== -1) {
           if (impact.level) currentImpacts[index].level = impact.level;
-          if (impact.hasImpact !== undefined)
-            currentImpacts[index].hasImpact = impact.hasImpact;
-          if (impact.description)
-            currentImpacts[index].description = impact.description;
+          currentImpacts[index].hasImpact = true;
+          if (impact.description) currentImpacts[index].description = impact.description;
         }
       });
       form.setValue("impacts", currentImpacts);
     }
 
-    // Remplir les activités critiques si disponibles
-    if (aiData.criticalActivities && Array.isArray(aiData.criticalActivities)) {
-      const activities = aiData.criticalActivities.map(
-        (activity: any, index: number) => ({
-          nom: activity.name || "",
-          criticite: activity.criticality || "medium",
-          delai: "",
+    // Remplir les activités critiques si disponibles (Nom du champ dans l'IA: activitesCritiques)
+    const criticalActivities = (aiData as any).activitesCritiques || (aiData as any).criticalActivities;
+    if (criticalActivities && Array.isArray(criticalActivities)) {
+      const activities = criticalActivities.map(
+        (activity: any) => ({
+          nom: activity.nom || activity.name || "",
+          criticite: activity.criticite || activity.criticality || "medium",
+          delai: activity.delai || "",
           rto: activity.rto || 4,
-          mtpd: activity.rto ? activity.rto * 2 : 8,
+          mtpd: activity.mtpd || (activity.rto ? activity.rto * 2 : 8),
           rpo: activity.rpo || 2,
           mbco: activity.mbco || "",
-          impactsOperationnels: activity.impact || "",
-          impactsReglementaires: "",
-          impactsImage: "",
+          impactsOperationnels: activity.impactsOperationnels || activity.impact || "",
+          impactsReglementaires: activity.impactsReglementaires || "",
+          impactsImage: activity.impactsImage || "",
         })
       );
       form.setValue("activitesCritiques", activities);
     }
 
-    // Remplir les systèmes si disponibles
-    if (aiData.systems && Array.isArray(aiData.systems)) {
-      const systems = aiData.systems.map((system: any) => ({
-        nom: system.name || "",
-        type: system.type || "",
-        criticite: system.criticality || "medium",
+    // Remplir les systèmes informatiques si disponibles (Nom du champ dans l'IA: systemesInformatiques)
+    const systems = (aiData as any).systemesInformatiques || (aiData as any).systems;
+    if (systems && Array.isArray(systems)) {
+      const itSystems = systems.map((system: any) => ({
+        nom: system.nom || system.name || "",
+        typeSysteme: system.typeSysteme || system.type || "",
+        criticite: system.criticite || system.criticality || "medium",
+        impactIndisponibilite: system.impactIndisponibilite || "",
+        activitesAssociees: system.activitesAssociees || "",
+        sauvegardesEnPlace: system.sauvegardesEnPlace || "oui",
         rto: system.rto || 4,
-        alternativeSolution: system.alternativeSolution || "",
+        rpo: system.rpo || 4,
+        mtpd: system.mtpd || 8,
+        solutionsContournement: system.solutionsContournement || "",
       }));
-      form.setValue("systemes", systems);
+      form.setValue("systemesInformatiques", itSystems);
     }
 
-    // Remplir le personnel si disponible
-    if (aiData.personnel && Array.isArray(aiData.personnel)) {
-      const personnel = aiData.personnel.map((person: any) => ({
+    // Remplir le personnel si disponible (Nom du champ dans l'IA: rolesPersonnel)
+    const personnel = (aiData as any).rolesPersonnel || (aiData as any).personnel;
+    if (personnel && Array.isArray(personnel)) {
+      const staffRoles = personnel.map((person: any) => ({
         role: person.role || "",
-        nombrePersonnes: person.number || 1,
-        competences: person.skills || "",
-        criticite: person.criticality || "medium",
-        solutionBackup: person.backupOption || "",
+        effectif: person.effectif || person.number || 1,
+        tachesResponsabilites: person.tachesResponsabilites || "",
+        competenceUnique: person.competenceUnique || "non",
+        delaiDisponibiliteNecessaire: person.delaiDisponibiliteNecessaire || "",
+        remplacable: person.remplacable || "oui",
+        formationNecessaire: person.formationNecessaire || "non",
       }));
-      form.setValue("personnel", personnel);
+      form.setValue("rolesPersonnel", staffRoles);
+    }
+
+    // Remplir les fournisseurs si disponibles (Nom du champ dans l'IA: fournisseursExternes)
+    const suppliers = (aiData as any).fournisseursExternes || (aiData as any).suppliers;
+    if (suppliers && Array.isArray(suppliers)) {
+      const externalSuppliers = suppliers.map((supplier: any) => ({
+        nom: supplier.nom || supplier.name || "",
+        servicesOfferts: supplier.servicesOfferts || supplier.service || "",
+        contactNom: supplier.contactNom || "",
+        contactTelephone: supplier.contactTelephone || "",
+        contactEmail: supplier.contactEmail || "",
+        zoneGeographique: supplier.zoneGeographique || "",
+        planContinuiteActivite: supplier.planContinuiteActivite || "non",
+        clauseSLA: supplier.clauseSLA || "non",
+        rto: supplier.rto || 4,
+        mtpd: supplier.mtpd || 8,
+      }));
+      form.setValue("fournisseursExternes", externalSuppliers);
+    }
+
+    // Remplir les obligations légales si disponibles (Nom du champ dans l'IA: obligationsLegales)
+    const obligations = (aiData as any).obligationsLegales || (aiData as any).legalRequirements;
+    if (obligations && Array.isArray(obligations)) {
+      const legalRequirements = obligations.map((ob: any) => ({
+        domaine: ob.domaine || "",
+        obligationLegale: ob.obligationLegale || ob.name || "",
+        reference: ob.reference || "",
+        autoriteRegulation: ob.autoriteRegulation || "",
+        details: ob.details || "",
+        consequencesNonRespect: ob.consequencesNonRespect || "",
+      }));
+      form.setValue("obligationsLegales", legalRequirements);
     }
 
     // Remplir les dépendances si disponibles
@@ -427,7 +473,7 @@ export function ProcessFormSpreadsheet({
       const deps = aiData.dependencies.map((dep: any) => ({
         id: Math.random().toString(36).substr(2, 9),
         processName: dep.name || "",
-        department: "",
+        department: dep.department || "",
         supportType: dep.type || "",
         reason: dep.description || "",
         dependencyType: dep.type || "",
@@ -457,11 +503,165 @@ export function ProcessFormSpreadsheet({
     toast.success(
       "✨ Formulaire rempli automatiquement ! Vérifiez et ajustez les données si nécessaire."
     );
-    */
+    toast.success("✅ Extraction terminée !", {
+      description: "Le formulaire a été rempli. Vérifiez et ajustez les données si nécessaire.",
+    });
+  };
+
+  const handleAISuggestions = async () => {
+    const values = form.getValues();
+    if (!values.name) {
+      toast.error("Veuillez d'abord saisir un nom de processus");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const result = await suggestProcessData(values);
+      if (result.success && result.suggestions) {
+        const s = result.suggestions;
+        if (s.department && !values.department) form.setValue("department", s.department);
+        if (s.location && !values.location) form.setValue("location", s.location);
+        if (s.impact && !values.impact) form.setValue("impact", s.impact);
+        if (s.rto !== undefined && !values.rto) form.setValue("rto", s.rto);
+        if (s.mtpd !== undefined && !values.mtpd) form.setValue("mtpd", s.mtpd);
+        if (s.rpo !== undefined && !values.rpo) form.setValue("rpo", s.rpo);
+        if (s.mbco && !values.mbco) form.setValue("mbco", s.mbco);
+        if (s.criticality && values.criticality === "MEDIUM") form.setValue("criticality", s.criticality);
+        
+        toast.success("Suggestions appliquées ✨", {
+          description: "L'IA a complété les champs manquants basés sur le contexte.",
+        });
+        
+        // Ouvrir les sections concernées
+        setOpenSections(prev => ({ ...prev, general: true, criticite: true }));
+      } else {
+        toast.error("L'IA n'a pas pu générer de suggestions");
+      }
+    } catch (error) {
+      console.error("Error getting AI suggestions:", error);
+      toast.error("Une erreur est survenue lors de la consultation de l'IA");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const onError = (errors: any) => {
+    console.error("❌ Erreurs de validation:", errors);
+    
+    // Fusionner les erreurs pour avoir une vue complète
+    const actualErrors = { ...form.formState.errors, ...errors };
+    const errorFields = Object.keys(actualErrors);
+    
+    if (errorFields.length > 0) {
+      console.log("🔍 Champs en erreur:", errorFields);
+      // Mapper les champs aux sections pour les ouvrir automatiquement
+      const fieldToSection: Record<string, keyof typeof openSections> = {
+        name: "general",
+        description: "general",
+        department: "general",
+        location: "general",
+        factoryId: "general",
+        processOwner: "responsable",
+        ownerRole: "responsable",
+        ownerEmail: "responsable",
+        ownerPhone: "responsable",
+        interimManagers: "responsable",
+        impact: "criticite",
+        criticality: "criticite",
+        rto: "criticite",
+        mtpd: "criticite",
+        rpo: "criticite",
+        mbco: "criticite",
+        criticalTimes: "criticite",
+        impacts: "impacts",
+        dependencies: "dependencies",
+        activitesCritiques: "activitesCritiques",
+        fournisseursExternes: "fournisseursExternes",
+        obligationsLegales: "legal",
+        systemesInformatiques: "systemes",
+        infrastructuresPhysiques: "infrastructure",
+        rolesPersonnel: "personnel",
+        equipementsIndustriels: "equipIndus",
+        equipementsBureautiques: "equipBuro",
+        documentationsCritiques: "docs",
+      };
+
+      // Identifier les sections à ouvrir
+      const sectionsToOpen = { ...openSections };
+      let hasNewSectionToOpen = false;
+
+      errorFields.forEach((field) => {
+        const section = fieldToSection[field as keyof typeof fieldToSection];
+        if (section && !sectionsToOpen[section]) {
+          sectionsToOpen[section] = true;
+          hasNewSectionToOpen = true;
+        }
+      });
+
+      if (hasNewSectionToOpen) {
+        setOpenSections(sectionsToOpen);
+      }
+
+      // Préparer les champs pour l'assistant de correction
+      const errorFieldsForReview = prepareErrorFieldsForReview(actualErrors, form.getValues());
+      if (errorFieldsForReview.length > 0) {
+        setAssistantTitle("Correction Assistée par IA 🤖");
+        setAssistantDescription(`Il y a ${errorFieldsForReview.length} champ(s) à corriger ou compléter.`);
+        setFieldsToReview(errorFieldsForReview);
+        setShowConfirmationAssistant(true);
+      }
+
+      toast.error("Formulaire incomplet", {
+        description: `Veuillez corriger les ${errorFields.length} champ(s) invalide(s).`,
+      });
+    } else {
+      // Cas étrange : onError appelé sans erreurs visibles
+      toast.error("Erreur de validation inconnue", {
+        description: "Certains champs sont invalides mais n'ont pas pu être identifiés. Vérifiez tous les champs requis (marqués par *).",
+      });
+    }
+  };
+
+  const handleManualSubmit = async () => {
+    console.log("🛠️ Démarrage de la soumission manuelle...");
+    setIsLoading(true);
+
+    try {
+      const values = form.getValues();
+      console.log("📝 Valeurs envoyées à Zod:", values);
+      
+      // Diagnostic ultra-profond via Zod direct
+      const zodCheck = processFormSchemaEnhanced.safeParse(values);
+      console.log("🧬 Diagnostic Zod direct (success):", zodCheck.success);
+      if (!zodCheck.success) {
+        console.error("🧬 Erreurs Zod (issues):", JSON.stringify(zodCheck.error.issues, null, 2));
+      }
+
+      // Forcer la validation manuelle
+      const isValid = await form.trigger();
+      console.log("🔍 Résultat du trigger manuel:", isValid);
+      
+      if (!isValid) {
+        console.error("❌ La validation a échoué. Erreurs:", form.formState.errors);
+        onError(form.formState.errors);
+        setIsLoading(false);
+        return;
+      }
+
+      // Si valide, on récupère les données et on appelle onSubmit
+      const data = form.getValues();
+      await onSubmit(data);
+    } catch (error) {
+      console.error("💥 Erreur critique lors de la soumission manuelle:", error);
+      toast.error("Une erreur critique est survenue lors de l'enregistrement");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const onSubmit = async (data: ProcessFormValues) => {
-    setIsLoading(true);
+    console.log("🚀 onSubmit appelé avec les données validées:", data);
 
     try {
       if (processId) {
@@ -556,7 +756,10 @@ export function ProcessFormSpreadsheet({
         />
       )}
 
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form
+        onSubmit={(e) => e.preventDefault()}
+        className="space-y-4"
+      >
         {/* SECTION 1: INFORMATIONS GÉNÉRALES */}
         <Collapsible
           open={openSections.general}
@@ -926,6 +1129,21 @@ export function ProcessFormSpreadsheet({
                         <EditableCell
                           value={form.watch("mtpd")}
                           onChange={(val) => form.setValue("mtpd", Number(val))}
+                          type="number"
+                          min={0}
+                          placeholder="0"
+                          required
+                        />
+                        <span className="text-sm text-muted-foreground">
+                          heures
+                        </span>
+                      </div>
+                    </TableRow>
+                    <TableRow label="RPO (Recovery Point Objective)" required>
+                      <div className="flex items-center gap-2">
+                        <EditableCell
+                          value={form.watch("rpo")}
+                          onChange={(val) => form.setValue("rpo", Number(val))}
                           type="number"
                           min={0}
                           placeholder="0"
@@ -3164,24 +3382,48 @@ export function ProcessFormSpreadsheet({
 
         {/* Boutons de soumission */}
         <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4 shadow-lg z-50">
-          <div className="container mx-auto flex justify-end gap-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.back()}
-              disabled={isLoading}
-            >
-              <X className="mr-2 h-4 w-4" />
-              Annuler
-            </Button>
-            <Button type="submit" disabled={isLoading} size="lg">
-              <Save className="mr-2 h-4 w-4" />
-              {isLoading
-                ? "Enregistrement..."
-                : processId
-                ? "Mettre à jour"
-                : "Créer le processus"}
-            </Button>
+          <div className="container mx-auto flex justify-between items-center">
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleAISuggestions}
+                disabled={isLoading}
+                className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+              >
+                <Wand2 className="h-4 w-4 mr-2" />
+                Auto-complétion par IA 🤖
+              </Button>
+            </div>
+            <div className="flex gap-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.back()}
+                disabled={isLoading}
+              >
+                <X className="mr-2 h-4 w-4" />
+                Annuler
+              </Button>
+              <Button 
+                type="button" 
+                disabled={isLoading} 
+                size="lg"
+                onClick={handleManualSubmit}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Enregistrement...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    {processId ? "Mettre à jour" : "Créer le processus"}
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </form>
@@ -3191,6 +3433,8 @@ export function ProcessFormSpreadsheet({
         isOpen={showConfirmationAssistant}
         onClose={() => setShowConfirmationAssistant(false)}
         extractedFields={fieldsToReview}
+        title={assistantTitle}
+        description={assistantDescription}
         onComplete={(confirmedData) => {
           // Appliquer les données confirmées au formulaire (ignorer les valeurs vides)
           let filledCount = 0;

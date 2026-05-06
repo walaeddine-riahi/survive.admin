@@ -39,7 +39,6 @@ export function NotificationsDropdown() {
 
   useEffect(() => {
     fetchNotifications();
-    // Poll for new notifications every minute
     const interval = setInterval(fetchNotifications, 60000);
     return () => clearInterval(interval);
   }, []);
@@ -53,95 +52,75 @@ export function NotificationsDropdown() {
       await fetchNotifications();
     } catch (error) {
       console.error("Error marking notification as read:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de marquer la notification comme lue.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const deleteNotification = async (notificationId: string) => {
-    try {
-      const response = await fetch(`/api/notifications/${notificationId}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Failed to delete notification");
-      await fetchNotifications();
-    } catch (error) {
-      console.error("Error deleting notification:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de supprimer la notification.",
-        variant: "destructive",
-      });
+      toast({ title: "Erreur", description: "Impossible de marquer la notification comme lue.", variant: "destructive" });
     }
   };
 
   const getNotificationColor = (type: string) => {
     switch (type) {
-      case "success":
-        return "bg-green-500/10 text-green-500 border-green-500/20";
-      case "warning":
-        return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
-      case "error":
-        return "bg-red-500/10 text-red-500 border-red-500/20";
-      default:
-        return "bg-blue-500/10 text-blue-500 border-blue-500/20";
+      case "success": return "text-green-400 bg-green-500/10 border-green-500/20";
+      case "warning": return "text-yellow-400 bg-yellow-500/10 border-yellow-500/20";
+      case "error": return "text-red-400 bg-red-500/10 border-red-500/20";
+      default: return "text-primary bg-primary/10 border-primary/20";
     }
   };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
+        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-[8px] hover:bg-[var(--bg-hover)] border border-[var(--border)] relative group transition-all duration-300">
+          <Bell className="h-4 w-4 text-[var(--text-secondary)] group-hover:text-[var(--accent)] transition-colors" />
           {unreadCount > 0 && (
-            <Badge
-              variant="secondary"
-              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0"
-            >
-              {unreadCount}
-            </Badge>
+            <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80">
-        <ScrollArea className="h-[300px]">
+      <DropdownMenuContent align="end" className="w-80 bg-[var(--bg-surface)] rounded-[12px] border-[var(--border)] mt-2 p-2 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300 shadow-2xl">
+        <div className="px-4 py-3 border-b border-[var(--border)] mb-2">
+          <h3 className="text-[11px] font-black uppercase tracking-widest text-[var(--accent)]">Centre de Notifications</h3>
+        </div>
+        <ScrollArea className="h-[400px] pr-4">
           {notifications.length === 0 ? (
-            <div className="p-4 text-center text-sm text-muted-foreground">
-              Aucune notification
+            <div className="py-20 text-center flex flex-col items-center gap-3 opacity-30">
+              <Bell className="h-8 w-8 text-[var(--text-muted)]" />
+              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Silence Radio</p>
             </div>
           ) : (
-            notifications.map((notification) => (
-              <DropdownMenuItem
-                key={notification.id}
-                className="flex flex-col items-start gap-2 p-4 cursor-pointer"
-                onClick={() => markAsRead(notification.id)}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <Badge
-                    variant="outline"
-                    className={getNotificationColor(notification.type)}
-                  >
-                    {notification.type}
-                  </Badge>
-                  {!notification.read && (
-                    <div className="h-2 w-2 rounded-full bg-blue-500" />
-                  )}
-                </div>
-                <div className="font-medium">{notification.title}</div>
-                <div className="text-sm text-muted-foreground">
-                  {notification.message}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {new Date(notification.createdAt).toLocaleString()}
-                </div>
-              </DropdownMenuItem>
-            ))
+            <div className="space-y-1">
+              {notifications.map((notification) => (
+                <DropdownMenuItem
+                  key={notification.id}
+                  className="flex flex-col items-start gap-1 p-4 rounded-[8px] cursor-pointer hover:bg-[var(--bg-hover)] transition-colors border border-transparent hover:border-[var(--border)]"
+                  onClick={() => markAsRead(notification.id)}
+                >
+                  <div className="flex items-center justify-between w-full mb-1">
+                    <Badge variant="outline" className={cn("text-[9px] uppercase font-black tracking-tighter h-5", getNotificationColor(notification.type))}>
+                      {notification.type}
+                    </Badge>
+                    <span className="text-[9px] font-medium text-[var(--text-muted)]">
+                      {new Date(notification.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <div className={cn("text-[13px] font-bold transition-colors", !notification.read ? "text-[var(--text-primary)]" : "text-[var(--text-secondary)]")}>
+                    {notification.title}
+                  </div>
+                  <div className="text-[11px] text-[var(--text-secondary)] leading-relaxed line-clamp-2">
+                    {notification.message}
+                  </div>
+                </DropdownMenuItem>
+              ))}
+            </div>
           )}
         </ScrollArea>
+        {notifications.length > 0 && (
+          <div className="p-2 mt-2 border-t border-[var(--border)]">
+            <Button variant="ghost" className="w-full text-[10px] font-black uppercase tracking-widest h-8 hover:bg-[var(--bg-hover)] rounded-[8px] text-[var(--text-secondary)] hover:text-[var(--accent)]">
+              Tout marquer comme lu
+            </Button>
+          </div>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
-} 
+}
+ 

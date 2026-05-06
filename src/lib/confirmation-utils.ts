@@ -101,6 +101,17 @@ const FIELD_METADATA: Record<
     category: "📌 Criticité",
   },
 
+  impact: {
+    label: "Impact global",
+    type: "textarea",
+    category: "📌 Criticité",
+  },
+  factoryId: {
+    label: "Usine",
+    type: "text",
+    category: "📌 Informations Générales",
+  },
+
   // Impacts
   financialImpact: {
     label: "Impact financier",
@@ -507,4 +518,31 @@ export function prepareExtractedFieldsForReview(
     }
     return a.label.localeCompare(b.label);
   });
+}
+
+/**
+ * Prépare les champs avec erreurs pour correction par l'IA
+ */
+export function prepareErrorFieldsForReview(
+  errors: Record<string, any>,
+  currentValues: any
+): ExtractedFieldReview[] {
+  const fields: ExtractedFieldReview[] = [];
+
+  for (const fieldName of Object.keys(errors)) {
+    const metadata = FIELD_METADATA[fieldName];
+    if (metadata) {
+      fields.push({
+        name: fieldName,
+        label: metadata.label,
+        value: currentValues[fieldName] ?? "",
+        type: metadata.type,
+        options: metadata.options,
+        category: "❌ Champs Invalides à Corriger",
+        confidence: "low",
+      });
+    }
+  }
+
+  return fields;
 }

@@ -2,296 +2,58 @@
 
 import { Inter } from "next/font/google";
 import { Badge } from "@/components/ui/badge";
-import React from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useSession } from "next-auth/react";
+import { useParams } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-
-// Configuration de la police Inter
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
-
-// Configuration du thème Ooredoo
-const ooredooTheme = {
-  colors: {
-    primary: {
-      DEFAULT: "#ED1C24",
-      light: "#F24950",
-      dark: "#C01018",
-      hover: "#E5171F",
-    },
-    secondary: {
-      DEFAULT: "#000000",
-      light: "#333333",
-      dark: "#000000",
-    },
-    background: {
-      DEFAULT: "#ffffff",
-      light: "#f8fafc",
-      muted: "#f1f5f9",
-    },
-    text: {
-      primary: "#1e293b",
-      secondary: "#475569",
-      muted: "#64748b",
-    },
-    border: {
-      DEFAULT: "#e2e8f0",
-      hover: "#cbd5e1",
-    },
-  },
-  shadows: {
-    sm: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
-    DEFAULT: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
-    md: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
-    lg: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
-  },
-  borderRadius: {
-    sm: "0.25rem",
-    DEFAULT: "0.5rem",
-    md: "0.75rem",
-    lg: "1rem",
-    xl: "1.5rem",
-    full: "9999px",
-  },
-  spacing: {
-    xs: "0.25rem",
-    sm: "0.5rem",
-    md: "1rem",
-    lg: "1.5rem",
-    xl: "2rem",
-    "2xl": "3rem",
-  },
-};
-// Link import removed — not used in this file
-import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState, useRef } from "react";
-// Import potential icons (example using lucide-react, assuming it's available)
-import AlertComposeForm from "@/components/participant-mode/communication-forms/AlertComposeForm";
-import CallComposeForm from "@/components/participant-mode/communication-forms/CallComposeForm";
-import EmailComposeForm from "@/components/participant-mode/communication-forms/EmailComposeForm";
-import MemoComposeForm from "@/components/participant-mode/communication-forms/MemoComposeForm";
-import NewsBroadcastComposeForm from "@/components/participant-mode/communication-forms/NewsBroadcastComposeForm";
-import NewspaperComposeForm from "@/components/participant-mode/communication-forms/NewspaperComposeForm";
-import SmsComposeForm from "@/components/participant-mode/communication-forms/SmsComposeForm";
-import SocialComposeForm from "@/components/participant-mode/communication-forms/SocialComposeForm";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import {
-  Bell,
-  Calendar,
-  Check,
-  Clock,
-  Download,
-  FileText,
-  Mail,
-  MessageSquare,
-  Newspaper,
-  Paperclip,
-  Phone,
-  Plus,
-  Rss,
-  User,
-  Users,
-  X,
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast as sonnerToast } from "sonner";
+
+import { 
+  AlertCircle, Bell, Calendar, Check, Clock, Download, FileText, 
+  Mail, MessageSquare, Newspaper, Paperclip, Phone, Plus, Rss, 
+  User, Users, X, User2, Heart, Repeat2, Share2, Zap, Sparkles, Loader2, Search,
+  ChevronRight
 } from "lucide-react";
 import Image from "next/image";
 import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
 
-import type { AlertFormData } from "@/components/participant-mode/communication-forms/AlertComposeForm";
-import type { CallFormData } from "@/components/participant-mode/communication-forms/CallComposeForm";
-import type { EmailFormData } from "@/components/participant-mode/communication-forms/EmailComposeForm";
-import type { MemoFormData } from "@/components/participant-mode/communication-forms/MemoComposeForm";
-import type { NewsBroadcastFormData } from "@/components/participant-mode/communication-forms/NewsBroadcastComposeForm";
-import type { NewspaperFormData } from "@/components/participant-mode/communication-forms/NewspaperComposeForm";
-import type { SmsFormData } from "@/components/participant-mode/communication-forms/SmsComposeForm";
-import type { SocialFormData } from "@/components/participant-mode/communication-forms/SocialComposeForm";
+import { 
+  Simulation, Assignment, Communication, Injection, ParticipantViewData, 
+  ChannelKey, CombinedContentItem 
+} from "./types";
+import { 
+  cybergTheme, formatDate, participantLogo, 
+  getChannelGradient, getInjectionGradient 
+} from "./constants";
+import { getIconForType } from "./icons";
 
-interface Assignment {
-  userId: string;
-  role: string;
-  status: string;
-  teamId: string | null;
-}
+import { ChannelSidebar } from "./components/ChannelSidebar";
+import { CommunicationFeed } from "./components/CommunicationFeed";
+import { InjectionModal } from "./components/InjectionModal";
+import { CommunicationModal } from "./components/CommunicationModal";
+import { ReportModal } from "./components/ReportModal";
 
-interface Simulation {
-  id: string;
-  title: string;
-  description: string | null;
-  startDate: string;
-  endDate: string;
-  status: string;
-  assignmentStatus: string;
-  createdAt: string;
-  assignments: Assignment[];
-}
+import EmailComposeForm, { EmailFormData } from "@/components/participant-mode/communication-forms/EmailComposeForm";
+import SmsComposeForm, { SmsFormData } from "@/components/participant-mode/communication-forms/SmsComposeForm";
+import CallComposeForm, { CallFormData } from "@/components/participant-mode/communication-forms/CallComposeForm";
+import AlertComposeForm, { AlertFormData } from "@/components/participant-mode/communication-forms/AlertComposeForm";
+import MemoComposeForm, { MemoFormData } from "@/components/participant-mode/communication-forms/MemoComposeForm";
+import NewsBroadcastComposeForm, { NewsBroadcastFormData } from "@/components/participant-mode/communication-forms/NewsBroadcastComposeForm";
+import NewspaperComposeForm, { NewspaperFormData } from "@/components/participant-mode/communication-forms/NewspaperComposeForm";
+import SocialComposeForm, { SocialFormData } from "@/components/participant-mode/communication-forms/SocialComposeForm";
 
-interface Communication {
-  id: string;
-  type: string;
-  content: string;
-  sender?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-  };
-  recipient?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-  };
-  createdAt: string;
-  subject?: string;
-}
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+});
 
-interface Injection {
-  id: string;
-  title: string;
-  content: string;
-  scenarioName: string;
-  createdAt: string;
-  acknowledged: boolean;
-  type: string;
-  imageUrl?: string;
-  videoUrl?: string;
-  attachments?: {
-    type: string;
-    url: string;
-    name: string;
-  }[];
-}
-
-interface ParticipantViewData {
-  simulation: Simulation;
-  counts: {
-    email: number;
-    call: number;
-    sms: number;
-    alert: number;
-    memo: number;
-    newsBroadcast: number;
-    newspaper: number;
-    social: number;
-  };
-  communications: {
-    email: Communication[];
-    call: Communication[];
-    sms: Communication[];
-    alert: Communication[];
-    memo: Communication[];
-    newsBroadcast: Communication[];
-    newspaper: Communication[];
-    social: Communication[];
-  };
-  injections: Injection[];
-}
-
-// Helper component for a communication channel card
-function CommunicationChannelCard({
-  title,
-  onClick,
-  icon: Icon,
-  className = "",
-  commCount = 0,
-  injCount = 0,
-}: {
-  title: string;
-  onClick: () => void;
-  icon: React.ElementType;
-  className?: string;
-  commCount?: number;
-  injCount?: number;
-}) {
-  const totalCount = commCount + injCount;
-
-  return (
-    <Card
-      className={`relative flex flex-col items-center justify-center p-4 rounded-xl transition-all cursor-pointer border ${className} hover:shadow-md`}
-      onClick={onClick}
-    >
-      <div className="flex flex-col items-center w-full">
-        <div className="relative p-3 mb-2">
-          <Icon className="h-6 w-6" />
-          {totalCount > 0 && (
-            <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold text-white bg-red-500 rounded-full">
-              {totalCount}
-            </span>
-          )}
-        </div>
-        <span className="text-sm font-medium text-center mb-1">{title}</span>
-        {(commCount > 0 || injCount > 0) && (
-          <div className="flex gap-2 text-xs mt-1">
-            {commCount > 0 && (
-              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
-                {commCount} msg
-              </span>
-            )}
-            {injCount > 0 && (
-              <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">
-                {injCount} inj
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-    </Card>
-  );
-}
-
-// Fonction utilitaire pour formater la date
-const formatDate = (dateString: string) => {
-  if (!dateString) return "Non définie";
-  try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return "Date invalide";
-    return new Intl.DateTimeFormat("fr-FR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date);
-  } catch (error) {
-    console.error("Erreur de formatage de date:", error);
-    return "Date invalide";
-  }
-};
-
-const getIconForType = (type: string): React.ReactElement => {
-  const iconProps = {
-    className: "h-6 w-6 text-white drop-shadow-sm",
-    strokeWidth: 1.75,
-  };
-
-  switch (type.toLowerCase()) {
-    case "email":
-      return <Mail {...iconProps} />;
-    case "sms":
-      return <MessageSquare {...iconProps} />;
-    case "call":
-      return <Phone {...iconProps} />;
-    case "alert":
-      return <Bell {...iconProps} />;
-    case "memo":
-      return <WhatsAppIcon className={iconProps.className} />;
-    case "newsbroadcast":
-      return <Newspaper {...iconProps} />;
-    case "newspaper":
-      return <Rss {...iconProps} />;
-    case "social":
-      return <Users {...iconProps} />;
-    default:
-      return <MessageSquare {...iconProps} />; // Icône par défaut
-  }
-};
+// Utility functions moved to constants.ts or components
 
 export default function ParticipantViewFixedPage() {
   const { data: session } = useSession();
@@ -314,6 +76,19 @@ export default function ParticipantViewFixedPage() {
   );
   const [selectedCommunication, setSelectedCommunication] =
     useState<Communication | null>(null);
+  const [selectedReport, setSelectedReport] = useState<{
+    filePath: string;
+    fileName: string;
+    reportId?: string;
+  } | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
+  const [reportFile, setReportFile] = useState<File | null>(null);
+  const [reportTitle, setReportTitle] = useState<string>("");
+  const [reportDescription, setReportDescription] = useState<string>("");
+  const [reportUploading, setReportUploading] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
 
   // Réf pour suivre les injections déjà affichées en modale pour éviter de les remontrer
@@ -494,6 +269,30 @@ export default function ParticipantViewFixedPage() {
     },
     [session?.user?.id]
   );
+
+  const currentTeamId = useMemo(() => {
+    if (!data?.simulation?.assignments || !session?.user?.id) {
+      return null;
+    }
+
+    const assignment = data.simulation.assignments.find(
+      (item) => item.userId === session.user.id
+    );
+
+    return assignment?.teamId || null;
+  }, [data?.simulation?.assignments, session?.user?.id]);
+
+  const currentTeamName = useMemo(() => {
+    if (!data?.simulation?.assignments || !session?.user?.id) {
+      return null;
+    }
+
+    const assignment = data.simulation.assignments.find(
+      (item) => item.userId === session.user.id
+    );
+
+    return assignment?.team?.name || null;
+  }, [data?.simulation?.assignments, session?.user?.id]);
 
   const fetchData = useCallback(async () => {
     if (!simulationId) {
@@ -753,7 +552,7 @@ export default function ParticipantViewFixedPage() {
 
       // Envoyer un email à chaque destinataire
       const results = await Promise.allSettled(
-        formData.to.map((recipientId, index) => {
+        formData.to.map((recipientId: string, index: number) => {
           const requestBody = {
             type: "email",
             subject: formData.subject,
@@ -830,7 +629,7 @@ export default function ParticipantViewFixedPage() {
 
       // Envoyer un SMS à chaque destinataire
       const results = await Promise.allSettled(
-        formData.to.map((recipientId, index) => {
+        formData.to.map((recipientId: string, index: number) => {
           const requestBody = {
             type: "sms",
             content: formData.body,
@@ -920,6 +719,146 @@ export default function ParticipantViewFixedPage() {
     }
   };
 
+  const handleReportUpload = async () => {
+    if (!reportFile) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner un fichier PDF à télécharger.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (reportFile.type !== "application/pdf") {
+      toast({
+        title: "Erreur",
+        description: "Seuls les fichiers PDF sont autorisés.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setReportUploading(true);
+
+    try {
+      const uploadForm = new FormData();
+      uploadForm.append("file", reportFile);
+      uploadForm.append("name", reportTitle || reportFile.name);
+      uploadForm.append(
+        "description",
+        reportDescription || "Rapport PDF participant"
+      );
+      uploadForm.append("category", "simulation-report");
+      uploadForm.append("tags", "participant,report");
+
+      const uploadResp = await fetch("/api/bia/upload-report", {
+        method: "POST",
+        body: uploadForm,
+      });
+
+      if (!uploadResp.ok) {
+        const err = await uploadResp.json().catch(() => ({}));
+        throw new Error(err.error || "Erreur lors de l'upload du rapport");
+      }
+
+      const uploadResult = await uploadResp.json();
+
+      if (!uploadResult.success) {
+        throw new Error(
+          uploadResult.error || "Erreur lors de l'upload du rapport"
+        );
+      }
+
+      // Poster la communication report dans le flux simulation
+      const reportPayload = {
+        type: "report",
+        content: `Rapport PDF uploadé : ${
+          uploadResult.data?.name || reportFile.name
+        }`,
+        subject: reportTitle || "Rapport PDF participant",
+        payload: {
+          reportId: uploadResult.data?.id,
+          filePath: uploadResult.data?.filePath,
+          originalFileName: reportFile.name,
+        },
+      };
+
+      const commResp = await fetch(
+        `/api/simulations/${simulationId}/communications`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(reportPayload),
+        }
+      );
+
+      if (!commResp.ok) {
+        const err = await commResp.text();
+        throw new Error(
+          err || "Erreur lors de la sauvegarde de la communication"
+        );
+      }
+
+      toast({
+        title: "Rapport envoyé",
+        description: "Votre fichier PDF a bien été uploadé et partagé.",
+      });
+
+      setReportFile(null);
+      setReportTitle("");
+      setReportDescription("");
+      setIsComposing(false);
+      setData(null);
+      setLoading(true);
+      await fetchData();
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Erreur inconnue";
+      toast({
+        title: "Erreur",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setReportUploading(false);
+    }
+  };
+
+  const handleAIDraftSitRep = async () => {
+    if (!data) return;
+    
+    try {
+      setReportLoading(true);
+      // Récupérer les 10 dernières injections et communications pour le contexte
+      const recentInjections = data.injections.slice(-10);
+      const recentComms = Object.values(data.communications)
+        .flat()
+        .slice(-10);
+
+      const response = await fetch("/api/ai/generate-sitrep", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          injections: recentInjections,
+          communications: recentComms,
+          simulationTitle: data.simulation.title,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Échec de la génération IA");
+      const result = await response.json();
+
+      setReportTitle(result.title || "");
+      setReportDescription(result.content || "");
+      sonnerToast.success("Brouillon de SITREP généré par l'IA");
+    } catch (error) {
+      console.error(error);
+      sonnerToast.error("Erreur lors de la génération IA");
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
   const handleMemoSubmit = async (formData: MemoFormData) => {
     try {
       // If formData.to exists (array of recipient IDs), send one request per recipient like SMS
@@ -932,7 +871,7 @@ export default function ParticipantViewFixedPage() {
         }
 
         const results = await Promise.allSettled(
-          formData.to.map((recipientId, index) => {
+          formData.to.map((recipientId: string, index: number) => {
             const phone = formData.recipientPhones?.[index] || undefined;
             const requestBody = {
               type: "memo",
@@ -1175,7 +1114,9 @@ export default function ParticipantViewFixedPage() {
 
           // Filtrer l'utilisateur actuel s'il fait partie des participants
           const otherParticipants = participants.filter(
-            (p: { user?: { id?: string } }) => p.user?.id !== session?.user?.id
+            (p: { user?: { id?: string }; teamId?: string | null }) =>
+              p.user?.id !== session?.user?.id &&
+              (!currentTeamId || p.teamId === currentTeamId)
           );
 
           console.log(
@@ -1263,7 +1204,7 @@ export default function ParticipantViewFixedPage() {
         );
 
         const successfulCount = results.filter(
-          (r) => r.status === "fulfilled"
+          (r: PromiseSettledResult<any>) => r.status === "fulfilled"
         ).length;
         const failedCount = results.length - successfulCount;
 
@@ -1329,7 +1270,7 @@ export default function ParticipantViewFixedPage() {
 
       // Envoyer un appel à chaque destinataire
       const results = await Promise.allSettled(
-        formData.to.map((recipientId, index) => {
+        formData.to.map((recipientId: string, index: number) => {
           const requestBody = {
             type: "call",
             content: formData.notes,
@@ -1444,6 +1385,7 @@ export default function ParticipantViewFixedPage() {
     acknowledged?: boolean;
     imageUrl?: string;
     videoUrl?: string;
+    payload?: Record<string, unknown>;
     attachments?: {
       type: string;
       url: string;
@@ -1451,344 +1393,30 @@ export default function ParticipantViewFixedPage() {
     }[];
   };
 
-  const renderContentForChannel = (
-    channelType: keyof ParticipantViewData["communications"]
-  ) => {
-    if (!data) return null;
-
-    const channelCommunications = data.communications[channelType] || [];
-    const channelInjections = data.injections.filter((inj) => {
-      if (!inj.type) return false;
-
-      // Normaliser les types pour la comparaison (supprimer les underscores et mettre en majuscules)
-      const normalizedInjType = inj.type.toUpperCase().replace(/_/g, "");
-      const normalizedChannelType = channelType.toUpperCase().replace(/_/g, "");
-
-      // Gérer les cas spéciaux
-      if (normalizedChannelType === "SOCIAL") {
-        return (
-          normalizedInjType === "SOCIAL" || normalizedInjType === "SOCIALMEDIA"
-        );
-      }
-
-      // Pour les autres types, comparer les valeurs normalisées
-      return normalizedInjType === normalizedChannelType;
-    });
-
-    const combinedContent: CombinedContentItem[] = [
-      ...channelCommunications.map((comm) => ({
-        ...comm,
-        isInjection: false as const,
-      })),
-      ...channelInjections.map((inj) => ({
-        ...inj,
-        isInjection: true as const,
-      })),
-    ].sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-
-    if (combinedContent.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center p-8 text-center rounded-xl bg-gray-50 border-2 border-dashed border-gray-200">
-          <MessageSquare className="h-10 w-10 text-gray-400 mb-3" />
-          <h3 className="text-lg font-medium text-gray-700 mb-1">
-            Aucun contenu
-          </h3>
-          <p className="text-sm text-gray-500 max-w-xs">
-            Aucune communication ou injection n&apos;a été envoyée sur ce canal
-            pour le moment.
-          </p>
-        </div>
-      );
-    }
-
-    const getChannelColor = (type: string) => {
-      switch (type.toLowerCase()) {
-        case "email":
-          return "border-l-4 border-l-red-500";
-        case "sms":
-          return "border-l-4 border-l-green-500";
-        case "call":
-          return "border-l-4 border-l-purple-500";
-        case "alert":
-          return "border-l-4 border-l-amber-500";
-        case "memo":
-          return "border-l-4 border-l-indigo-500";
-        case "newsbroadcast":
-          return "border-l-4 border-l-pink-500";
-        case "newspaper":
-          return "border-l-4 border-l-rose-500";
-        case "social":
-          return "border-l-4 border-l-teal-500";
-        default:
-          return "border-l-4 border-l-gray-400";
-      }
-    };
-
-    return (
-      <div className="space-y-4">
-        {combinedContent.map((item) => (
-          <div
-            key={item.id}
-            className={`relative flex flex-col gap-3 rounded-xl bg-white shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden 
-              ${getChannelColor(item.type)} 
-              ${
-                item.isInjection && !item.acknowledged
-                  ? "ring-1 ring-amber-500/20"
-                  : "border border-gray-100"
-              }
-              ${
-                item.isInjection ? "hover:bg-amber-50/50" : "hover:bg-gray-50"
-              }`}
-            tabIndex={0}
-            aria-label={
-              item.isInjection
-                ? `Injection : ${item.title}`
-                : `Communication : ${item.subject || "Sans sujet"}`
-            }
-          >
-            {/* En-tête avec icône, titre et date */}
-            <div className="flex items-start justify-between p-4 pb-0">
-              <div className="flex items-start gap-3">
-                <div
-                  className={`p-2 rounded-lg mt-1 ${
-                    item.isInjection
-                      ? "bg-amber-100 text-amber-600"
-                      : "bg-blue-100 text-blue-600"
-                  }`}
-                >
-                  {getIconForType(item.type)}
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 line-clamp-2">
-                    {item.isInjection
-                      ? item.title
-                      : item.subject || "Sans sujet"}
-                  </h3>
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500 mt-1">
-                    {item.sender && (
-                      <span className="flex items-center">
-                        <User className="h-3 w-3 mr-1 opacity-70" />
-                        {item.sender.firstName} {item.sender.lastName}
-                      </span>
-                    )}
-                    {item.recipient && (
-                      <span className="flex items-center">
-                        <Mail className="h-3 w-3 mr-1 opacity-70" />
-                        {item.recipient.firstName} {item.recipient.lastName}
-                      </span>
-                    )}
-                    <span className="flex items-center">
-                      <Clock className="h-3 w-3 mr-1 opacity-70" />
-                      {formatDate(item.createdAt)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {item.isInjection && (
-                  <>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="ml-2 bg-white hover:bg-amber-50 text-amber-600 border-amber-200 hover:border-amber-300 hover:text-amber-700"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedInjection(item as Injection);
-                      }}
-                    >
-                      <span className="text-xs">Voir</span>
-                    </Button>
-                    {!item.acknowledged && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="ml-2 bg-white hover:bg-amber-50 text-amber-600 border-amber-200 hover:border-amber-300 hover:text-amber-700"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAcknowledgeInjection(item.id);
-                        }}
-                      >
-                        <Check className="h-4 w-4 mr-1" />
-                        <span className="text-xs">Marquer comme lu</span>
-                      </Button>
-                    )}
-                  </>
-                )}
-                {!item.isInjection && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="ml-2 bg-white hover:bg-blue-50 text-blue-600 border-blue-200 hover:border-blue-300 hover:text-blue-700"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedCommunication(item as Communication);
-                    }}
-                  >
-                    <span className="text-xs">Voir</span>
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            {/* Contenu du message */}
-            <div className="px-4 pb-4 pt-1">
-              <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-line break-words">
-                {item.content}
-              </div>
-
-              {/* Pièces jointes (si présentes) */}
-              {item.attachments && item.attachments.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-gray-100">
-                  <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 flex items-center">
-                    <Paperclip className="h-3 w-3 mr-1.5" />
-                    Pièces jointes ({item.attachments.length})
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {item.attachments.map((attachment, idx) => (
-                      <a
-                        key={idx}
-                        href={attachment.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium rounded-md bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <FileText className="h-3.5 w-3.5 mr-1.5 text-gray-400" />
-                        {attachment.name}
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Badge "Nouveau" pour les injections non lues */}
-            {item.isInjection && !item.acknowledged && (
-              <div className="absolute top-3 right-3">
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                  Nouveau
-                </span>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  // Fonction pour obtenir le dégradé de couleur d'un canal de communication
-  const getChannelGradient = (channelType: string) => {
-    switch (channelType.toLowerCase()) {
-      case "email":
-        return "from-red-500 to-red-600";
-      case "sms":
-        return "from-green-500 to-green-600";
-      case "call":
-        return "from-purple-500 to-purple-600";
-      case "alert":
-        return "from-amber-500 to-amber-600";
-      case "memo":
-        return "from-indigo-500 to-indigo-600";
-      case "newsbroadcast":
-        return "from-pink-500 to-pink-600";
-      case "newspaper":
-        return "from-rose-500 to-rose-600";
-      case "social":
-        return "from-teal-500 to-teal-600";
-      default:
-        return "from-gray-500 to-gray-600";
-    }
-  };
-
-  // Fonction pour obtenir le type de fichier à partir du nom de fichier
-  const getFileType = (filename: string) => {
-    const extension = filename.split(".").pop()?.toLowerCase() || "";
-    const fileTypes: Record<string, string> = {
-      // Documents
-      pdf: "Document PDF",
-      doc: "Document Word",
-      docx: "Document Word",
-      xls: "Feuille de calcul Excel",
-      xlsx: "Feuille de calcul Excel",
-      ppt: "Présentation PowerPoint",
-      pptx: "Présentation PowerPoint",
-      txt: "Fichier texte",
-      rtf: "Document texte enrichi",
-      odt: "Document OpenDocument",
-      ods: "Feuille de calcul OpenDocument",
-      odp: "Présentation OpenDocument",
-
-      // Images
-      jpg: "Image",
-      jpeg: "Image",
-      png: "Image",
-      gif: "Image",
-      bmp: "Image",
-      svg: "Image vectorielle",
-      webp: "Image WebP",
-
-      // Archives
-      zip: "Archive ZIP",
-      rar: "Archive RAR",
-      "7z": "Archive 7-Zip",
-      tar: "Archive TAR",
-      gz: "Archive GZIP",
-
-      // Audio/Video
-      mp3: "Fichier audio",
-      wav: "Fichier audio",
-      mp4: "Vidéo",
-      avi: "Vidéo",
-      mov: "Vidéo",
-      wmv: "Vidéo",
-    };
-
-    return fileTypes[extension] || `Fichier .${extension}`;
-  };
-
-  // Fonction pour obtenir le dégradé de couleur en fonction du type d'injection
-  const getInjectionGradient = (type: string) => {
-    switch (type.toLowerCase()) {
-      case "email":
-        return "from-blue-500 to-blue-600";
-      case "sms":
-        return "from-green-500 to-green-600";
-      case "call":
-        return "from-purple-500 to-purple-600";
-      case "alert":
-        return "from-amber-500 to-amber-600";
-      case "memo":
-        return "from-indigo-500 to-indigo-600";
-      case "newsbroadcast":
-        return "from-pink-500 to-pink-600";
-      case "newspaper":
-        return "from-rose-500 to-rose-600";
-      case "social":
-        return "from-teal-500 to-teal-600";
-      default:
-        return "from-gray-500 to-gray-600";
-    }
-  };
+  // Utility functions moved to components
 
   const getStatusBadge = (status: string) => {
     switch (status?.toLowerCase()) {
       case "en_cours":
+      case "ongoing":
+      case "in_progress":
+      case "open":
         return (
           <Badge className="bg-blue-50 text-[#0066b3] border border-blue-100 font-medium">
             En cours
           </Badge>
         );
       case "termine":
+      case "completed":
+      case "resolved":
+      case "closed":
         return (
           <Badge className="bg-green-50 text-[#a8cf45] border border-green-100 font-medium">
             Terminé
           </Badge>
         );
       case "a_venir":
+      case "upcoming":
         return (
           <Badge className="bg-amber-50 text-amber-700 border border-amber-100 font-medium">
             À venir
@@ -1797,7 +1425,7 @@ export default function ParticipantViewFixedPage() {
       default:
         return (
           <Badge className="bg-gray-50 text-gray-600 border border-gray-200 font-medium">
-            {status || "Inconnu"}
+            {status ? status : "Inconnu"}
           </Badge>
         );
     }
@@ -1806,21 +1434,39 @@ export default function ParticipantViewFixedPage() {
   const getAssignmentStatusBadge = (status: string) => {
     switch (status?.toLowerCase()) {
       case "en_attente":
+      case "pending":
         return (
           <Badge className="bg-amber-50 text-amber-700 border border-amber-100 font-medium">
             En attente
           </Badge>
         );
       case "accepte":
+      case "accepted":
+      case "assigned":
         return (
           <Badge className="bg-green-50 text-[#a8cf45] border border-green-100 font-medium">
-            Accepté
+            Assigné
           </Badge>
         );
       case "refuse":
+      case "rejected":
+      case "declined":
         return (
           <Badge className="bg-red-50 text-red-600 border border-red-100 font-medium">
             Refusé
+          </Badge>
+        );
+      case "non_assigné":
+      case "non assigné":
+      case "non assigne":
+      case "not_assigned":
+      case "unassigned":
+      case "non assigned":
+      case "none":
+      case "":
+        return (
+          <Badge className="bg-gray-50 text-gray-600 border border-gray-200 font-medium">
+            Non assigné
           </Badge>
         );
       default:
@@ -1872,694 +1518,476 @@ export default function ParticipantViewFixedPage() {
     );
   }
 
-  return (
-    <div
-      className={`${inter.variable} font-sans min-h-screen bg-background dark:bg-background text-foreground dark:text-foreground`}
+  return ( 
+    <div 
+      className={`min-h-screen flex flex-col font-sans text-[#FAFAF9] selection:bg-[#D97706]/30`}
+      style={{ backgroundColor: "#1C1917" }}
     >
-      <style jsx global>{`
-        :root {
-          --primary: ${ooredooTheme.colors.primary.DEFAULT};
-          --primary-hover: ${ooredooTheme.colors.primary.hover};
-          --success: ${ooredooTheme.colors.secondary.DEFAULT};
-        }
-
-        /* Styles pour les boutons */
-        .btn-primary {
-          background-color: var(--primary);
-          color: white;
-        }
-        .btn-primary:hover {
-          background-color: var(--primary-hover);
-        }
-
-        /* Styles pour les cartes - compatibles dark mode */
-        .card {
-          background: ${resolvedTheme === "dark" ? "rgb(24 24 27)" : "white"};
-          border: 1px solid
-            ${resolvedTheme === "dark" ? "rgb(39 39 42)" : "#e5e7eb"};
-          border-radius: 0.5rem;
-          transition: all 0.2s ease;
-          color: ${resolvedTheme === "dark"
-            ? "rgb(244 244 245)"
-            : "rgb(24 24 27)"};
-        }
-        .card:hover {
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, ${resolvedTheme === "dark" ? "0.3" : "0.1"}),
-            0 2px 4px -1px rgba(0, 0, 0, ${resolvedTheme === "dark" ? "0.2" : "0.06"});
-        }
-
-        /* Styles pour les badges */
-        .badge {
-          font-weight: 500;
-          border-radius: 9999px;
-          padding: 0.25rem 0.75rem;
-          font-size: 0.75rem;
-          line-height: 1rem;
-        }
-
-        /* Adaptations dark mode */
-        .dark .bg-gray-50 {
-          background-color: rgb(39 39 42) !important;
-        }
-        .dark .text-gray-700 {
-          color: rgb(212 212 216) !important;
-        }
-        .dark .border-gray-200 {
-          border-color: rgb(39 39 42) !important;
-        }
-
-        /* Transitions fluides pour le changement de thème */
-        * {
-          transition: background-color 0.3s ease, border-color 0.3s ease,
-            color 0.3s ease;
-        }
-
-        /* Amélioration des couleurs de scrollbar en dark mode */
-        .dark ::-webkit-scrollbar {
-          background-color: rgb(39 39 42);
-        }
-        .dark ::-webkit-scrollbar-thumb {
-          background-color: rgb(63 63 70);
-        }
-        .dark ::-webkit-scrollbar-thumb:hover {
-          background-color: rgb(82 82 91);
-        }
-      `}</style>
-
-      <header className="sticky top-0 z-50 bg-[#ED1C24] text-white shadow-lg">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="relative w-16 h-16 bg-white p-2 rounded-md flex items-center justify-center">
-              <Image
-                src="/ooredoo-logo.png"
-                alt="Logo Ooredoo"
-                width={56}
-                height={56}
-                className="object-contain"
-                priority
-                onError={(e) => {
-                  // Remplacer par un logo de secours si échec de chargement
-                  const target = e.currentTarget;
-                  target.style.display = "none";
-                  const parent = target.parentElement;
-                  if (parent) {
-                    parent.innerHTML =
-                      '<div class="flex items-center justify-center w-full h-full"><span class="text-red-600 text-xs font-bold bg-white px-1 rounded">OOREDOO</span></div>';
-                  }
-                }}
-              />
-            </div>
-            <h1 className="text-2xl font-bold text-white">
-              {data?.simulation.title || "Tableau de bord"}
-            </h1>
-          </div>
-
-          <div className="text-center flex-1 px-4">
-            <h1 className="text-xl md:text-2xl font-bold">
-              {data?.simulation.title}
-            </h1>
-            {userRole && (
-              <div className="mt-1">
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
-                  Rôle: {userRole}
-                </span>
-              </div>
+      {/* 🔝 TOPBAR — Simplifiée */}
+      <header 
+        className="h-14 flex items-center justify-between px-4 sticky top-0 z-50 backdrop-blur-md"
+        style={{ backgroundColor: "#1A1816", borderBottom: "1px solid #33302D" }}
+      >
+        {/* Logo zone (gauche) */}
+        <div className="flex items-center gap-3">
+          <div 
+            className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden"
+            style={{ backgroundColor: "#2E2B28", border: "1px solid #3C3835" }}
+          >
+            {participantLogo ? (
+              <Image src={participantLogo} alt="Logo" width={24} height={24} className="object-contain" />
+            ) : (
+              <Zap className="w-4 h-4 text-[#D97706]" />
             )}
           </div>
-
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <Button
-              variant="default"
-              className="bg-white text-[#ED1C24] hover:bg-opacity-90 hover:bg-white"
-              onClick={handleComposeClick}
-            >
-              <span className="hidden md:inline">Nouvelle Communication</span>
-              <span className="md:hidden">+</span>
-            </Button>
+          <div className="flex flex-col leading-tight">
+            <span className="text-[14px] font-semibold text-[#FAFAF9]">
+              {data?.simulation?.title?.substring(0, 10) || "Simulation"}
+            </span>
+            <span className="text-[11px] text-[#78716C]">
+              Espace opérationnel
+            </span>
           </div>
+        </div>
+
+        {/* Centre — Equipe & Rôle */}
+        <div className="hidden md:flex items-center gap-8">
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] text-[#78716C]">Équipe</span>
+            <span className="text-[13px] font-medium text-[#FAFAF9]">
+              {session?.user?.teamName || "Équipe de sécurité"}
+            </span>
+          </div>
+          <div className="w-px h-6 bg-[#33302D]"></div>
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] text-[#78716C]">Rôle</span>
+            <span className="text-[13px] font-medium text-[#D97706]">
+              {session?.user?.role?.toLowerCase() || "participant"}
+            </span>
+          </div>
+        </div>
+
+        {/* Droite — Actions */}
+        <div className="flex items-center gap-4">
+          <button className="p-2 text-[#78716C] hover:text-[#FAFAF9] transition-colors">
+            <Zap className="w-5 h-5" /> 
+          </button>
+          <Button 
+            onClick={() => setIsComposing(true)}
+            className="rounded-lg px-3.5 py-2 text-[13px] font-medium transition-all"
+            style={{ backgroundColor: "#D97706", color: "#1C1917" }}
+          >
+            <Plus className="w-4 h-4 mr-1.5" />
+            Communication
+          </Button>
         </div>
       </header>
 
-      <main className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6 p-4 md:p-6 overflow-auto">
-        {/* Colonne de gauche : Aperçu + Plans/Tâches */}
-        <div className="md:col-span-2 flex flex-col gap-6">
-          {/* Carte Aperçu de la Simulation */}
-          <Card className="bg-card dark:bg-card shadow-md rounded-lg border border-border dark:border-border hover:shadow-lg transition-shadow">
-            <CardHeader className="bg-[#ED1C24] text-white rounded-t-lg p-4">
-              <CardTitle className="text-xl">Aperçu de la Simulation</CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <p className="text-gray-700 mb-6">
-                {data?.simulation.description}
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                  <p className="text-gray-500 dark:text-gray-400 text-xs font-medium uppercase tracking-wider mb-1">
-                    Date de début
-                  </p>
-                  <p className="text-gray-900 dark:text-gray-100 font-medium">
-                    {formatDate(data?.simulation.startDate || "")}
-                  </p>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                  <p className="text-gray-500 dark:text-gray-400 text-xs font-medium uppercase tracking-wider mb-1">
-                    Date de fin
-                  </p>
-                  <p className="text-gray-900 dark:text-gray-100 font-medium">
-                    {formatDate(data?.simulation.endDate || "")}
-                  </p>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                  <p className="text-gray-500 dark:text-gray-400 text-xs font-medium uppercase tracking-wider mb-1">
-                    Statut
-                  </p>
-                  <div className="mt-1">
-                    {getStatusBadge(data?.simulation.status || "")}
-                  </div>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                  <p className="text-gray-500 dark:text-gray-400 text-xs font-medium uppercase tracking-wider mb-1">
-                    Assignation
-                  </p>
-                  <div className="mt-1">
-                    {getAssignmentStatusBadge(
-                      data?.simulation.assignmentStatus || ""
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          {/* Plans et Tâches - Section masquée */}
-        </div>
-
-        {/* Colonne de droite : Communications & Injections */}
-        <div className="md:col-span-1 flex flex-col gap-6">
-          {/* Section des canaux de communication */}
-          <Card className="bg-card dark:bg-card rounded-xl shadow-sm border border-border dark:border-border hover:shadow-md transition-all duration-300 overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-[#ED1C24] to-[#F24950] p-4">
-              <CardTitle className="text-lg font-semibold text-white flex items-center gap-3">
-                <div className="p-1.5 bg-white/20 rounded-lg">
-                  <MessageSquare className="h-5 w-5" />
-                </div>
-                <span>Canaux de Communication</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <CommunicationChannelCard
-                  title="Email"
-                  onClick={() => handleChannelClick("email")}
-                  icon={Mail}
-                  className="bg-red-50 dark:bg-red-950/20 hover:bg-red-100 dark:hover:bg-red-900/30 border-red-100 dark:border-red-800 text-red-600 dark:text-red-400"
-                  commCount={data?.communications.email?.length || 0}
-                  injCount={
-                    data?.injections.filter(
-                      (inj) =>
-                        inj.type.toUpperCase().replace(/_/g, "") === "EMAIL"
-                    ).length || 0
-                  }
-                />
-                <CommunicationChannelCard
-                  title="SMS"
-                  onClick={() => handleChannelClick("sms")}
-                  icon={MessageSquare}
-                  className="bg-green-50 dark:bg-green-950/20 hover:bg-green-100 dark:hover:bg-green-900/30 border-green-100 dark:border-green-800 text-green-600 dark:text-green-400"
-                  commCount={data?.communications.sms?.length || 0}
-                  injCount={
-                    data?.injections.filter(
-                      (inj) =>
-                        inj.type.toUpperCase().replace(/_/g, "") === "SMS"
-                    ).length || 0
-                  }
-                />
-                <CommunicationChannelCard
-                  title="Appel"
-                  onClick={() => handleChannelClick("call")}
-                  icon={Phone}
-                  className="bg-purple-50 dark:bg-purple-950/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 border-purple-100 dark:border-purple-800 text-purple-600 dark:text-purple-400"
-                  commCount={data?.communications.call?.length || 0}
-                  injCount={
-                    data?.injections.filter(
-                      (inj) =>
-                        inj.type.toUpperCase().replace(/_/g, "") === "CALL"
-                    ).length || 0
-                  }
-                />
-                <CommunicationChannelCard
-                  title="Alerte"
-                  onClick={() => handleChannelClick("alert")}
-                  icon={Bell}
-                  className="bg-amber-50 dark:bg-amber-950/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 border-amber-100 dark:border-amber-800 text-amber-600 dark:text-amber-400"
-                  commCount={data?.communications.alert?.length || 0}
-                  injCount={
-                    data?.injections.filter(
-                      (inj) =>
-                        inj.type.toUpperCase().replace(/_/g, "") === "ALERT"
-                    ).length || 0
-                  }
-                />
-                <CommunicationChannelCard
-                  title="WhatsApp"
-                  onClick={() => handleChannelClick("memo")}
-                  icon={WhatsAppIcon}
-                  className="bg-indigo-50 dark:bg-indigo-950/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 border-indigo-100 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400"
-                  commCount={data?.communications.memo?.length || 0}
-                  injCount={
-                    data?.injections.filter(
-                      (inj) =>
-                        inj.type.toUpperCase().replace(/_/g, "") === "MEMO"
-                    ).length || 0
-                  }
-                />
-                <CommunicationChannelCard
-                  title="SITREP"
-                  onClick={() => handleChannelClick("newsBroadcast")}
-                  icon={Newspaper}
-                  className="bg-pink-50 dark:bg-pink-950/20 hover:bg-pink-100 dark:hover:bg-pink-900/30 border-pink-100 dark:border-pink-800 text-pink-600 dark:text-pink-400"
-                  commCount={data?.communications.newsBroadcast?.length || 0}
-                  injCount={
-                    data?.injections.filter(
-                      (inj) =>
-                        inj.type.toUpperCase().replace(/_/g, "") ===
-                        "NEWSBROADCAST"
-                    ).length || 0
-                  }
-                />
-                <CommunicationChannelCard
-                  title="Journal"
-                  onClick={() => handleChannelClick("newspaper")}
-                  icon={Rss}
-                  className="bg-rose-50 dark:bg-rose-950/20 hover:bg-rose-100 dark:hover:bg-rose-900/30 border-rose-100 dark:border-rose-800 text-rose-600 dark:text-rose-400"
-                  commCount={data?.communications.newspaper?.length || 0}
-                  injCount={
-                    data?.injections.filter(
-                      (inj) =>
-                        inj.type.toUpperCase().replace(/_/g, "") === "NEWSPAPER"
-                    ).length || 0
-                  }
-                />
-                <CommunicationChannelCard
-                  title="Social"
-                  className="bg-teal-50 dark:bg-teal-950/20 hover:bg-teal-100 dark:hover:bg-teal-900/30 border-teal-100 dark:border-teal-800 text-teal-600 dark:text-teal-400"
-                  onClick={() => handleChannelClick("social")}
-                  icon={Users}
-                  commCount={data?.communications.social?.length || 0}
-                  injCount={
-                    data?.injections.filter((inj) => {
-                      const normalized = inj.type
-                        .toUpperCase()
-                        .replace(/_/g, "");
-                      return (
-                        normalized === "SOCIAL" || normalized === "SOCIALMEDIA"
-                      );
-                    }).length || 0
-                  }
-                />
-              </div>
-            </CardContent>
-          </Card>
-          {/* Liste des communications/injections avec ScrollArea, effet visuel, responsive */}
-          <Card className="bg-card dark:bg-card shadow-sm hover:shadow-md transition-all duration-300 rounded-2xl border border-border dark:border-border flex-1 flex flex-col overflow-hidden">
-            {/* En-tête avec dégradé de couleur */}
-            <CardHeader
-              className={`pb-0 border-b border-border dark:border-border bg-gradient-to-r ${
-                selectedChannel
-                  ? getChannelGradient(selectedChannel)
-                  : "from-muted to-muted"
-              } rounded-t-2xl px-6 pt-6 pb-4`}
-            >
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  {selectedChannel && (
-                    <div className="relative">
-                      <div className="absolute -inset-1 bg-white/30 rounded-xl blur-sm opacity-70 group-hover:opacity-100 transition-opacity"></div>
-                      <div className="relative p-2.5 bg-white/20 backdrop-blur-sm rounded-lg border border-white/20 shadow-sm">
-                        {getIconForType(selectedChannel)}
-                      </div>
-                    </div>
-                  )}
-                  <h2 className="text-2xl font-bold text-white drop-shadow-sm">
-                    {selectedChannel
-                      ? selectedChannel === "newsBroadcast"
-                        ? "SITREP"
-                        : selectedChannel === "memo"
-                        ? "WhatsApp"
-                        : selectedChannel.charAt(0).toUpperCase() +
-                          selectedChannel.slice(1)
-                      : "Sélectionnez un canal"}
-                  </h2>
-                </div>
-                {selectedChannel && (
-                  <Button
-                    onClick={handleComposeClick}
-                    variant="outline"
-                    className="bg-white/20 hover:bg-white/30 border-white/30 text-white hover:text-white backdrop-blur-sm"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    <span className="hidden md:inline">Nouveau</span>
-                  </Button>
-                )}
-              </CardTitle>
-            </CardHeader>
-
-            {/* Contenu principal */}
-            <CardContent className="flex-1 overflow-hidden p-0">
-              {!selectedChannel ? (
-                <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-                  <MessageSquare className="h-12 w-12 text-muted-foreground dark:text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium text-foreground dark:text-foreground mb-2">
-                    Aucun canal sélectionné
-                  </h3>
-                  <p className="text-muted-foreground dark:text-muted-foreground max-w-md">
-                    Sélectionnez un canal de communication dans la liste pour
-                    afficher son contenu ou en créer un nouveau.
-                  </p>
-                </div>
-              ) : (
-                <ScrollArea className="h-[500px] w-full">
-                  <div className="p-6 space-y-6">
-                    {/* Contenu des communications */}
-                    {!isComposing && (
-                      <div className="animate-fade-in">
-                        {renderContentForChannel(selectedChannel)}
-                      </div>
-                    )}
-
-                    {/* Formulaire de composition */}
-                    {isComposing && (
-                      <div className="animate-fade-in">
-                        {selectedChannel === "email" && (
-                          <EmailComposeForm
-                            onSubmit={handleEmailSubmit}
-                            onCancel={() => setIsComposing(false)}
-                            simulationId={simulationId}
-                          />
-                        )}
-                        {selectedChannel === "sms" && (
-                          <SmsComposeForm
-                            onSubmit={handleSmsSubmit}
-                            onCancel={() => setIsComposing(false)}
-                            simulationId={simulationId}
-                          />
-                        )}
-                        {selectedChannel === "call" && (
-                          <CallComposeForm
-                            onSubmit={handleCallSubmit}
-                            onCancel={() => setIsComposing(false)}
-                            simulationId={simulationId}
-                          />
-                        )}
-                        {selectedChannel === "alert" && (
-                          <AlertComposeForm
-                            onSubmit={handleAlertSubmit}
-                            onCancel={() => setIsComposing(false)}
-                            simulationId={simulationId}
-                          />
-                        )}
-                        {selectedChannel === "memo" && (
-                          <MemoComposeForm
-                            onSubmit={handleMemoSubmit}
-                            onCancel={() => setIsComposing(false)}
-                            simulationId={simulationId}
-                          />
-                        )}
-                        {selectedChannel === "newsBroadcast" && (
-                          <NewsBroadcastComposeForm
-                            onSubmit={handleNewsBroadcastSubmit}
-                            onCancel={() => setIsComposing(false)}
-                          />
-                        )}
-                        {selectedChannel === "newspaper" && (
-                          <NewspaperComposeForm
-                            onSubmit={handleNewspaperSubmit}
-                            onCancel={() => setIsComposing(false)}
-                          />
-                        )}
-                        {selectedChannel === "social" && (
-                          <SocialComposeForm
-                            onSubmit={handleSocialSubmit}
-                            onCancel={() => setIsComposing(false)}
-                          />
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </ScrollArea>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-
-      {selectedInjection && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-          <Card className="w-full max-w-3xl max-h-[90vh] bg-card dark:bg-card shadow-xl rounded-2xl border border-border dark:border-border overflow-hidden flex flex-col">
-            {/* En-tête avec dégradé de couleur */}
-            <div
-              className={`bg-gradient-to-r ${getInjectionGradient(
-                selectedInjection.type
-              )} px-6 py-4 border-b border-border dark:border-border`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-lg">
-                    {getIconForType(selectedInjection.type)}
-                  </div>
-                  <h2 className="text-xl font-bold text-white truncate max-w-[70%]">
-                    {selectedInjection.title}
-                  </h2>
-                </div>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="text-white/80 hover:bg-white/20 hover:text-white"
-                  aria-label="Fermer"
-                  onClick={() => setSelectedInjection(null)}
-                >
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
-
-              {/* Métadonnées */}
-              <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-white/90">
-                <div className="flex items-center bg-white/20 px-2.5 py-1 rounded-full">
-                  <Calendar className="h-3.5 w-3.5 mr-1.5" />
-                  <span>{formatDate(selectedInjection.createdAt)}</span>
-                </div>
-                {selectedInjection.scenarioName && (
-                  <div className="flex items-center bg-white/20 px-2.5 py-1 rounded-full">
-                    <FileText className="h-3.5 w-3.5 mr-1.5" />
-                    <span>Scénario : {selectedInjection.scenarioName}</span>
-                  </div>
-                )}
-                {!selectedInjection.acknowledged && (
-                  <span className="ml-auto bg-white/20 px-2.5 py-1 rounded-full text-xs font-medium flex items-center">
-                    <span className="h-2 w-2 rounded-full bg-yellow-300 mr-1.5 animate-pulse"></span>
-                    Non lu
-                  </span>
-                )}
+      <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        {/* 📋 PANEL GAUCHE — "Aperçu de la Simulation" */}
+        <aside 
+          className="w-full md:w-[380px] lg:w-[420px] flex flex-col p-5 overflow-y-auto gap-5"
+          style={{ backgroundColor: "#252220", borderRight: "1px solid #3C3835" }}
+        >
+          {/* Header du panel */}
+          <div className="flex flex-col gap-1">
+            <h1 className="text-[18px] font-semibold text-[#FAFAF9] tracking-tight">
+              Aperçu de la Simulation
+            </h1>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-[#78716C]">
+                Séquence opérationnelle en cours
+              </span>
+              <div 
+                className="px-2 py-0.5 rounded-md text-[11px] font-medium"
+                style={{ backgroundColor: "#2E2B28", border: "1px solid #57534E", color: "#A8A29E" }}
+              >
+                {data?.simulation?.status || "planned"}
               </div>
             </div>
-            <CardContent className="p-6 overflow-y-auto flex-1">
-              {/* Contenu principal */}
-              <div className="prose prose-sm max-w-none text-gray-700 mb-6 whitespace-pre-line break-words">
-                {selectedInjection.content}
+          </div>
+
+          {/* Card Principale - Infos Simulation */}
+          <div 
+            className="rounded-xl p-5 flex flex-col"
+            style={{ backgroundColor: "#2E2B28", border: "1px solid #3C3835" }}
+          >
+            <h2 
+              className="text-[16px] font-medium text-[#FAFAF9] pb-3 mb-4"
+              style={{ borderBottom: "1px solid #3C3835" }}
+            >
+              {data?.simulation?.title || "Simulation en cours"}
+            </h2>
+
+            {/* Directives stratégiques */}
+            <div className="flex flex-col gap-3">
+              <h3 className="text-[11px] font-semibold text-[#D97706] uppercase tracking-wider">
+                Directives stratégiques
+              </h3>
+              <div 
+                className="p-4 rounded-lg flex flex-col gap-3"
+                style={{ backgroundColor: "#1C1917", borderLeft: "2px solid #D97706" }}
+              >
+                {(data?.simulation?.description || "Aucune directive spécifique pour le moment.")
+                  .split("\n")
+                  .map((line, i) => (
+                    <div key={i} className="flex gap-2.5 items-start">
+                      <ChevronRight className="w-3.5 h-3.5 mt-0.5 text-[#D97706] flex-shrink-0" />
+                      <span className="text-[13px] text-[#A8A29E] leading-relaxed">
+                        {line}
+                      </span>
+                    </div>
+                  ))}
               </div>
+            </div>
 
-              {/* Image */}
-              {selectedInjection.imageUrl && (
-                <div className="mb-6 rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
-                  {selectedInjection.imageUrl.startsWith("/media/") ? (
-                    // Utiliser <img> natif pour les images locales du dossier media
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={selectedInjection.imageUrl}
-                      alt={selectedInjection.title ?? "Image d'injection"}
-                      className="w-full h-auto object-cover"
-                    />
-                  ) : (
-                    // Utiliser Next.js Image pour les URLs externes
-                    <Image
-                      src={selectedInjection.imageUrl}
-                      alt={selectedInjection.title ?? "Image d'injection"}
-                      width={800}
-                      height={450}
-                      className="w-full h-auto object-cover"
-                    />
-                  )}
-                </div>
-              )}
-
-              {/* Vidéo */}
-              {selectedInjection.videoUrl && (
-                <div className="mb-6 rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
-                  {selectedInjection.videoUrl.includes("youtube.com") ? (
-                    <div className="aspect-video w-full">
-                      <iframe
-                        className="w-full h-full"
-                        src={`https://www.youtube.com/embed/${
-                          selectedInjection.videoUrl
-                            .split("v=")[1]
-                            ?.split("&")[0]
-                        }`}
-                        frameBorder="0"
-                        /* Omit `allow` to improve compatibility (e.g. Firefox for Android) */
-                        allowFullScreen
-                        title="Vidéo YouTube"
-                      />
-                    </div>
-                  ) : (
-                    <video
-                      src={selectedInjection.videoUrl}
-                      controls
-                      className="w-full aspect-video"
-                    />
-                  )}
-                </div>
-              )}
-
-              {/* Pièces jointes */}
-              {selectedInjection.attachments &&
-                selectedInjection.attachments.length > 0 && (
-                  <div className="mb-6">
-                    <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
-                      <Paperclip className="h-4 w-4 mr-2 text-gray-500" />
-                      Pièces jointes ({selectedInjection.attachments.length})
-                    </h4>
-                    <div className="grid gap-2 grid-cols-1 sm:grid-cols-2">
-                      {selectedInjection.attachments.map(
-                        (attachment, index) => (
-                          <a
-                            key={index}
-                            href={attachment.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors"
-                            download
-                          >
-                            <div className="bg-blue-100 p-2 rounded-lg mr-3">
-                              <FileText className="h-5 w-5 text-blue-600" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate">
-                                {attachment.name}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {getFileType(attachment.name)}
-                              </p>
-                            </div>
-                            <Download className="h-4 w-4 text-gray-400 ml-2" />
-                          </a>
-                        )
-                      )}
-                    </div>
+            {/* Informations système */}
+            <div className="mt-6 flex flex-col gap-4">
+              <h3 className="text-[11px] font-medium text-[#78716C]">
+                Informations système
+              </h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[10px] text-[#78716C]">Assignation</span>
+                  <div 
+                    className="px-2.5 py-1.5 rounded-md text-[12px] font-medium text-[#A8A29E] text-center"
+                    style={{ backgroundColor: "#1C1917", border: "1px solid #3C3835" }}
+                  >
+                    Non assigné
                   </div>
-                )}
-
-              {/* Bouton d'action */}
-              {!selectedInjection.acknowledged && (
-                <div className="flex justify-end pt-4 border-t border-gray-100">
-                  <Button
-                    variant="outline"
-                    className="mr-3 border-gray-300 text-gray-700 hover:bg-gray-50"
-                    onClick={() => setSelectedInjection(null)}
+                </div>
+                
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[10px] text-[#78716C]">Chronologie</span>
+                  <div 
+                    className="px-2.5 py-1.5 rounded-md text-[12px] font-medium text-[#10B981] flex items-center justify-center gap-2"
+                    style={{ backgroundColor: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.3)" }}
                   >
-                    Fermer
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse"></span>
+                    En cours
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card "Chronologie de la simulation" */}
+          <div 
+            className="rounded-xl p-5 flex flex-col gap-4"
+            style={{ backgroundColor: "#2E2B28", border: "1px solid #3C3835" }}
+          >
+            <h3 className="text-[13px] font-semibold text-[#FAFAF9]">
+              Chronologie de la simulation
+            </h3>
+            <div className="flex flex-col gap-0 pl-1">
+              {[
+                { label: "Briefing initial", status: "past" },
+                { label: "Activation cellule de crise", status: "current" },
+                { label: "Analyse d'impact", status: "future" },
+                { label: "Débriefing", status: "future" }
+              ].map((step, i, arr) => (
+                <div key={i} className="flex gap-4 items-stretch group">
+                  <div className="flex flex-col items-center">
+                    <div 
+                      className={`w-2.5 h-2.5 rounded-full z-10 ${
+                        step.status === "past" ? "bg-[#10B981]" : 
+                        step.status === "current" ? "bg-[#D97706] animate-pulse" : 
+                        "bg-[#3C3835]"
+                      }`}
+                    ></div>
+                    {i < arr.length - 1 && (
+                      <div className="w-px flex-1 bg-[#3C3835] my-1"></div>
+                    )}
+                  </div>
+                  <div className="pb-6">
+                    <span className={`text-[13px] ${
+                      step.status === "past" ? "text-[#A8A29E]" : 
+                      step.status === "current" ? "text-[#FAFAF9] font-medium" : 
+                      "text-[#78716C]"
+                    }`}>
+                      {step.label}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Card "Actions rapides" */}
+          <div 
+            className="rounded-xl p-5 flex flex-col gap-4"
+            style={{ backgroundColor: "#2E2B28", border: "1px solid #3C3835" }}
+          >
+            <h3 className="text-[13px] font-semibold text-[#FAFAF9]">
+              Actions rapides
+            </h3>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { icon: FileText, label: "SITREP" },
+                { icon: AlertCircle, label: "Incident" },
+                { icon: Bell, label: "Alerte" }
+              ].map((action, i) => (
+                <button 
+                  key={i}
+                  className="flex flex-col items-center gap-2 p-3 rounded-lg border transition-all hover:scale-[1.02]"
+                  style={{ backgroundColor: "#1C1917", border: "1px solid #3C3835" }}
+                >
+                  <action.icon className="w-4 h-4 text-[#78716C]" />
+                  <span className="text-[10px] text-[#A8A29E] font-medium text-center leading-tight">
+                    {action.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </aside>
+
+        {/* 📡 PANEL DROIT — "Canaux de Communication" */}
+        <section 
+          className="flex-1 flex flex-col overflow-hidden relative"
+          style={{ backgroundColor: "#1E1C1A" }}
+        >
+          {/* Barre latérale des canaux (en haut ou à gauche) */}
+          <div 
+            className="w-full flex flex-col p-4 border-b"
+            style={{ backgroundColor: "#1E1C1A", borderBottom: "1px solid #3C3835" }}
+          >
+            <div className="flex items-center gap-2 mb-4 px-1">
+              <MessageSquare className="w-4 h-4 text-[#78716C]" />
+              <h2 className="text-[13px] font-semibold text-[#FAFAF9]">
+                Canaux de communication
+              </h2>
+            </div>
+
+            <ChannelSidebar
+              selectedChannel={selectedChannel}
+              onChannelClick={setSelectedChannel}
+              counts={data?.counts || {}}
+              resolvedTheme={resolvedTheme}
+            />
+          </div>
+
+          {/* Flux de communication principal */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {selectedChannel ? (
+              <CommunicationFeed
+                channelType={selectedChannel}
+                data={data}
+                searchQuery={searchQuery}
+                onViewInjection={setSelectedInjection}
+                onAcknowledgeInjection={handleAcknowledgeInjection}
+                onViewCommunication={setSelectedCommunication}
+                onViewReport={(id, name) => {
+                  setReportLoading(true);
+                  setReportError(null);
+                  setSelectedReport({
+                    filePath: `/api/bia/download/${id}?inline=true`,
+                    fileName: name,
+                    reportId: id,
+                  });
+                }}
+              />
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
+                <div 
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6"
+                  style={{ backgroundColor: "#2E2B28", border: "1px solid #3C3835" }}
+                >
+                  <MessageSquare className="w-8 h-8 text-[#3C3835]" />
+                </div>
+                <h3 className="text-[15px] font-medium text-[#57534E] mb-2">
+                  Aucun canal sélectionné
+                </h3>
+                <p className="text-[13px] text-[#78716C] max-w-[240px] leading-relaxed">
+                  Veuillez choisir un canal opérationnel ci-dessus pour consulter les messages.
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+      </main>
+
+      {/* Compose Form Modal */}
+      {isComposing && selectedChannel && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-[#3C3835] bg-[#1C1917] p-1 shadow-2xl">
+            {selectedChannel === "email" && (
+              <EmailComposeForm
+                onSubmit={handleEmailSubmit}
+                onCancel={() => setIsComposing(false)}
+                simulationId={simulationId}
+                teamId={currentTeamId}
+              />
+            )}
+            {selectedChannel === "sms" && (
+              <SmsComposeForm
+                onSubmit={handleSmsSubmit}
+                onCancel={() => setIsComposing(false)}
+                simulationId={simulationId}
+                teamId={currentTeamId}
+              />
+            )}
+            {selectedChannel === "call" && (
+              <CallComposeForm
+                onSubmit={handleCallSubmit}
+                onCancel={() => setIsComposing(false)}
+                simulationId={simulationId}
+                teamId={currentTeamId}
+              />
+            )}
+            {selectedChannel === "alert" && (
+              <AlertComposeForm
+                onSubmit={handleAlertSubmit}
+                onCancel={() => setIsComposing(false)}
+                simulationId={simulationId}
+                teamId={currentTeamId}
+              />
+            )}
+            {selectedChannel === "memo" && (
+              <MemoComposeForm
+                onSubmit={handleMemoSubmit}
+                onCancel={() => setIsComposing(false)}
+                simulationId={simulationId}
+                teamId={currentTeamId}
+              />
+            )}
+            {selectedChannel === "newsBroadcast" && (
+              <NewsBroadcastComposeForm
+                onSubmit={handleNewsBroadcastSubmit}
+                onCancel={() => setIsComposing(false)}
+              />
+            )}
+            {selectedChannel === "newspaper" && (
+              <NewspaperComposeForm
+                onSubmit={handleNewspaperSubmit}
+                onCancel={() => setIsComposing(false)}
+              />
+            )}
+            {selectedChannel === "social" && (
+              <SocialComposeForm
+                onSubmit={handleSocialSubmit}
+                onCancel={() => setIsComposing(false)}
+              />
+            )}
+            {selectedChannel === "report" && (
+              <div className="p-6 flex flex-col gap-6">
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-[16px] font-semibold text-[#FAFAF9]">Gestion des Rapports</h3>
+                  <p className="text-[12px] text-[#78716C]">Générer un SITREP ou uploader un document PDF</p>
+                </div>
+
+                {/* SITREP Draft Section */}
+                <div className="p-4 rounded-xl bg-[#2E2B28] border border-[#3C3835] flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[13px] font-medium text-[#FAFAF9]">Brouillon de SITREP</span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-[11px] font-medium border-[#D97706]/40 text-[#D97706] hover:bg-[#D97706]/10"
+                      onClick={handleAIDraftSitRep}
+                      disabled={reportLoading}
+                    >
+                      {reportLoading ? (
+                        <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-3 h-3 mr-1.5" />
+                      )}
+                      Générer par IA
+                    </Button>
+                  </div>
+                  
+                  <div className="flex flex-col gap-3">
+                    <input
+                      type="text"
+                      placeholder="Titre du rapport..."
+                      value={reportTitle}
+                      onChange={(e) => setReportTitle(e.target.value)}
+                      className="w-full bg-[#1C1917] border-[#3C3835] border rounded-lg px-3 py-2 text-[13px] text-[#FAFAF9] placeholder-[#78716C] focus:border-[#D97706] outline-none"
+                    />
+                    <textarea
+                      placeholder="Description ou contenu du SITREP..."
+                      value={reportDescription}
+                      onChange={(e) => setReportDescription(e.target.value)}
+                      className="w-full bg-[#1C1917] border-[#3C3835] border rounded-lg px-3 py-2 text-[13px] text-[#FAFAF9] placeholder-[#78716C] focus:border-[#D97706] outline-none min-h-[100px] resize-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="w-full h-px bg-[#3C3835]"></div>
+
+                {/* PDF Upload Section */}
+                <div className="flex flex-col gap-3">
+                  <span className="text-[13px] font-medium text-[#FAFAF9]">Upload de document PDF</span>
+                  <div className="flex gap-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="application/pdf"
+                      className="hidden"
+                      onChange={(e) => setReportFile(e.target.files?.[0] || null)}
+                    />
+                    <Button
+                      variant="outline"
+                      className="flex-1 border-dashed border-2 border-[#3C3835] hover:border-[#D97706]/40 hover:bg-[#2C2118] h-12 text-[12px] text-[#78716C]"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {reportFile ? reportFile.name : "Sélectionner un fichier PDF"}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-4">
+                  <Button
+                    variant="ghost"
+                    className="text-[13px] text-[#78716C] hover:text-[#FAFAF9]"
+                    onClick={() => setIsComposing(false)}
+                  >
+                    Annuler
                   </Button>
                   <Button
-                    onClick={() => {
-                      handleAcknowledgeInjection(selectedInjection.id);
-                      setSelectedInjection(null);
-                    }}
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="px-6 py-2 text-[13px] font-semibold rounded-lg"
+                    style={{ backgroundColor: "#D97706", color: "#1C1917" }}
+                    onClick={handleReportUpload}
+                    disabled={reportUploading || (!reportFile && !reportTitle)}
                   >
-                    <Check className="h-4 w-4 mr-2" />
-                    Marquer comme lu
+                    {reportUploading ? "Envoi..." : "Envoyer le Rapport"}
                   </Button>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Modale pour afficher les détails d'une communication */}
+      {selectedInjection && (
+        <InjectionModal 
+          injection={selectedInjection}
+          onClose={() => setSelectedInjection(null)}
+          onAcknowledge={(id) => {
+            handleAcknowledgeInjection(id);
+            setSelectedInjection(null);
+          }}
+        />
+      )}
+      
       {selectedCommunication && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-          <Card className="w-full max-w-3xl max-h-[90vh] bg-card dark:bg-card shadow-xl rounded-2xl border border-border dark:border-border overflow-hidden flex flex-col">
-            {/* En-tête avec dégradé de couleur */}
-            <div
-              className={`bg-gradient-to-r ${getChannelGradient(
-                selectedCommunication.type
-              )} px-6 py-4 border-b border-border dark:border-border`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-lg">
-                    {getIconForType(selectedCommunication.type)}
-                  </div>
-                  <h2 className="text-xl font-bold text-white truncate max-w-[70%]">
-                    {selectedCommunication.subject || "Communication"}
-                  </h2>
-                </div>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="text-white/80 hover:bg-white/20 hover:text-white"
-                  aria-label="Fermer"
-                  onClick={() => setSelectedCommunication(null)}
-                >
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
-
-              {/* Métadonnées */}
-              <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-white/90">
-                <div className="flex items-center bg-white/20 px-2.5 py-1 rounded-full">
-                  <Calendar className="h-3.5 w-3.5 mr-1.5" />
-                  <span>{formatDate(selectedCommunication.createdAt)}</span>
-                </div>
-                {selectedCommunication.sender && (
-                  <div className="flex items-center bg-white/20 px-2.5 py-1 rounded-full">
-                    <User className="h-3.5 w-3.5 mr-1.5" />
-                    <span>
-                      De: {selectedCommunication.sender.firstName}{" "}
-                      {selectedCommunication.sender.lastName}
-                    </span>
-                  </div>
-                )}
-                {selectedCommunication.recipient && (
-                  <div className="flex items-center bg-white/20 px-2.5 py-1 rounded-full">
-                    <Mail className="h-3.5 w-3.5 mr-1.5" />
-                    <span>
-                      À: {selectedCommunication.recipient.firstName}{" "}
-                      {selectedCommunication.recipient.lastName}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-            <CardContent className="p-6 overflow-y-auto flex-1">
-              {/* Contenu principal */}
-              <div className="prose prose-sm max-w-none text-gray-700 mb-6 whitespace-pre-line break-words">
-                {selectedCommunication.content}
-              </div>
-
-              {/* Bouton de fermeture */}
-              <div className="flex justify-end pt-4 border-t border-gray-100">
-                <Button
-                  variant="outline"
-                  className="border-gray-300 text-gray-700 hover:bg-gray-50"
-                  onClick={() => setSelectedCommunication(null)}
-                >
-                  Fermer
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <CommunicationModal 
+          communication={selectedCommunication}
+          onClose={() => setSelectedCommunication(null)}
+        />
+      )}
+      
+      {selectedReport && (
+        <ReportModal 
+          report={selectedReport}
+          loading={reportLoading}
+          onClose={() => {
+            setSelectedReport(null);
+            setReportError(null);
+            setReportLoading(false);
+          }}
+        />
       )}
     </div>
   );

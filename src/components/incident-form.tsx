@@ -103,6 +103,25 @@ export function IncidentForm({
   });
 
   useEffect(() => {
+    if (open) {
+      form.reset(initialData || {
+        name: "",
+        description: "",
+        location: "",
+        resources: "",
+        requiredVehicles: "",
+        latitude: "",
+        longitude: "",
+        incidentDate: new Date().toISOString().split("T")[0],
+        typeId: "",
+        teamId: "",
+        planId: "",
+        status: IncidentStatus.OPEN,
+      });
+    }
+  }, [open, initialData, form]);
+
+  useEffect(() => {
     const fetchData = async () => {
       try {
         // Récupérer les équipes
@@ -235,7 +254,7 @@ export function IncidentForm({
                     <FormLabel>Type d'incident</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -263,7 +282,7 @@ export function IncidentForm({
                     <FormLabel>Statut</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -293,7 +312,7 @@ export function IncidentForm({
                     <FormLabel>Équipe</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -321,7 +340,7 @@ export function IncidentForm({
                     <FormLabel>Plan</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>

@@ -1,14 +1,6 @@
 'use server';
 
-interface GeminiResponse {
-  candidates: Array<{
-    content: {
-      parts: Array<{
-        text: string;
-      }>;
-    };
-  }>;
-}
+import { AzureOpenAI } from 'openai';
 
 export interface Recommendation {
   title: string;
@@ -31,51 +23,31 @@ export interface ImpactAnalysisResult {
   contingencyMeasures: string;
 }
 
-const GEMINI_API_KEY = "AIzaSyB1LRhsvFGjlJbvtUJ7SxEgFZ1qAS0epI4";
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+/**
+ * Initialise le client Azure OpenAI
+ */
+function getAzureClient() {
+  const apiKey = process.env.AZURE_OPENAI_API_KEY;
+  const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
+  const deployment = process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-4o";
 
-async function queryGemini(prompt: string): Promise<string> {
-  try {
-    const response = await fetch(
-      `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: prompt,
-                },
-              ],
-            },
-          ],
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`Erreur de l'API Gemini: ${response.status}`);
-    }
-
-    const data = (await response.json()) as GeminiResponse;
-
-    if (!data.candidates || data.candidates.length === 0) {
-      throw new Error('Aucune réponse de l\'API Gemini');
-    }
-
-    return data.candidates[0].content.parts[0].text;
-  } catch (error) {
-    console.error('Erreur lors de la requête à Gemini:', error);
-    throw error;
+  if (!apiKey || !endpoint) {
+    throw new Error("Azure OpenAI n'est pas configuré. Vérifiez vos variables d'environnement.");
   }
+
+  return new AzureOpenAI({
+    apiKey,
+    endpoint,
+    apiVersion: process.env.AZURE_OPENAI_API_VERSION || "2024-02-15-preview",
+    deployment,
+  });
 }
 
 export async function generateImpactAnalysis(processData: any): Promise<ImpactAnalysisResult> {
   try {
+    const client = getAzureClient();
+    const deployment = process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-4o";
+
     const prompt = `# Analyse d'Impact Métier (BIA) - Génération de Rapport
 
     ## 1. Contexte du Processus
@@ -122,129 +94,83 @@ export async function generateImpactAnalysis(processData: any): Promise<ImpactAn
     - **Localisation Documentation**: ${processData.documentationLocation || 'Non spécifiée'}
 
     ## Instructions pour l'Analyse
-    - Fournis une analyse complète et structurée en format JSON
-    - Sois précis et basé sur les données fournies
-    - Propose des recommandations actionnables
-    - Tient compte des délais de reprise (RTO, RPO, MTPD)
-    - Évalue les risques et impacts potentiels
+    - Fournis une analyse complète et structurée en format JSON.
+    - Sois précis et basé sur les données fournies.
+    - Évalue les risques en fonction des délais de reprise (RTO, RPO, MTPD).
+    - Propose des recommandations actionnables pour améliorer la résilience.
     
     ## Format de Réponse Requis (JSON uniquement)
     {
-      "summary": "Résumé concis de l'impact global et de l'importance du processus",
+      "summary": "Résumé de l'impact global",
       "riskLevel": "low/medium/high",
-      "estimatedRecoveryTime": "Estimation du temps de rétablissement",
-      "financialImpact": "Impact financier potentiel",
-      "operationalImpact": "Impact sur les opérations",
-      "reputationImpact": "Impact sur la réputation",
-      "keyRisks": ["Risque 1", "Risque 2", "Risque 3"],
-      "criticalDependencies": ["Dépendance 1", "Dépendance 2"],
+      "estimatedRecoveryTime": "Estimation en heures/jours",
+      "financialImpact": "Description détaillée",
+      "operationalImpact": "Description détaillée",
+      "reputationImpact": "Description détaillée",
+      "keyRisks": ["Risque 1", "Risque 2"],
+      "criticalDependencies": ["Dépendance 1"],
       "recommendations": [
         {
-          "title": "Titre de la recommandation",
-          "description": "Description détaillée",
+          "title": "Titre",
+          "description": "Description",
           "priority": "high/medium/low",
-          "estimatedTime": "Temps estimé pour la mise en œuvre"
+          "estimatedTime": "Durée"
         }
       ],
-      "recoveryStrategy": "Stratégie de reprise recommandée",
-      "contingencyMeasures": "Mesures d'urgence à mettre en place"
+      "recoveryStrategy": "Stratégie détaillée",
+      "contingencyMeasures": "Mesures détaillées"
     }`;
 
-    const response = await queryGemini(prompt);
-    
-    // Essayer d'extraire et de parser le JSON
-    try {
-      // Nettoyer la réponse pour ne garder que le JSON
-      let jsonString = response.trim();
-      
-      // Supprimer les éventuels marqueurs de code
-      if (jsonString.startsWith('```json')) {
-        jsonString = jsonString.substring(7);
-      }
-      if (jsonString.startsWith('```')) {
-        jsonString = jsonString.substring(3);
-      }
-      if (jsonString.endsWith('```')) {
-        jsonString = jsonString.substring(0, jsonString.length - 3);
-      }
-      
-      // Nettoyer les éventuels espaces et sauts de ligne au début et à la fin
-      jsonString = jsonString.trim();
-      
-      // S'assurer que c'est bien un objet JSON valide
-      if (!jsonString.startsWith('{') || !jsonString.endsWith('}')) {
-        throw new Error('Format JSON invalide');
-      }
-      
-      const analysis = JSON.parse(jsonString) as ImpactAnalysisResult;
-      
-      // Valider la structure de la réponse
-      if (!analysis.summary || !analysis.recommendations || !analysis.riskLevel || !analysis.estimatedRecoveryTime) {
-        throw new Error('Format de réponse invalide');
-      }
-      
-      return analysis;
-    } catch (parseError) {
-      console.error('Erreur lors du parsing de la réponse:', parseError);
-      // Retourner une réponse par défaut en cas d'échec du parsing
-      const defaultRecommendation: Recommendation = {
-        title: 'Vérification manuelle requise',
-        description: 'Veuillez vérifier manuellement les détails du processus.',
-        priority: 'high',
-        estimatedTime: 'Non spécifié'
-      };
-      
-      return {
-        summary: 'Impossible de générer une analyse complète. ' + response.substring(0, 200) + '...',
-        recommendations: [defaultRecommendation],
-        riskLevel: 'medium',
-        estimatedRecoveryTime: 'Non spécifié',
-        financialImpact: 'Non évalué',
-        operationalImpact: 'Non évalué',
-        reputationImpact: 'Non évalué',
-        keyRisks: ['Impossible de générer une analyse des risques'],
-        criticalDependencies: [],
-        recoveryStrategy: 'Non spécifiée',
-        contingencyMeasures: 'Non spécifiées'
-      };
+    const completion = await client.chat.completions.create({
+      model: deployment,
+      messages: [
+        {
+          role: "system",
+          content: "Tu es un expert en BIA et continuité d'activité. Tu fournis des analyses d'impact précises en format JSON.",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: 0.2,
+      response_format: { type: "json_object" }
+    });
+
+    const responseText = completion.choices[0]?.message?.content || "{}";
+    const analysis = JSON.parse(responseText) as ImpactAnalysisResult;
+
+    // Validation basique
+    if (!analysis.summary || !analysis.riskLevel) {
+      throw new Error("Réponse IA incomplète");
     }
-    
+
+    return analysis;
+
   } catch (error) {
-    console.error('Erreur lors de la génération du rapport d\'impact:', error);
-    // Retourner une réponse d'erreur claire
-    const errorRecommendations: Recommendation[] = [
-      {
-        title: 'Vérification de la connexion',
-        description: 'Vérifiez votre connexion internet',
-        priority: 'high',
-        estimatedTime: '5 minutes'
-      },
-      {
-        title: 'Nouvelle tentative',
-        description: 'Réessayez plus tard',
-        priority: 'medium',
-        estimatedTime: '15 minutes'
-      },
-      {
-        title: 'Contact du support',
-        description: 'Contactez le support si le problème persiste',
-        priority: 'low',
-        estimatedTime: '1 heure'
-      }
-    ];
+    console.error('Erreur lors de la génération du rapport d\'impact (Azure):', error);
     
+    // Fallback gracieux avec informations d'erreur pour l'utilisateur
     return {
-      summary: 'Une erreur est survenue lors de la génération du rapport d\'impact.',
-      recommendations: errorRecommendations,
+      summary: 'Une erreur est survenue lors de la génération de l\'analyse automatique. Veuillez vérifier vos configurations IA.',
       riskLevel: 'medium',
       estimatedRecoveryTime: 'Non disponible',
-      financialImpact: 'Non évalué',
-      operationalImpact: 'Non évalué',
-      reputationImpact: 'Non évalué',
-      keyRisks: ['Erreur lors de la génération du rapport'],
+      financialImpact: 'Échec de l\'analyse automatique',
+      operationalImpact: 'Échec de l\'analyse automatique',
+      reputationImpact: 'Échec de l\'analyse automatique',
+      keyRisks: ['Erreur de service IA'],
       criticalDependencies: [],
-      recoveryStrategy: 'Non spécifiée',
-      contingencyMeasures: 'Non spécifiées'
+      recommendations: [
+        {
+          title: 'Analyse Manuelle',
+          description: 'L\'IA n\'a pas pu générer l\'analyse. Veuillez procéder à une évaluation manuelle.',
+          priority: 'high',
+          estimatedTime: 'Non spécifié'
+        }
+      ],
+      recoveryStrategy: 'Non disponible',
+      contingencyMeasures: 'Non disponible'
     };
   }
 }
+

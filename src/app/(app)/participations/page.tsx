@@ -135,8 +135,20 @@ export default function ParticipationsPage() {
         body: JSON.stringify({ role: newRole }),
       });
 
-      if (!response.ok)
-        throw new Error("Erreur lors de la mise à jour du rôle");
+      if (!response.ok) {
+        let errorMessage = "Erreur lors de la mise à jour du rôle";
+        try {
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorData.error || errorMessage;
+          } else {
+            const textError = await response.text();
+            errorMessage = textError || errorMessage;
+          }
+        } catch (e) {}
+        throw new Error(errorMessage);
+      }
 
       await fetchParticipations();
       toast({
@@ -168,10 +180,20 @@ export default function ParticipationsPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.message || "Erreur lors de l'ajout de la participation"
-        );
+        let errorMessage = "Erreur lors de l'ajout de la participation";
+        try {
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorData.error || errorMessage;
+          } else {
+            const textError = await response.text();
+            errorMessage = textError || errorMessage;
+          }
+        } catch (parseError) {
+          console.error("Erreur lors du parsing de l'erreur:", parseError);
+        }
+        throw new Error(errorMessage);
       }
 
       await fetchParticipations();
@@ -199,8 +221,20 @@ export default function ParticipationsPage() {
         method: "DELETE",
       });
 
-      if (!response.ok)
-        throw new Error("Erreur lors de la suppression de la participation");
+      if (!response.ok) {
+        let errorMessage = "Erreur lors de la suppression de la participation";
+        try {
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorData.error || errorMessage;
+          } else {
+            const textError = await response.text();
+            errorMessage = textError || errorMessage;
+          }
+        } catch (e) {}
+        throw new Error(errorMessage);
+      }
 
       await fetchParticipations();
       toast({

@@ -80,16 +80,17 @@ export function SimulationAssignmentForm({
   useEffect(() => {
     const fetchRoles = async () => {
       try {
-        const response = await fetch('/api/tasks/roles');
-        if (!response.ok) throw new Error('Erreur lors du chargement des rôles');
+        const response = await fetch("/api/tasks/roles");
+        if (!response.ok)
+          throw new Error("Erreur lors du chargement des rôles");
         const data = await response.json();
         setRoles(data);
       } catch (error) {
-        console.error('Erreur lors du chargement des rôles:', error);
+        console.error("Erreur lors du chargement des rôles:", error);
         toast({
-          title: 'Erreur',
-          description: 'Impossible de charger les rôles',
-          variant: 'destructive',
+          title: "Erreur",
+          description: "Impossible de charger les rôles",
+          variant: "destructive",
         });
       } finally {
         setLoadingRoles(false);
@@ -104,10 +105,21 @@ export function SimulationAssignmentForm({
     defaultValues: {
       userId: "",
       simulationId: "",
-      role: "",
+      role: "participant",
       teamId: "",
     },
   });
+
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        userId: "",
+        simulationId: "",
+        role: "participant",
+        teamId: "",
+      });
+    }
+  }, [open, form]);
 
   const handleSubmit = async (data: AssignmentFormValues) => {
     try {
@@ -145,7 +157,7 @@ export function SimulationAssignmentForm({
                   <FormLabel>Utilisateur</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -178,7 +190,7 @@ export function SimulationAssignmentForm({
                   <FormLabel>Simulation</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -205,7 +217,7 @@ export function SimulationAssignmentForm({
                   <FormLabel>Rôle</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value || "participant"}
                   >
                     <FormControl>
                       <SelectTrigger>

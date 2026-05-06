@@ -8,7 +8,7 @@ export async function GET() {
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return new NextResponse("Non autorisé", { status: 401 });
+      return NextResponse.json({ message: "Non autorisé" }, { status: 401 });
     }
 
     const simulations = await prisma.simulation.findMany({
@@ -20,7 +20,7 @@ export async function GET() {
     return NextResponse.json(simulations);
   } catch (error) {
     console.error("[SIMULATIONS_GET]", error);
-    return new NextResponse("Erreur interne", { status: 500 });
+    return NextResponse.json({ message: "Erreur interne" }, { status: 500 });
   }
 }
 
@@ -29,18 +29,25 @@ export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return new NextResponse("Non autorisé", { status: 401 });
+      return NextResponse.json({ message: "Non autorisé" }, { status: 401 });
+    }
+
+    // Seuls les ADMINS peuvent créer des simulations
+    if (session.user.role !== "ADMIN") {
+      return NextResponse.json({ message: "Accès refusé - Réservé aux administrateurs" }, {
+        status: 403,
+      });
     }
 
     const data = await req.json();
-    const { assignments, ...simulationData } = data;
+    const { assignments = [], ...simulationData } = data;
 
     if (
       !simulationData.title ||
       !simulationData.startDate ||
       !simulationData.endDate
     ) {
-      return new NextResponse("Données manquantes", { status: 400 });
+      return NextResponse.json({ message: "Données manquantes" }, { status: 400 });
     }
 
     const simulation = await prisma.simulation.create({

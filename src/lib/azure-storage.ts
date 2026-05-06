@@ -54,9 +54,9 @@ class AzureStorageService {
     }
 
     try {
-      await this.containerClient.createIfNotExists({
-        access: "blob", // Accès public en lecture pour les fichiers uploadés
-      });
+      // Créer le conteneur sans spécifier l'accès public
+      // (Le compte de stockage a AllowBlobPublicAccess désactivé)
+      await this.containerClient.createIfNotExists();
     } catch (error) {
       console.error("Erreur lors de la création du conteneur:", error);
       throw error;
@@ -175,6 +175,13 @@ class AzureStorageService {
       console.error("❌ Erreur lors de la liste des fichiers:", error);
       throw error;
     }
+  }
+
+  /**
+   * Retourne le client du conteneur
+   */
+  getContainerClient(): ContainerClient | null {
+    return this.containerClient;
   }
 
   /**

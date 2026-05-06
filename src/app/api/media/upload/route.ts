@@ -1,13 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
-import { writeFile } from "fs/promises";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { azureStorage } from "@/lib/azure-storage";
+import { prisma } from "@/lib/prisma";
+
+/**
+ * Azure Storage File Upload API
+ * Persistent file storage for production deployment
+ */
+
+// Allowed file extensions
+const ALLOWED_EXTENSIONS = [
+  ".pdf",
+  ".doc",
+  ".docx",
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".mp4",
+  ".webm",
+  ".mov",
+];
+
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const formData = await request.formData();
     const file = formData.get("file") as File;
-    const folder = (formData.get("folder") as string) || "";
+    const folder = (formData.get("folder") as string) || "documents";
+    const uploadType = (formData.get("uploadType") as string) || "general";
+    const simulationId = (formData.get("simulationId") as string) || undefined;
+    const assignmentId = (formData.get("assignmentId") as string) || undefined;
 
     if (!file) {
       return NextResponse.json(
@@ -16,80 +46,81 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Valider la taille du fichier (max 10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    if (file.size > maxSize) {
+    // Validate file size
+    if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: "Le fichier est trop volumineux (max 10MB)" },
+        { error: "Le fichier est trop volumineux (max 50MB)" },
         { status: 400 }
       );
     }
 
-    // Valider l'extension du fichier
-    const allowedExtensions = [
-      ".jpg",
-      ".jpeg",
-      ".png",
-      ".gif",
-      ".webp",
-      ".svg",
-      ".mp4",
-      ".webm",
-      ".mov",
-      ".avi",
-      ".pdf",
-      ".doc",
-      ".docx",
-      ".txt",
-    ];
-    const ext = path.extname(file.name).toLowerCase();
-    if (!allowedExtensions.includes(ext)) {
+    // Validate file extension
+    const ext = ("." + file.name.split(".").pop()).toLowerCase();
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
       return NextResponse.json(
         { error: "Type de fichier non autorisé" },
         { status: 400 }
       );
     }
 
-    // Créer le dossier de destination
-    const mediaDir = path.join(process.cwd(), "public", "media", folder);
-    if (!fs.existsSync(mediaDir)) {
-      fs.mkdirSync(mediaDir, { recursive: true });
+    // Check if Azure Storage is available
+    if (!azureStorage.isAvailable()) {
+      return NextResponse.json(
+        { error: "File storage service not available" },
+        { status: 503 }
+      );
     }
 
-    // Générer un nom de fichier unique avec sanitization stricte
+    // Generate unique filename with timestamp and user ID
     const timestamp = Date.now();
-    // Extraire le nom sans extension et l'extension
-    const fileNameWithoutExt = path.basename(file.name, ext);
-    // Remplacer tous les caractères non-alphanumériques par des tirets
-    const sanitizedName = fileNameWithoutExt
-      .replace(/[^a-zA-Z0-9]/g, "-")
-      .replace(/-+/g, "-") // Remplacer les tirets multiples par un seul
-      .replace(/^-|-$/g, "") // Enlever les tirets au début et à la fin
+    const sanitizedName = file.name
+      .replace(/[^a-zA-Z0-9.-]/g, "-")
+      .replace(/-+/g, "-")
       .toLowerCase();
-    const fileName = `${timestamp}_${sanitizedName}${ext}`;
-    const filePath = path.join(mediaDir, fileName);
+    const fileName = `${timestamp}-${sanitizedName}`;
 
-    // Convertir le fichier en buffer et l'enregistrer
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
+    // Upload file to Azure Storage
+    const storageUrl = await azureStorage.uploadFile(file, fileName, folder);
+    console.log(`[UPLOAD] File uploaded to Azure: ${fileName}`);
 
-    // Construire l'URL relative
-    const relativePath = folder ? `${folder}/${fileName}` : fileName;
-    const fileUrl = `/media/${relativePath}`;
+    // Extract blob path from storage URL for database storage
+    const blobPath = `${folder}/${fileName}`;
 
-    return NextResponse.json({
-      success: true,
-      file: {
-        name: fileName,
-        path: relativePath,
-        url: fileUrl,
-        size: file.size,
-        type: file.type,
+    // Save file metadata to database
+    const fileRecord = await prisma.fileUpload.create({
+      data: {
+        fileName: file.name,
+        storagePath: blobPath,
+        storageUrl: `/api/media/download/${encodeURIComponent(blobPath)}`,
+        fileSize: file.size,
+        mimeType: file.type || "application/octet-stream",
+        uploadType: uploadType,
+        storageProvider: "azure",
+        uploadedById: session.user.id,
+        ...(simulationId && { simulationId }),
+        ...(assignmentId && { assignmentId }),
       },
     });
+
+    console.log(`[DB] File record created: ${fileRecord.id}`);
+
+    return NextResponse.json(
+      {
+        success: true,
+        file: {
+          id: fileRecord.id,
+          name: file.name,
+          path: blobPath,
+          url: fileRecord.storageUrl,
+          size: file.size,
+          type: file.type,
+          uploadType: uploadType,
+        },
+      },
+      { status: 200 }
+    );
   } catch (error) {
-    console.error("Erreur lors de l'upload du fichier:", error);
+    console.error("[UPLOAD_ERROR]", error);
     return NextResponse.json(
       { error: "Erreur lors de l'upload du fichier" },
       { status: 500 }

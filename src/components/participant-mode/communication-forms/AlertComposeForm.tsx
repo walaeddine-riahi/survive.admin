@@ -22,11 +22,13 @@ export default function AlertComposeForm({
   onSubmit,
   onCancel,
   simulationId,
+  teamId,
 }: {
   onSubmit: (data: AlertFormData) => void;
   onCancel: () => void;
   isParticipant?: boolean;
   simulationId?: string;
+  teamId?: string | null;
 }) {
   const { data: session } = useSession();
   const [users, setUsers] = useState<User[]>([]);
@@ -56,7 +58,12 @@ export default function AlertComposeForm({
         if (response.ok) {
           const data = await response.json();
           const allUsers = simulationId
-            ? data.map((assignment: { user: User }) => assignment.user)
+            ? data
+                .filter(
+                  (assignment: { user: User; teamId?: string | null }) =>
+                    !teamId || assignment.teamId === teamId
+                )
+                .map((assignment: { user: User }) => assignment.user)
             : data;
           // Filtrer pour ne pas afficher l'utilisateur actuel dans la liste des destinataires
           const otherUsers = allUsers.filter(
@@ -68,11 +75,10 @@ export default function AlertComposeForm({
         console.error("Erreur lors du chargement des utilisateurs:", error);
       }
     };
-
     if (session?.user?.id) {
       fetchUsers();
     }
-  }, [session, simulationId]);
+  }, [session?.user?.id, simulationId, teamId]);
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { checked } = e.target;
@@ -172,11 +178,13 @@ export default function AlertComposeForm({
             id="sendToAll"
             checked={formData.sendToAll}
             onChange={handleCheckboxChange}
-            aria-label="Envoyer à tous les participants"
-            title="Envoyer à tous les participants"
+            aria-label="Envoyer à tous les membres de mon équipe"
+            title="Envoyer à tous les membres de mon équipe"
             className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
           />
-          <Label htmlFor="sendToAll">Envoyer à tous les participants</Label>
+          <Label htmlFor="sendToAll">
+            Envoyer à tous les membres de mon équipe
+          </Label>
         </div>
 
         {!formData.sendToAll && (

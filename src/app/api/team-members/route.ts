@@ -32,21 +32,54 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const data = await request.json();
-    const teamMember = await prisma.teamMember.create({
-      data: {
-        role: data.role,
+    const role = data.role || "MEMBER";
+
+    if (!data.userId || !data.teamId) {
+      return NextResponse.json(
+        { error: "L'utilisateur et l'équipe sont requis" },
+        { status: 400 }
+      );
+    }
+
+    const existingTeamMember = await prisma.teamMember.findFirst({
+      where: {
         userId: data.userId,
         teamId: data.teamId,
       },
-      include: {
-        user: {
-          include: {
-            profile: true,
-          },
-        },
-        team: true,
-      },
     });
+
+    const teamMember = existingTeamMember
+      ? await prisma.teamMember.update({
+          where: {
+            id: existingTeamMember.id,
+          },
+          data: {
+            role,
+          },
+          include: {
+            user: {
+              include: {
+                profile: true,
+              },
+            },
+            team: true,
+          },
+        })
+      : await prisma.teamMember.create({
+          data: {
+            role,
+            userId: data.userId,
+            teamId: data.teamId,
+          },
+          include: {
+            user: {
+              include: {
+                profile: true,
+              },
+            },
+            team: true,
+          },
+        });
 
     return NextResponse.json(teamMember);
   } catch (error) {

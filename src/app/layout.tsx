@@ -3,14 +3,24 @@ import { HydrationFix } from "@/components/hydration-fix";
 import { authOptions } from "@/lib/auth";
 import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
-import { Roboto } from "next/font/google";
+import { Crimson_Pro, JetBrains_Mono, Inter } from "next/font/google";
 import "./globals.css";
 
-const roboto = Roboto({
-  weight: ["300", "400", "500", "700"],
+const inter = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
-  display: "swap",
+});
+
+const serif = Crimson_Pro({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-serif",
+});
+
+const mono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-mono",
 });
 
 export const metadata: Metadata = {
@@ -34,10 +44,8 @@ export default async function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning>
       <body
-        className={roboto.className}
+        className={`${inter.variable} ${serif.variable} ${mono.variable} font-sans`}
         suppressHydrationWarning
-        data-new-gr-c-s-check-loaded=""
-        data-gr-ext-installed=""
       >
         <HydrationFix />
         <RootLayoutContent session={session}>{children}</RootLayoutContent>

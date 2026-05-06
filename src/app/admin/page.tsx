@@ -1,13 +1,14 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -15,19 +16,35 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Search, Shield, User, CheckCircle, XCircle, MoreHorizontal, Clock, Settings, Users } from "lucide-react"
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import {
+  Search,
+  Shield,
+  User,
+  CheckCircle,
+  XCircle,
+  MoreHorizontal,
+  Clock,
+  Settings,
+  Users,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Données d'exemple pour les utilisateurs
 const users = [
@@ -97,7 +114,7 @@ const users = [
     createdAt: "16 Mai 2025",
     teams: ["Développement"],
   },
-]
+];
 
 // Données d'exemple pour les statistiques
 const stats = [
@@ -121,7 +138,7 @@ const stats = [
     value: "18",
     icon: Clock,
   },
-]
+];
 
 // Données d'exemple pour les logs d'activité
 const activityLogs = [
@@ -155,45 +172,65 @@ const activityLogs = [
     action: "Mise à jour du système vers la version 2.1.5",
     timestamp: "Hier à 03:00",
   },
-]
+];
 
 const getRoleBadge = (role: string) => {
   switch (role) {
-    case 'admin':
-      return <Badge className="bg-primary">Admin</Badge>
-    case 'superadmin':
-      return <Badge className="bg-purple-600">Super Admin</Badge>
-    case 'user':
-      return <Badge variant="outline">Utilisateur</Badge>
+    case "admin":
+      return <Badge className="bg-[var(--accent)] text-white border-none">Admin</Badge>;
+    case "superadmin":
+      return <Badge className="bg-[#7C3AED] text-white border-none">Super Admin</Badge>;
+    case "user":
+      return <Badge variant="outline" className="border-[var(--border)] text-[var(--text-secondary)]">Utilisateur</Badge>;
     default:
-      return <Badge variant="outline">{role}</Badge>
+      return <Badge variant="outline" className="border-[var(--border)]">{role}</Badge>;
   }
-}
+};
 
 const getStatusBadge = (status: string) => {
   switch (status) {
-    case 'active':
-      return <Badge className="bg-green-500">Actif</Badge>
-    case 'inactive':
-      return <Badge variant="secondary">Inactif</Badge>
-    case 'pending':
-      return <Badge className="bg-yellow-500">En attente</Badge>
+    case "active":
+      return <Badge className="bg-[#10B981] text-white border-none">Actif</Badge>;
+    case "inactive":
+      return <Badge variant="secondary" className="bg-[var(--bg-tertiary)] text-[var(--text-muted)] border-none">Inactif</Badge>;
+    case "pending":
+      return <Badge className="bg-[#F59E0B] text-white border-none">En attente</Badge>;
     default:
-      return <Badge variant="outline">{status}</Badge>
+      return <Badge variant="outline" className="border-[var(--border)]">{status}</Badge>;
   }
-}
+};
 
 export default function AdminPage() {
   return (
-    <div className="flex-1 pl-0 pr-4 py-4 bg-background dark">
+    <div className="flex-1 p-8 bg-[var(--bg-primary)] transition-colors duration-300">
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Administration</h1>
-          <Button>
-            <Settings className="mr-2 h-4 w-4" /> Paramètres
-          </Button>
+          <h1 className="text-3xl font-black tracking-tight text-[var(--text-primary)]">Administration</h1>
+          <div className="flex items-center gap-3">
+            <Link href="/admin/teams">
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-[var(--border)] hover:bg-[var(--bg-hover)] text-[var(--text-secondary)]"
+              >
+                <Users className="mr-2 h-4 w-4 text-[var(--accent)]" /> Équipes & affectations
+              </Button>
+            </Link>
+            <Link href="/admin/participant-communications">
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-[var(--border)] hover:bg-[var(--bg-hover)] text-[var(--text-secondary)]"
+              >
+                <User className="mr-2 h-4 w-4 text-[var(--accent)]" /> Communications
+              </Button>
+            </Link>
+            <Button className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white border-none">
+              <Settings className="mr-2 h-4 w-4" /> Paramètres
+            </Button>
+          </div>
         </div>
-        
+
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat, index) => (
             <Card key={index}>
@@ -201,7 +238,7 @@ export default function AdminPage() {
                 <CardTitle className="text-sm font-medium">
                   {stat.title}
                 </CardTitle>
-                <stat.icon className="h-4 w-4 text-muted-foreground" />
+                <stat.icon className="h-4 w-4 text-[var(--accent)]" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stat.value}</div>
@@ -209,15 +246,15 @@ export default function AdminPage() {
             </Card>
           ))}
         </div>
-        
+
         <Tabs defaultValue="users" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="users">Utilisateurs</TabsTrigger>
-            <TabsTrigger value="roles">Rôles & Permissions</TabsTrigger>
-            <TabsTrigger value="logs">Logs d activité</TabsTrigger>
-            <TabsTrigger value="settings">Paramètres système</TabsTrigger>
+          <TabsList className="bg-[var(--bg-tertiary)]/50 p-1 rounded-[12px]">
+            <TabsTrigger value="users" className="data-[state=active]:bg-[var(--bg-surface)] data-[state=active]:text-[var(--text-primary)] rounded-[8px] font-bold">Utilisateurs</TabsTrigger>
+            <TabsTrigger value="roles" className="data-[state=active]:bg-[var(--bg-surface)] data-[state=active]:text-[var(--text-primary)] rounded-[8px] font-bold">Rôles & Permissions</TabsTrigger>
+            <TabsTrigger value="logs" className="data-[state=active]:bg-[var(--bg-surface)] data-[state=active]:text-[var(--text-primary)] rounded-[8px] font-bold">Logs d activité</TabsTrigger>
+            <TabsTrigger value="settings" className="data-[state=active]:bg-[var(--bg-surface)] data-[state=active]:text-[var(--text-primary)] rounded-[8px] font-bold">Paramètres système</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="users" className="space-y-4">
             <Card>
               <CardHeader>
@@ -260,17 +297,23 @@ export default function AdminPage() {
                     <TableRow>
                       <TableHead>ID</TableHead>
                       <TableHead>Utilisateur</TableHead>
-                      <TableHead className="hidden md:table-cell">Email</TableHead>
+                      <TableHead className="hidden md:table-cell">
+                        Email
+                      </TableHead>
                       <TableHead>Rôle</TableHead>
                       <TableHead>Statut</TableHead>
-                      <TableHead className="hidden md:table-cell">Dernière activité</TableHead>
+                      <TableHead className="hidden md:table-cell">
+                        Dernière activité
+                      </TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {users.map((user) => (
                       <TableRow key={user.id}>
-                        <TableCell className="font-mono text-xs">{user.id}</TableCell>
+                        <TableCell className="font-mono text-[10px] text-[var(--text-muted)] tracking-tighter uppercase">
+                          {user.id}
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Avatar className="h-8 w-8">
@@ -284,7 +327,9 @@ export default function AdminPage() {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="hidden md:table-cell">{user.email}</TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {user.email}
+                        </TableCell>
                         <TableCell>{getRoleBadge(user.role)}</TableCell>
                         <TableCell>{getStatusBadge(user.status)}</TableCell>
                         <TableCell className="hidden md:table-cell text-muted-foreground">
@@ -299,11 +344,23 @@ export default function AdminPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem>Voir le profil</DropdownMenuItem>
-                              <DropdownMenuItem>Modifier le rôle</DropdownMenuItem>
-                              <DropdownMenuItem>Réinitialiser le mot de passe</DropdownMenuItem>
-                              <DropdownMenuItem>{user.status === "active" ? "Désactiver" : "Activer"}</DropdownMenuItem>
-                              <DropdownMenuItem className="text-red-500">Supprimer</DropdownMenuItem>
+                              <DropdownMenuItem>
+                                Voir le profil
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                Modifier le rôle
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                Réinitialiser le mot de passe
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                {user.status === "active"
+                                  ? "Désactiver"
+                                  : "Activer"}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-red-500">
+                                Supprimer
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -314,37 +371,48 @@ export default function AdminPage() {
               </CardContent>
             </Card>
           </TabsContent>
-          
+
           <TabsContent value="roles" className="space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle>Gestion des rôles et permissions</CardTitle>
-                <CardDescription>Définissez les rôles et leurs permissions associées</CardDescription>
+                <CardDescription>
+                  Définissez les rôles et leurs permissions associées
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="rounded-md border p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Shield className="h-5 w-5 text-primary" />
+                        <Shield className="h-5 w-5 text-[var(--accent)]" />
                         <div>
                           <h3 className="font-medium">Super Administrateur</h3>
-                          <p className="text-sm text-muted-foreground">Accès complet à toutes les fonctionnalités</p>
+                          <p className="text-sm text-muted-foreground">
+                            Accès complet à toutes les fonctionnalités
+                          </p>
                         </div>
                       </div>
-                      <Button variant="outline" size="sm">Modifier</Button>
+                      <Button variant="outline" size="sm">
+                        Modifier
+                      </Button>
                     </div>
                   </div>
                   <div className="rounded-md border p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Shield className="h-5 w-5 text-primary" />
+                        <Shield className="h-5 w-5 text-[var(--accent)]" />
                         <div>
                           <h3 className="font-medium">Administrateur</h3>
-                          <p className="text-sm text-muted-foreground">Accès à la plupart des fonctionnalités administratives</p>
+                          <p className="text-sm text-muted-foreground">
+                            Accès à la plupart des fonctionnalités
+                            administratives
+                          </p>
                         </div>
                       </div>
-                      <Button variant="outline" size="sm">Modifier</Button>
+                      <Button variant="outline" size="sm">
+                        Modifier
+                      </Button>
                     </div>
                   </div>
                   <div className="rounded-md border p-4">
@@ -353,10 +421,15 @@ export default function AdminPage() {
                         <Shield className="h-5 w-5 text-muted-foreground" />
                         <div>
                           <h3 className="font-medium">Manager</h3>
-                          <p className="text-sm text-muted-foreground">Gestion d équipe et accès limité aux fonctionnalités admin</p>
+                          <p className="text-sm text-muted-foreground">
+                            Gestion d équipe et accès limité aux fonctionnalités
+                            admin
+                          </p>
                         </div>
                       </div>
-                      <Button variant="outline" size="sm">Modifier</Button>
+                      <Button variant="outline" size="sm">
+                        Modifier
+                      </Button>
                     </div>
                   </div>
                   <div className="rounded-md border p-4">
@@ -365,34 +438,47 @@ export default function AdminPage() {
                         <Shield className="h-5 w-5 text-muted-foreground" />
                         <div>
                           <h3 className="font-medium">Utilisateur</h3>
-                          <p className="text-sm text-muted-foreground">Accès standard aux fonctionnalités de base</p>
+                          <p className="text-sm text-muted-foreground">
+                            Accès standard aux fonctionnalités de base
+                          </p>
                         </div>
                       </div>
-                      <Button variant="outline" size="sm">Modifier</Button>
+                      <Button variant="outline" size="sm">
+                        Modifier
+                      </Button>
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
-          
+
           <TabsContent value="logs" className="space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle>Logs d activité</CardTitle>
-                <CardDescription>Journal des activités système et administratives</CardDescription>
+                <CardDescription>
+                  Journal des activités système et administratives
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {activityLogs.map((log) => (
-                    <div key={log.id} className="flex items-start gap-4 rounded-md border p-4">
+                    <div
+                      key={log.id}
+                      className="flex items-start gap-4 rounded-md border p-4"
+                    >
                       <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
                         <Clock className="h-4 w-4" />
                       </div>
                       <div className="flex-1">
                         <p className="font-medium">{log.user}</p>
-                        <p className="text-sm text-muted-foreground">{log.action}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{log.timestamp}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {log.action}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {log.timestamp}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -400,12 +486,14 @@ export default function AdminPage() {
               </CardContent>
             </Card>
           </TabsContent>
-          
+
           <TabsContent value="settings" className="space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle>Paramètres système</CardTitle>
-                <CardDescription>Configuration générale du système</CardDescription>
+                <CardDescription>
+                  Configuration générale du système
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -415,7 +503,9 @@ export default function AdminPage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <h4 className="font-medium">Mode maintenance</h4>
-                          <p className="text-sm text-muted-foreground">Mettre le site en mode maintenance</p>
+                          <p className="text-sm text-muted-foreground">
+                            Mettre le site en mode maintenance
+                          </p>
                         </div>
                         <Button variant="outline">Désactivé</Button>
                       </div>
@@ -423,8 +513,12 @@ export default function AdminPage() {
                     <div className="rounded-md border p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h4 className="font-medium">Inscription utilisateur</h4>
-                          <p className="text-sm text-muted-foreground">Autoriser les nouvelles inscriptions</p>
+                          <h4 className="font-medium">
+                            Inscription utilisateur
+                          </h4>
+                          <p className="text-sm text-muted-foreground">
+                            Autoriser les nouvelles inscriptions
+                          </p>
                         </div>
                         <Button variant="outline">Activé</Button>
                       </div>
@@ -435,8 +529,12 @@ export default function AdminPage() {
                     <div className="rounded-md border p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h4 className="font-medium">Authentification à deux facteurs</h4>
-                          <p className="text-sm text-muted-foreground">Rendre l authentification 2FA obligatoire</p>
+                          <h4 className="font-medium">
+                            Authentification à deux facteurs
+                          </h4>
+                          <p className="text-sm text-muted-foreground">
+                            Rendre l authentification 2FA obligatoire
+                          </p>
                         </div>
                         <Button variant="outline">Optionnel</Button>
                       </div>
@@ -444,8 +542,12 @@ export default function AdminPage() {
                     <div className="rounded-md border p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h4 className="font-medium">Expiration des mots de passe</h4>
-                          <p className="text-sm text-muted-foreground">Forcer le changement de mot de passe périodiquement</p>
+                          <h4 className="font-medium">
+                            Expiration des mots de passe
+                          </h4>
+                          <p className="text-sm text-muted-foreground">
+                            Forcer le changement de mot de passe périodiquement
+                          </p>
                         </div>
                         <Button variant="outline">90 jours</Button>
                       </div>
@@ -458,5 +560,5 @@ export default function AdminPage() {
         </Tabs>
       </div>
     </div>
-  )
+  );
 }

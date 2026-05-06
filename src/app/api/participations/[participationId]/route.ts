@@ -14,7 +14,7 @@ export async function GET(req: Request, { params }: Params) {
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return new NextResponse("Non autorisé", { status: 401 });
+      return NextResponse.json({ message: "Non autorisé" }, { status: 401 });
     }
 
     const participation = await prisma.participation.findUnique({
@@ -35,13 +35,13 @@ export async function GET(req: Request, { params }: Params) {
     });
 
     if (!participation) {
-      return new NextResponse("Participation non trouvée", { status: 404 });
+      return NextResponse.json({ message: "Participation non trouvée" }, { status: 404 });
     }
 
     return NextResponse.json(participation);
   } catch (error) {
     console.error("[PARTICIPATION_GET]", error);
-    return new NextResponse("Erreur interne", { status: 500 });
+    return NextResponse.json({ message: "Erreur interne" }, { status: 500 });
   }
 }
 
@@ -50,14 +50,14 @@ export async function PATCH(req: Request, { params }: Params) {
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return new NextResponse("Non autorisé", { status: 401 });
+      return NextResponse.json({ message: "Non autorisé" }, { status: 401 });
     }
 
     const body = await req.json();
     const { role } = body;
 
     if (!role) {
-      return new NextResponse("Données manquantes", { status: 400 });
+      return NextResponse.json({ message: "Données manquantes" }, { status: 400 });
     }
 
     const participation = await prisma.simulationAssignment.update({
@@ -76,7 +76,7 @@ export async function PATCH(req: Request, { params }: Params) {
     return NextResponse.json(participation);
   } catch (error) {
     console.error("Erreur lors de la mise à jour de la participation:", error);
-    return new NextResponse("Erreur interne", { status: 500 });
+    return NextResponse.json({ message: "Erreur interne" }, { status: 500 });
   }
 }
 
@@ -87,7 +87,7 @@ export async function DELETE(
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return new NextResponse("Non autorisé", { status: 401 });
+      return NextResponse.json({ message: "Non autorisé" }, { status: 401 });
     }
 
     const participation = await prisma.simulationAssignment.delete({
@@ -99,6 +99,6 @@ export async function DELETE(
     return NextResponse.json(participation);
   } catch (error) {
     console.error("Erreur lors de la suppression de la participation:", error);
-    return new NextResponse("Erreur interne", { status: 500 });
+    return NextResponse.json({ message: "Erreur interne" }, { status: 500 });
   }
 }

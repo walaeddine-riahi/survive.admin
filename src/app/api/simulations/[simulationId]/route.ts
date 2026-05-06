@@ -3,10 +3,10 @@ import { NextResponse } from "next/server";
 
 export async function GET(
   req: Request,
-  { params }: { params: { simulationId: string } }
+  { params }: { params: Promise<{ simulationId: string }> }
 ) {
   try {
-    const simulationId = params.simulationId;
+    const { simulationId } = await params;
 
     const simulation = await prisma.simulation.findUnique({
       where: {
@@ -36,10 +36,10 @@ export async function GET(
 
 export async function PUT(
   req: Request,
-  { params }: { params: { simulationId: string } }
+  { params }: { params: Promise<{ simulationId: string }> }
 ) {
   try {
-    const simulationId = params.simulationId;
+    const { simulationId } = await params;
     const data = await req.json();
 
     // You might want to add validation here for the incoming data

@@ -14,22 +14,24 @@ export async function GET(
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
+    // Vérifier que l'utilisateur est ADMIN
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    });
+
+    if (!user || user.role !== "ADMIN") {
+      return new NextResponse("Forbidden - Admin access required", {
+        status: 403,
+      });
+    }
+
     const { simulationId } = await Promise.resolve(params);
 
+    // Récupérer TOUTES les communications de la simulation
     const communications = await prisma.communication.findMany({
       where: {
         simulationId: simulationId,
-        OR: [
-          // L'utilisateur est le destinataire
-          { recipientId: session.user.id },
-          // L'utilisateur est l'expéditeur
-          { senderId: session.user.id },
-          // La communication est une alerte sans destinataire (broadcast)
-          {
-            type: "alert",
-            recipientId: null,
-          },
-        ],
       },
       include: {
         sender: {
@@ -107,7 +109,7 @@ export async function POST(
           where: { id: recipientId },
           select: { id: true },
         });
-        
+
         if (foundRecipient) {
           actualRecipientId = foundRecipient.id;
         } else {
@@ -116,18 +118,18 @@ export async function POST(
           );
         }
       } catch (error) {
-        console.error("[COMMUNICATIONS_POST] Error looking up recipient by ID:", error);
+        console.error(
+          "[COMMUNICATIONS_POST] Error looking up recipient by ID:",
+          error
+        );
         // Si ce n'est pas un ID valide, essayer avec l'email (pour la rétrocompatibilité)
         const foundRecipient = await prisma.user.findFirst({
-          where: { 
-            OR: [
-              { id: recipientId },
-              { email: recipientId }
-            ]
+          where: {
+            OR: [{ id: recipientId }, { email: recipientId }],
           },
           select: { id: true },
         });
-        
+
         if (foundRecipient) {
           actualRecipientId = foundRecipient.id;
         } else {

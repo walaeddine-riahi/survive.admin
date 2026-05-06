@@ -18,6 +18,7 @@ import { BiaRtoChart } from "@/components/bia/bia-rto-chart";
 import { BiaMetricsOverview } from "@/components/bia/bia-metrics-overview";
 import { BiaProcessTable } from "@/components/bia/bia-process-table";
 import { BiaExportButtons } from "@/components/bia/bia-export-buttons";
+import { BiaImpactMatrix } from "@/components/bia/bia-impact-matrix";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +49,7 @@ type ProcessStats = {
     severity: "Critique" | "Élevé" | "Moyen";
     processes: string[];
   }[];
+  matrix: Record<string, Record<string, number>>;
 };
 
 type Process = {
@@ -62,6 +64,7 @@ type Process = {
   mtpd: number;
   rpo: number;
   mbco: string;
+  factoryId: string | null;
   createdAt: string | Date;
   updatedAt: string | Date;
 };
@@ -87,6 +90,12 @@ function calculateProcessStats(processes: Process[]): ProcessStats {
     },
     recommendations: [],
     majorRisks: [],
+    matrix: {
+      "0-4h": { critical: 0, high: 0, medium: 0, low: 0 },
+      "4-24h": { critical: 0, high: 0, medium: 0, low: 0 },
+      "24-72h": { critical: 0, high: 0, medium: 0, low: 0 },
+      "72h+": { critical: 0, high: 0, medium: 0, low: 0 },
+    },
   };
 
   if (processes.length === 0) return stats;
@@ -98,6 +107,16 @@ function calculateProcessStats(processes: Process[]): ProcessStats {
   processes.forEach((process) => {
     // Criticité
     stats.byCriticality[process.criticality]++;
+
+    // Matrice (RTO / Criticité)
+    let rtoTag = "72h+";
+    if (process.rto <= 4) rtoTag = "0-4h";
+    else if (process.rto <= 24) rtoTag = "4-24h";
+    else if (process.rto <= 72) rtoTag = "24-72h";
+
+    if (stats.matrix[rtoTag]) {
+      stats.matrix[rtoTag][process.criticality]++;
+    }
 
     // Départements
     if (!stats.byDepartment[process.department]) {
@@ -448,72 +467,64 @@ export default async function BiaDashboardPage() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* En-tête avec design cohérent plateforme */}
-      <div className="relative overflow-hidden rounded-lg border bg-card p-8 shadow-sm">
+      <div className="relative overflow-hidden rounded-[16px] border border-[var(--border)] bg-[var(--bg-surface)] p-8 shadow-sm">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div className="flex-1">
-            <div className="flex items-center gap-4 mb-3">
-              <div className="p-3 bg-primary/10 rounded-lg">
-                <BarChart3 className="h-8 w-8 text-primary" />
+            <div className="flex items-center gap-5 mb-4">
+              <div className="p-4 bg-[var(--accent)] rounded-2xl shadow-lg transition-transform hover:scale-105">
+                <BarChart3 className="h-10 w-10 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-foreground mb-1">
+                <h1 className="text-4xl font-black tracking-tight text-[var(--text-primary)] mb-1">
                   Dashboard BIA
                 </h1>
-                <p className="text-muted-foreground">
-                  Business Impact Analysis - Vue stratégique
+                <p className="text-lg text-[var(--text-muted)] font-bold">
+                  Business Impact Analysis • <span className="text-[var(--accent)]">Vue Stratégique & Résilience</span>
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-3 mt-4">
               <div
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border ${
-                  stats.globalContinuityLevel.score >= 85
-                    ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900"
-                    : stats.globalContinuityLevel.score >= 70
-                    ? "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900"
-                    : stats.globalContinuityLevel.score >= 55
-                    ? "bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900"
-                    : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900"
-                }`}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[var(--border)] bg-[var(--bg-tertiary)]/50`}
               >
                 <Shield
                   className={`h-5 w-5 ${
                     stats.globalContinuityLevel.score >= 85
-                      ? "text-green-600 dark:text-green-400"
+                      ? "text-emerald-500"
                       : stats.globalContinuityLevel.score >= 70
-                      ? "text-blue-600 dark:text-blue-400"
+                      ? "text-blue-500"
                       : stats.globalContinuityLevel.score >= 55
-                      ? "text-orange-600 dark:text-orange-400"
-                      : "text-red-600 dark:text-red-400"
+                      ? "text-orange-500"
+                      : "text-red-500"
                   }`}
                 />
                 <span
-                  className={`font-semibold ${
+                  className={`font-bold text-sm uppercase tracking-wider ${
                     stats.globalContinuityLevel.score >= 85
-                      ? "text-green-700 dark:text-green-300"
+                      ? "text-emerald-500"
                       : stats.globalContinuityLevel.score >= 70
-                      ? "text-blue-700 dark:text-blue-300"
+                      ? "text-blue-500"
                       : stats.globalContinuityLevel.score >= 55
-                      ? "text-orange-700 dark:text-orange-300"
-                      : "text-red-700 dark:text-red-300"
+                      ? "text-orange-500"
+                      : "text-red-500"
                   }`}
                 >
                   Niveau: {stats.globalContinuityLevel.level}
                 </span>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-xs font-bold text-[var(--text-muted)]">
                   ({stats.globalContinuityLevel.score}/100)
                 </span>
               </div>
             </div>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <div className="px-4 py-2 bg-muted rounded-lg">
-              <div className="flex items-center gap-2 text-sm">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <span>
+          <div className="flex flex-col items-end gap-3">
+            <div className="px-4 py-2 bg-muted/50 backdrop-blur-sm rounded-xl border border-border/50 shadow-sm">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Clock className="h-4 w-4 text-primary" />
+                <span className="tabular-nums">
                   {new Date().toLocaleDateString("fr-FR", {
                     day: "2-digit",
-                    month: "short",
+                    month: "long",
                     year: "numeric",
                     hour: "2-digit",
                     minute: "2-digit",
@@ -521,8 +532,10 @@ export default async function BiaDashboardPage() {
                 </span>
               </div>
             </div>
-            <div className="text-sm text-muted-foreground">
-              {stats.total} processus analysés
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="bg-[var(--accent)] text-white border-none px-3 py-1 font-bold">
+                {stats.total} processus analysés
+              </Badge>
             </div>
           </div>
         </div>
@@ -536,8 +549,8 @@ export default async function BiaDashboardPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Total Processus
             </CardTitle>
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Building2 className="h-4 w-4 text-primary" />
+            <div className="p-2 bg-[var(--accent)]/10 rounded-lg">
+              <Building2 className="h-4 w-4 text-[var(--accent)]" />
             </div>
           </CardHeader>
           <CardContent>
@@ -606,8 +619,8 @@ export default async function BiaDashboardPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">
               RTO Moyen
             </CardTitle>
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Clock className="h-4 w-4 text-primary" />
+            <div className="p-2 bg-[var(--accent)]/10 rounded-lg">
+              <Clock className="h-4 w-4 text-[var(--accent)]" />
             </div>
           </CardHeader>
           <CardContent>
@@ -670,10 +683,10 @@ export default async function BiaDashboardPage() {
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <BarChart3 className="h-5 w-5 text-primary" />
+              <div className="p-2 bg-[var(--accent)]/10 rounded-lg">
+                <BarChart3 className="h-5 w-5 text-[var(--accent)]" />
               </div>
-              <span className="font-semibold">Répartition par Criticité</span>
+              <span className="font-bold text-[var(--text-primary)]">Répartition par Criticité</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-6">
@@ -685,10 +698,10 @@ export default async function BiaDashboardPage() {
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-primary" />
+              <div className="p-2 bg-[var(--accent)]/10 rounded-lg">
+                <TrendingUp className="h-5 w-5 text-[var(--accent)]" />
               </div>
-              <span className="font-semibold">Distribution RTO</span>
+              <span className="font-bold text-[var(--text-primary)]">Distribution RTO</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-6">
@@ -697,20 +710,28 @@ export default async function BiaDashboardPage() {
         </Card>
       </div>
 
-      {/* Répartition par département */}
-      <Card className="hover:shadow-md transition-shadow">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Users className="h-5 w-5 text-primary" />
-            </div>
-            <span className="font-semibold">Processus par Département</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <BiaProcessChart departmentData={stats.byDepartment} />
-        </CardContent>
-      </Card>
+      {/* Matrix and Department charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-1">
+          <BiaImpactMatrix matrix={stats.matrix} />
+        </div>
+        <div className="lg:col-span-2">
+          {/* Répartition par département */}
+          <Card className="hover:shadow-md transition-shadow h-full">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <div className="p-2 bg-[var(--accent)]/10 rounded-lg">
+                  <Users className="h-5 w-5 text-[var(--accent)]" />
+                </div>
+                <span className="font-bold text-[var(--text-primary)]">Processus par Département</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <BiaProcessChart departmentData={stats.byDepartment} />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* Table des processus critiques */}
       <Card className="hover:shadow-md transition-shadow">
@@ -749,12 +770,12 @@ export default async function BiaDashboardPage() {
               {stats.majorRisks.map((risk, index) => (
                 <div
                   key={index}
-                  className={`border-l-4 rounded-lg p-4 transition-shadow hover:shadow-sm ${
+                  className={`border-l-4 rounded-xl p-5 transition-all hover:shadow-md ${
                     risk.severity === "Critique"
-                      ? "border-red-500 bg-red-50 dark:bg-red-950/20"
+                      ? "border-red-500 bg-red-500/5"
                       : risk.severity === "Élevé"
-                      ? "border-orange-500 bg-orange-50 dark:bg-orange-950/20"
-                      : "border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20"
+                      ? "border-orange-500 bg-orange-500/5"
+                      : "border-yellow-500 bg-yellow-500/5"
                   }`}
                 >
                   <div className="flex items-start justify-between mb-3">
@@ -1191,19 +1212,19 @@ export default async function BiaDashboardPage() {
                         <h4 className="font-semibold text-sm">{report.name}</h4>
                         <Badge
                           variant={
-                            report.status === "completed"
+                            report.status === "GENERATED"
                               ? "default"
-                              : report.status === "in_progress"
+                              : report.status === "DRAFT"
                               ? "secondary"
                               : "outline"
                           }
                           className="text-xs"
                         >
-                          {report.status === "completed"
+                          {report.status === "GENERATED"
                             ? "Complété"
-                            : report.status === "in_progress"
+                            : report.status === "DRAFT"
                             ? "En cours"
-                            : "Brouillon"}
+                            : "Archivé"}
                         </Badge>
                       </div>
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">

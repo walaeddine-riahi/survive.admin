@@ -30,6 +30,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Edit, PlusCircle, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { useEffect } from "react";
 
 // Correspond à l'enum InjectionTriggerType de Prisma
 enum InjectionTriggerTypeEnum {
@@ -94,6 +95,17 @@ export function ScenarioForm({
     },
   });
 
+  // Réinitialiser le formulaire lorsque les données initiales ou l'état d'ouverture changent
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        name: initialData?.name || "",
+        description: initialData?.description || "",
+        simulationId: initialData?.simulationId || "",
+      });
+    }
+  }, [open, initialData, form]);
+
   const handleSubmit = (data: ScenarioFormValues) => {
     onSubmit(data);
     form.reset();
@@ -155,7 +167,7 @@ export function ScenarioForm({
                   <FormLabel>Simulation</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>

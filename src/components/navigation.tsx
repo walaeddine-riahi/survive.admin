@@ -168,9 +168,24 @@ export const navigation: NavigationItem[] = [
         icon: Shield,
       },
       {
-        title: "Gestion des risques",
-        href: "/risk",
+        title: "Analyse des Écarts",
+        href: "/bia/gap-analysis",
         icon: AlertTriangle,
+      },
+      {
+        title: "Stratégies BCM",
+        href: "/bia/strategies",
+        icon: ShieldAlert,
+      },
+      {
+        title: "Appréciation Risques",
+        href: "/risk/assessment",
+        icon: ShieldAlert,
+      },
+      {
+        title: "Dashboard BCM",
+        href: "/bcm",
+        icon: Shield,
       },
     ],
   },

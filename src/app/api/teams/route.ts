@@ -39,10 +39,18 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const data = await request.json();
+
+    if (!data.name || !String(data.name).trim()) {
+      return NextResponse.json(
+        { error: "Le nom de l'équipe est requis" },
+        { status: 400 }
+      );
+    }
+
     const team = await prisma.team.create({
       data: {
-        name: data.name,
-        description: data.description,
+        name: String(data.name).trim(),
+        description: data.description ? String(data.description).trim() : null,
       },
       include: {
         members: {

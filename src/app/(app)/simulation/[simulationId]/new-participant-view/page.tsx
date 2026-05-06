@@ -84,7 +84,7 @@ const theme = {
 };
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef, useMemo } from "react";
 // Import potential icons (example using lucide-react, assuming it's available)
 import AlertComposeForm from "@/components/participant-mode/communication-forms/AlertComposeForm";
 import CallComposeForm from "@/components/participant-mode/communication-forms/CallComposeForm";
@@ -175,6 +175,10 @@ interface Assignment {
   role: string;
   status: string;
   teamId: string | null;
+  team?: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 interface Simulation {
@@ -384,6 +388,18 @@ export default function ParticipantViewFixedPage() {
   const audioContextRef = useRef<AudioContext | null>(null);
 
   const shownInjectionIds = useRef(new Set<string>());
+
+  const currentTeamId = useMemo(() => {
+    if (!data?.simulation?.assignments || !session?.user?.id) {
+      return null;
+    }
+
+    const assignment = data.simulation.assignments.find(
+      (item) => item.userId === session.user.id
+    );
+
+    return assignment?.teamId || null;
+  }, [data?.simulation?.assignments, session?.user?.id]);
 
   useEffect(() => {
     // Force light mode for this specific view
@@ -2792,30 +2808,40 @@ function MobileCommunicationsSection({
                   <EmailComposeForm
                     onSubmit={handleEmailSubmit}
                     onCancel={() => setIsComposing(false)}
+                    simulationId={simulationId}
+                    teamId={currentTeamId}
                   />
                 )}
                 {selectedChannel === "sms" && (
                   <SmsComposeForm
                     onSubmit={handleSmsSubmit}
                     onCancel={() => setIsComposing(false)}
+                    simulationId={simulationId}
+                    teamId={currentTeamId}
                   />
                 )}
                 {selectedChannel === "call" && (
                   <CallComposeForm
                     onSubmit={handleCallSubmit}
                     onCancel={() => setIsComposing(false)}
+                    simulationId={simulationId}
+                    teamId={currentTeamId}
                   />
                 )}
                 {selectedChannel === "alert" && (
                   <AlertComposeForm
                     onSubmit={handleAlertSubmit}
                     onCancel={() => setIsComposing(false)}
+                    simulationId={simulationId}
+                    teamId={currentTeamId}
                   />
                 )}
                 {selectedChannel === "memo" && (
                   <MemoComposeForm
                     onSubmit={handleMemoSubmit}
                     onCancel={() => setIsComposing(false)}
+                    simulationId={simulationId}
+                    teamId={currentTeamId}
                   />
                 )}
                 {selectedChannel === "newsBroadcast" && (
@@ -3187,24 +3213,32 @@ function DesktopLayout({
                         <EmailComposeForm
                           onSubmit={handleEmailSubmit}
                           onCancel={() => setIsComposing(false)}
+                          simulationId={simulationId}
+                          teamId={currentTeamId}
                         />
                       )}
                       {selectedChannel === "sms" && (
                         <SmsComposeForm
                           onSubmit={handleSmsSubmit}
                           onCancel={() => setIsComposing(false)}
+                          simulationId={simulationId}
+                          teamId={currentTeamId}
                         />
                       )}
                       {selectedChannel === "call" && (
                         <CallComposeForm
                           onSubmit={handleCallSubmit}
                           onCancel={() => setIsComposing(false)}
+                          simulationId={simulationId}
+                          teamId={currentTeamId}
                         />
                       )}
                       {selectedChannel === "alert" && (
                         <AlertComposeForm
                           onSubmit={handleAlertSubmit}
                           onCancel={() => setIsComposing(false)}
+                          simulationId={simulationId}
+                          teamId={currentTeamId}
                         />
                       )}
                       {selectedChannel === "memo" && (

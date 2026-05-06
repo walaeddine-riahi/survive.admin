@@ -164,43 +164,28 @@ export async function uploadBiaReportSimple(formData: FormData) {
 
     // Upload vers Azure Storage
     let fileUrl: string;
+    let blobPath: string;
     try {
-      if (azureStorage.isAvailable()) {
-        // Générer un nom de fichier unique
-        const timestamp = Date.now();
-        const fileName = `${timestamp}-${file.name.replace(
-          /[^a-zA-Z0-9.-]/g,
-          "_"
-        )}`;
-
-        // Upload vers Azure avec un dossier spécifique
-        fileUrl = await azureStorage.uploadFile(
-          buffer,
-          fileName,
-          "bia-reports"
-        );
-        console.log(`✅ Fichier uploadé vers Azure Storage: ${fileUrl}`);
-      } else {
-        // Fallback : stockage local si Azure n'est pas configuré
-        const { writeFile, mkdir } = await import("fs/promises");
-        const { join } = await import("path");
-
-        const uploadsDir = join(process.cwd(), "uploads", "bia-reports");
-        await mkdir(uploadsDir, { recursive: true });
-
-        const timestamp = Date.now();
-        const fileName = `${timestamp}-${file.name.replace(
-          /[^a-zA-Z0-9.-]/g,
-          "_"
-        )}`;
-        const filePath = join(uploadsDir, fileName);
-
-        await writeFile(filePath, buffer);
-        fileUrl = `/uploads/bia-reports/${fileName}`;
-        console.log(
-          `⚠️ Fichier stocké localement (Azure non configuré): ${fileUrl}`
-        );
+      if (!azureStorage.isAvailable()) {
+        return {
+          success: false,
+          error:
+            "Service de stockage Azure non configuré. Veuillez configurer les variables d'environnement Azure.",
+        };
       }
+
+      // Générer un nom de fichier unique
+      const timestamp = Date.now();
+      const fileName = `${timestamp}-${file.name.replace(
+        /[^a-zA-Z0-9.-]/g,
+        "_"
+      )}`;
+
+      // Upload vers Azure Storage
+      fileUrl = await azureStorage.uploadFile(buffer, fileName, "bia-reports");
+      // Construct the relative blob path for database storage
+      blobPath = `bia-reports/${fileName}`;
+      console.log(`✅ Fichier uploadé vers Azure Storage: ${fileUrl}`);
     } catch (uploadError) {
       console.error("Erreur d'upload:", uploadError);
       return {
@@ -257,8 +242,9 @@ export async function uploadBiaReportSimple(formData: FormData) {
       analysis,
       contentLength: extractedText.length,
       processingMethod: "simple-upload",
-      storageType: azureStorage.isAvailable() ? "azure" : "local",
-      fileUrl,
+      storageType: "azure",
+      blobPath: blobPath,
+      azureUrl: fileUrl,
       note: "Analyse basique - extraction complète nécessite des outils spécialisés",
     };
 
@@ -277,7 +263,7 @@ export async function uploadBiaReportSimple(formData: FormData) {
       reportData: reportData as unknown as Record<string, unknown>,
       content: extractedText.substring(0, 2000), // Contenu pour la recherche
       fileName: file.name,
-      filePath: fileUrl,
+      filePath: blobPath, // Store relative blob path for download route
       fileSize: buffer.length,
       mimeType: file.type,
       includedProcessIds: [],
@@ -295,13 +281,6 @@ export async function uploadBiaReportSimple(formData: FormData) {
         message: `Fichier ${file.name} uploadé avec succès (analyse basique)`,
       };
     } else {
-      // Supprimer le fichier en cas d'erreur de base de données
-      try {
-        await unlink(filePath);
-      } catch (unlinkError) {
-        console.warn("Impossible de supprimer le fichier:", unlinkError);
-      }
-
       return {
         success: false,
         error:

@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef, useMemo } from "react";
 import AlertComposeForm from "@/components/participant-mode/communication-forms/AlertComposeForm";
 import EmailComposeForm from "@/components/participant-mode/communication-forms/EmailComposeForm";
 import MemoComposeForm from "@/components/participant-mode/communication-forms/MemoComposeForm";
@@ -55,7 +55,25 @@ interface Participant {
   user?: { id: string; name?: string | null };
 }
 
+interface Assignment {
+  userId: string;
+  role: string;
+  status: string;
+  teamId: string | null;
+  team?: {
+    id: string;
+    name: string;
+  } | null;
+}
+
+interface Simulation {
+  id: string;
+  title: string;
+  assignments: Assignment[];
+}
+
 interface ParticipantViewData {
+  simulation: Simulation;
   communications: {
     email: Communication[];
     sms: Communication[];
@@ -173,6 +191,18 @@ export default function MobileParticipantViewPage() {
   );
   const audioContextRef = useRef<AudioContext | null>(null);
   const shownInjectionIds = useRef(new Set<string>());
+
+  const currentTeamId = useMemo(() => {
+    if (!data?.simulation?.assignments || !session?.user?.id) {
+      return null;
+    }
+
+    const assignment = data.simulation.assignments.find(
+      (item) => item.userId === session.user.id
+    );
+
+    return assignment?.teamId || null;
+  }, [data?.simulation?.assignments, session?.user?.id]);
 
   const playNotification = useCallback(() => {
     try {
@@ -510,6 +540,8 @@ export default function MobileParticipantViewPage() {
       onCancel: handleCancelCompose,
       onSubmit: (formData: unknown) =>
         genericSubmitHandler(composeType, formData),
+      simulationId: simulationId,
+      teamId: currentTeamId,
     };
 
     let formComponent;

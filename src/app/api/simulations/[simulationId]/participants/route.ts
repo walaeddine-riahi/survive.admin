@@ -10,24 +10,31 @@ export async function GET(
   console.log("[SIMULATION_PARTICIPANTS_GET] Début de la requête");
   try {
     const session = await getAuthSession();
-    console.log("[SIMULATION_PARTICIPANTS_GET] Session:", session ? "trouvée" : "non trouvée");
+    console.log(
+      "[SIMULATION_PARTICIPANTS_GET] Session:",
+      session ? "trouvée" : "non trouvée"
+    );
 
     if (!session) {
-      console.log("[SIMULATION_PARTICIPANTS_GET] Non autorisé: session manquante");
+      console.log(
+        "[SIMULATION_PARTICIPANTS_GET] Non autorisé: session manquante"
+      );
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
     const { simulationId } = params;
     console.log("[SIMULATION_PARTICIPANTS_GET] Simulation ID:", simulationId);
-    
+
     if (!simulationId) {
       console.error("[SIMULATION_PARTICIPANTS_GET] ID de simulation manquant");
       return new NextResponse("Simulation ID is required", { status: 400 });
     }
 
     // Récupérer tous les participants de la simulation avec leurs informations utilisateur
-    console.log("[SIMULATION_PARTICIPANTS_GET] Récupération des participants...");
-    
+    console.log(
+      "[SIMULATION_PARTICIPANTS_GET] Récupération des participants..."
+    );
+
     try {
       const participants = await prisma.simulationAssignment.findMany({
         where: {
@@ -42,28 +49,65 @@ export async function GET(
               email: true,
               phone: true,
               role: true,
+              teams: {
+                orderBy: {
+                  createdAt: "desc",
+                },
+                select: {
+                  teamId: true,
+                  team: {
+                    select: {
+                      id: true,
+                      name: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          team: {
+            select: {
+              id: true,
+              name: true,
             },
           },
         },
       });
 
-      console.log(`[SIMULATION_PARTICIPANTS_GET] ${participants.length} participants trouvés`);
-      return NextResponse.json(participants);
+      const normalizedParticipants = participants.map((assignment) => {
+        const fallbackTeam = assignment.user.teams?.[0]?.team || null;
+        const effectiveTeam = assignment.team || fallbackTeam;
+        const effectiveTeamId = assignment.teamId || fallbackTeam?.id || null;
+
+        return {
+          ...assignment,
+          teamId: effectiveTeamId,
+          team: effectiveTeam,
+        };
+      });
+
+      console.log(
+        `[SIMULATION_PARTICIPANTS_GET] ${participants.length} participants trouvés`
+      );
+      return NextResponse.json(normalizedParticipants);
     } catch (dbError) {
-      console.error("[SIMULATION_PARTICIPANTS_GET] Erreur de base de données:", dbError);
+      console.error(
+        "[SIMULATION_PARTICIPANTS_GET] Erreur de base de données:",
+        dbError
+      );
       throw dbError;
     }
   } catch (error) {
     console.error("[SIMULATION_PARTICIPANTS_GET] Erreur détaillée:", error);
     return new NextResponse(
-      JSON.stringify({ 
+      JSON.stringify({
         error: "Internal Server Error",
-        details: error instanceof Error ? error.message : String(error)
-      }), 
-      { 
+        details: error instanceof Error ? error.message : String(error),
+      }),
+      {
         status: 500,
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       }
     );

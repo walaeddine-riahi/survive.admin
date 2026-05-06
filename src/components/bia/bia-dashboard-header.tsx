@@ -62,27 +62,32 @@ export function BiaDashboardHeader({ processes }: DashboardHeaderProps) {
 
   return (
     <div className="space-y-6">
-      {/* En-tête principal avec gradient */}
-      <div className="relative overflow-hidden rounded-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-8 text-white">
-        <div className="absolute inset-0 bg-grid-white/10" />
+      <div className="relative overflow-hidden rounded-[16px] border border-[var(--border)] bg-[var(--bg-surface)] p-8 shadow-sm">
         <div className="relative z-10">
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">Tableau de Bord BIA</h1>
-              <p className="text-blue-100 text-lg">
-                Business Impact Analysis - Vue d&apos;ensemble de la continuité
-              </p>
+          <div className="flex flex-col md:flex-row items-start justify-between gap-6">
+            <div className="flex items-center gap-5">
+              <div className="p-4 bg-[var(--accent)] rounded-2xl shadow-lg">
+                <BarChart3 className="h-10 w-10 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-black tracking-tight text-[var(--text-primary)]">Tableau de Bord BIA</h1>
+                <p className="text-[var(--text-muted)] text-lg font-medium mt-1">
+                  Business Impact Analysis - Vue d&apos;ensemble de la continuité
+                </p>
+              </div>
             </div>
-            <div className="flex flex-col items-end gap-2">
-              <Badge
-                className={`${resilienceLevel.bg} ${resilienceLevel.color} border-0 text-lg px-4 py-2`}
+            <div className="flex flex-col items-end gap-3">
+              <div
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[var(--border)] bg-[var(--bg-tertiary)]/50`}
               >
-                <Shield className="h-5 w-5 mr-2" />
-                Résilience: {resilienceLevel.label}
-              </Badge>
-              <span className="text-blue-100 text-sm">
-                Score: {resilienceScore}/100
-              </span>
+                <Shield className={`h-5 w-5 ${resilienceScore >= 80 ? 'text-emerald-500' : resilienceScore >= 60 ? 'text-blue-500' : 'text-orange-500'}`} />
+                <span className={`font-bold text-sm uppercase tracking-wider ${resilienceScore >= 80 ? 'text-emerald-500' : resilienceScore >= 60 ? 'text-blue-500' : 'text-orange-500'}`}>
+                  Résilience: {resilienceLevel.label}
+                </span>
+                <span className="text-xs font-bold text-[var(--text-muted)] ml-1">
+                  Score: {resilienceScore}/100
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -91,145 +96,144 @@ export function BiaDashboardHeader({ processes }: DashboardHeaderProps) {
       {/* Statistiques principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Processus */}
-        <Card className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
+        <Card className="border border-[var(--border)] bg-[var(--bg-surface)] hover:shadow-md transition-all rounded-xl overflow-hidden">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-2">
                   Total Processus
                 </p>
-                <p className="text-3xl font-bold">{stats.total}</p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-3xl font-black text-[var(--text-primary)]">{stats.total}</p>
+                <p className="text-xs font-medium text-[var(--text-muted)] mt-1">
                   Processus analysés
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-                <Building2 className="h-6 w-6 text-blue-600" />
+              <div className="h-12 w-12 rounded-xl bg-[var(--accent)]/10 flex items-center justify-center">
+                <Building2 className="h-6 w-6 text-[var(--accent)]" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Processus critiques */}
-        <Card className="border-l-4 border-l-red-500 hover:shadow-md transition-shadow">
+        <Card className="border border-[var(--border)] bg-[var(--bg-surface)] hover:shadow-md transition-all rounded-xl overflow-hidden">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-2">
                   Critiques
                 </p>
-                <p className="text-3xl font-bold text-red-600">
+                <p className="text-3xl font-black text-red-500">
                   {stats.critical}
                 </p>
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-2 mt-2">
                   <Badge
                     variant="outline"
-                    className="bg-orange-100 text-orange-700 border-orange-200 text-xs"
+                    className="bg-orange-500/10 text-orange-600 border-orange-500/20 text-[10px] font-black uppercase"
                   >
                     +{stats.high} Élevés
                   </Badge>
                 </div>
               </div>
-              <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
-                <AlertCircle className="h-6 w-6 text-red-600" />
+              <div className="h-12 w-12 rounded-xl bg-red-500/10 flex items-center justify-center">
+                <AlertCircle className="h-6 w-6 text-red-500" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* RTO Moyen */}
-        <Card className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
+        <Card className="border border-[var(--border)] bg-[var(--bg-surface)] hover:shadow-md transition-all rounded-xl overflow-hidden">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-2">
                   RTO Moyen
                 </p>
-                <p className="text-3xl font-bold">{stats.avgRto.toFixed(0)}h</p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-3xl font-black text-[var(--text-primary)]">{stats.avgRto.toFixed(0)}h</p>
+                <p className="text-xs font-medium text-[var(--text-muted)] mt-1">
                   Recovery Time Objective
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
-                <Clock className="h-6 w-6 text-green-600" />
+              <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                <Clock className="h-6 w-6 text-emerald-500" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* MTPD Moyen */}
-        <Card className="border-l-4 border-l-purple-500 hover:shadow-md transition-shadow">
+        <Card className="border border-[var(--border)] bg-[var(--bg-surface)] hover:shadow-md transition-all rounded-xl overflow-hidden">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-2">
                   MTPD Moyen
                 </p>
-                <p className="text-3xl font-bold">
+                <p className="text-3xl font-black text-[var(--text-primary)]">
                   {stats.avgMtpd.toFixed(0)}h
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs font-medium text-[var(--text-muted)] mt-1">
                   Max Tolerable Period
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center">
-                <TrendingUp className="h-6 w-6 text-purple-600" />
+              <div className="h-12 w-12 rounded-xl bg-violet-500/10 flex items-center justify-center">
+                <TrendingUp className="h-6 w-6 text-violet-500" />
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Statistiques secondaires */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="hover:shadow-md transition-shadow">
+        <Card className="hover:shadow-md transition-all border border-[var(--border)] bg-[var(--bg-surface)] rounded-xl overflow-hidden">
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                <Activity className="h-5 w-5 text-blue-600" />
+              <div className="h-10 w-10 rounded-lg bg-[var(--accent)]/10 flex items-center justify-center">
+                <Activity className="h-5 w-5 text-[var(--accent)]" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
                   RPO Moyen
                 </p>
-                <p className="text-2xl font-bold">{stats.avgRpo.toFixed(0)}h</p>
+                <p className="text-2xl font-black text-[var(--text-primary)]">{stats.avgRpo.toFixed(0)}h</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow">
+        <Card className="hover:shadow-md transition-all border border-[var(--border)] bg-[var(--bg-surface)] rounded-xl overflow-hidden">
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-lg bg-yellow-100 flex items-center justify-center">
-                <BarChart3 className="h-5 w-5 text-yellow-600" />
+              <div className="h-10 w-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                <BarChart3 className="h-5 w-5 text-orange-500" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
                   Criticité Moyenne
                 </p>
                 <div className="flex gap-1 mt-1">
                   <Badge
                     variant="outline"
-                    className="text-xs bg-red-50 text-red-700"
+                    className="text-[10px] font-black bg-red-500/10 text-red-500 border-red-500/20"
                   >
                     {stats.critical}
                   </Badge>
                   <Badge
                     variant="outline"
-                    className="text-xs bg-orange-50 text-orange-700"
+                    className="text-[10px] font-black bg-orange-500/10 text-orange-500 border-orange-500/20"
                   >
                     {stats.high}
                   </Badge>
                   <Badge
                     variant="outline"
-                    className="text-xs bg-yellow-50 text-yellow-700"
+                    className="text-[10px] font-black bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
                   >
                     {stats.medium}
                   </Badge>
                   <Badge
                     variant="outline"
-                    className="text-xs bg-green-50 text-green-700"
+                    className="text-[10px] font-black bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
                   >
                     {stats.low}
                   </Badge>
@@ -239,17 +243,17 @@ export function BiaDashboardHeader({ processes }: DashboardHeaderProps) {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow">
+        <Card className="hover:shadow-md transition-all border border-[var(--border)] bg-[var(--bg-surface)] rounded-xl overflow-hidden">
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center">
-                <FileText className="h-5 w-5 text-indigo-600" />
+              <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <Shield className="h-5 w-5 text-blue-500" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
                   Conformité ISO 22301
                 </p>
-                <p className="text-2xl font-bold">{resilienceScore}%</p>
+                <p className="text-2xl font-black text-[var(--text-primary)]">{resilienceScore}%</p>
               </div>
             </div>
           </CardContent>

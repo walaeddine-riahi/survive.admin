@@ -27,7 +27,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { TeamSelect } from "./team-select";
@@ -86,6 +86,21 @@ export function TaskForm({
       role: undefined,
     },
   });
+
+  useEffect(() => {
+    if (open) {
+      form.reset(initialData || {
+        title: "",
+        description: "",
+        status: "PENDING",
+        priority: "MEDIUM",
+        dueDate: "",
+        teamId: "",
+        assigneeId: "",
+        role: undefined,
+      });
+    }
+  }, [open, initialData, form]);
 
   const handleSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
@@ -222,7 +237,7 @@ export function TaskForm({
                     </FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -250,7 +265,7 @@ export function TaskForm({
                     </FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>

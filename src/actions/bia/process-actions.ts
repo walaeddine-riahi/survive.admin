@@ -32,8 +32,8 @@ type ProcessInput = {
   id?: string;
   name: string;
   description?: string | null;
-  department?: string;
-  location?: string;
+  department?: string | null;
+  location?: string | null;
   factoryId?: string; // ID de l'usine
 
   // Responsable du processus
@@ -56,7 +56,7 @@ type ProcessInput = {
   impacts?: Array<{
     id: string;
     type: string;
-    level: "low" | "medium" | "high";
+    level: string;
     hasImpact: boolean;
     description: string;
   }>;
@@ -141,8 +141,8 @@ type ProcessInput = {
   }>;
 
   // Analyse d'impact
-  impact?: string;
-  criticality?: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  impact?: string | null;
+  criticality?: string;
   rto?: number;
   mtpd?: number;
   rpo?: number;
@@ -268,16 +268,27 @@ function getProcessModel() {
   return prisma.process;
 }
 
+/**
+ * Normalise la criticité depuis divers formats (Français, Anglais, Case)
+ * vers les valeurs attendues par l'énumération Prisma.
+ */
+function normalizeCriticality(value?: string): "low" | "medium" | "high" | "critical" {
+  if (!value) return "medium";
+  
+  const val = value.toLowerCase().trim();
+  
+  if (val === "low" || val === "faible" || val === "f") return "low";
+  if (val === "medium" || val === "moyen" || val === "moyenne" || val === "m") return "medium";
+  if (val === "high" || val === "élevé" || val === "eleve" || val === "haute" || val === "h") return "high";
+  if (val === "critical" || val === "critique" || val === "c") return "critical";
+  
+  return "medium"; // Valeur par défaut
+}
+
 export async function createProcess(data: ProcessInput) {
   try {
-    // Convertir criticality en minuscules si présent
-    const normalizedCriticality = data.criticality
-      ? (data.criticality.toLowerCase() as
-          | "low"
-          | "medium"
-          | "high"
-          | "critical")
-      : "medium";
+    // Normaliser la criticité
+    const normalizedCriticality = normalizeCriticality(data.criticality);
 
     // Préparer les données de base du processus avec valeurs par défaut
     const processData: Record<string, unknown> = {
@@ -297,9 +308,7 @@ export async function createProcess(data: ProcessInput) {
       ownerPhone: data.ownerPhone || null,
 
       // Responsables intérimaires (JSON)
-      interimManagers: data.interimManagers?.length
-        ? JSON.stringify(data.interimManagers)
-        : null,
+      interimManagers: data.interimManagers || null,
 
       // Factory relation (si fourni)
       ...(data.factoryId && {
@@ -427,39 +436,17 @@ export async function createProcess(data: ProcessInput) {
       providedService: data.providedService,
       supplierDetails: data.supplierDetails,
       supplierCriticality: data.supplierCriticality,
-      isUniqueSupplier: data.isUniqueSupplier,
-
-      // ============================================
       // NOUVEAUX CHAMPS JSON (9 multi-éléments)
-      // Sérialisation des arrays en JSON pour MongoDB
       // ============================================
-      activitesCritiques: data.activitesCritiques?.length
-        ? JSON.stringify(data.activitesCritiques)
-        : null,
-      fournisseursExternes: data.fournisseursExternes?.length
-        ? JSON.stringify(data.fournisseursExternes)
-        : null,
-      obligationsLegales: data.obligationsLegales?.length
-        ? JSON.stringify(data.obligationsLegales)
-        : null,
-      systemesInformatiques: data.systemesInformatiques?.length
-        ? JSON.stringify(data.systemesInformatiques)
-        : null,
-      infrastructuresPhysiques: data.infrastructuresPhysiques?.length
-        ? JSON.stringify(data.infrastructuresPhysiques)
-        : null,
-      rolesPersonnel: data.rolesPersonnel?.length
-        ? JSON.stringify(data.rolesPersonnel)
-        : null,
-      equipementsIndustriels: data.equipementsIndustriels?.length
-        ? JSON.stringify(data.equipementsIndustriels)
-        : null,
-      equipementsBureautiques: data.equipementsBureautiques?.length
-        ? JSON.stringify(data.equipementsBureautiques)
-        : null,
-      documentationsCritiques: data.documentationsCritiques?.length
-        ? JSON.stringify(data.documentationsCritiques)
-        : null,
+      activitesCritiques: data.activitesCritiques || null,
+      fournisseursExternes: data.fournisseursExternes || null,
+      obligationsLegales: data.obligationsLegales || null,
+      systemesInformatiques: data.systemesInformatiques || null,
+      infrastructuresPhysiques: data.infrastructuresPhysiques || null,
+      rolesPersonnel: data.rolesPersonnel || null,
+      equipementsIndustriels: data.equipementsIndustriels || null,
+      equipementsBureautiques: data.equipementsBureautiques || null,
+      documentationsCritiques: data.documentationsCritiques || null,
     };
 
     // Nettoyer l'objet pour supprimer les valeurs undefined
@@ -478,15 +465,20 @@ export async function createProcess(data: ProcessInput) {
         industrialEquipmentList: true,
         officeEquipmentList: true,
         suppliers: true,
-        // Inclure d'autres relations si nécessaire
       },
     });
 
+    // Revalider les chemins pertinents
+    revalidatePath("/bia");
     revalidatePath("/dashboard/process");
+    
     return { success: true, data: process };
   } catch (error) {
-    console.error("Error creating process:", error);
-    return { success: false, error: "Failed to create process" };
+    console.error("❌ Error creating process:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to create process" 
+    };
   }
 }
 
@@ -494,14 +486,8 @@ export async function updateProcess(id: string, data: ProcessInput) {
   try {
     const processModel = getProcessModel();
 
-    // Convertir criticality en minuscules si présent
-    const normalizedCriticality = data.criticality
-      ? (data.criticality.toLowerCase() as
-          | "low"
-          | "medium"
-          | "high"
-          | "critical")
-      : undefined;
+    // Normaliser la criticité
+    const normalizedCriticality = data.criticality ? normalizeCriticality(data.criticality) : undefined;
 
     // Créer un objet avec toutes les propriétés du formulaire
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -511,7 +497,7 @@ export async function updateProcess(id: string, data: ProcessInput) {
       department: data.department,
       location: data.location,
       impact: data.impact,
-      criticality: normalizedCriticality || data.criticality,
+      criticality: normalizedCriticality,
       rto: data.rto,
       mtpd: data.mtpd,
       rpo: data.rpo,
@@ -521,6 +507,7 @@ export async function updateProcess(id: string, data: ProcessInput) {
       operationalImpact: data.operationalImpact,
       reputationImpact: data.reputationImpact,
       operationalCapacityImpact: data.operationalCapacityImpact,
+      factoryId: data.factoryId || null,
       mainFunctionality: data.mainFunctionality,
       productDependencies: data.productDependencies,
       interServiceDependencies: data.interServiceDependencies,
@@ -593,7 +580,6 @@ export async function updateProcess(id: string, data: ProcessInput) {
       providedService: data.providedService,
       supplierDetails: data.supplierDetails,
       supplierCriticality: data.supplierCriticality,
-      isUniqueSupplier: data.isUniqueSupplier,
       hasAlternativeSupplier: data.hasAlternativeSupplier,
       supplierHasContinuityPlan: data.supplierHasContinuityPlan,
 
@@ -604,58 +590,182 @@ export async function updateProcess(id: string, data: ProcessInput) {
       ownerRole: data.ownerRole || null,
       ownerEmail: data.ownerEmail || null,
       ownerPhone: data.ownerPhone || null,
-      interimManagers: data.interimManagers?.length
-        ? JSON.stringify(data.interimManagers)
-        : null,
+      interimManagers: data.interimManagers || null,
 
       // ============================================
       // NOUVEAUX CHAMPS JSON (9 multi-éléments)
-      // Sérialisation des arrays en JSON pour MongoDB
       // ============================================
-      activitesCritiques: data.activitesCritiques?.length
-        ? JSON.stringify(data.activitesCritiques)
-        : null,
-      fournisseursExternes: data.fournisseursExternes?.length
-        ? JSON.stringify(data.fournisseursExternes)
-        : null,
-      obligationsLegales: data.obligationsLegales?.length
-        ? JSON.stringify(data.obligationsLegales)
-        : null,
-      systemesInformatiques: data.systemesInformatiques?.length
-        ? JSON.stringify(data.systemesInformatiques)
-        : null,
-      infrastructuresPhysiques: data.infrastructuresPhysiques?.length
-        ? JSON.stringify(data.infrastructuresPhysiques)
-        : null,
-      rolesPersonnel: data.rolesPersonnel?.length
-        ? JSON.stringify(data.rolesPersonnel)
-        : null,
-      equipementsIndustriels: data.equipementsIndustriels?.length
-        ? JSON.stringify(data.equipementsIndustriels)
-        : null,
-      equipementsBureautiques: data.equipementsBureautiques?.length
-        ? JSON.stringify(data.equipementsBureautiques)
-        : null,
-      documentationsCritiques: data.documentationsCritiques?.length
-        ? JSON.stringify(data.documentationsCritiques)
-        : null,
+      activitesCritiques: data.activitesCritiques || null,
+      fournisseursExternes: data.fournisseursExternes || null,
+      obligationsLegales: data.obligationsLegales || null,
+      systemesInformatiques: data.systemesInformatiques || null,
+      infrastructuresPhysiques: data.infrastructuresPhysiques || null,
+      rolesPersonnel: data.rolesPersonnel || null,
+      equipementsIndustriels: data.equipementsIndustriels || null,
+      equipementsBureautiques: data.equipementsBureautiques || null,
+      documentationsCritiques: data.documentationsCritiques || null,
     };
 
-    // Nettoyer l'objet pour supprimer les valeurs undefined
-    Object.keys(updateData).forEach((key) => {
-      if (updateData[key] === undefined) {
-        delete updateData[key];
-      } else if (updateData[key] === null) {
-        // Pour les mises à jour, on veut conserver les valeurs null
-        // pour effacer les champs existants
-        updateData[key] = null;
-      }
-    });
+    // Séparer les données en morceaux pour éviter l'erreur MongoDB Atlas "Pipeline length > 50"
+    // Ce problème survient lorsque Prisma essaie de mettre à jour trop de champs à la fois sur MongoDB.
 
-    const process = await processModel.update({
-      where: { id },
-      data: updateData,
-    });
+    // 1. Informations de base et Métriques
+    const basicUpdateData = {
+      name: updateData.name,
+      description: updateData.description,
+      department: updateData.department,
+      location: updateData.location,
+      impact: updateData.impact,
+      criticality: updateData.criticality,
+      rto: updateData.rto,
+      mtpd: updateData.mtpd,
+      rpo: updateData.rpo,
+      mbco: updateData.mbco,
+      criticalTimes: updateData.criticalTimes,
+      financialImpact: updateData.financialImpact,
+      operationalImpact: updateData.operationalImpact,
+      reputationImpact: updateData.reputationImpact,
+      operationalCapacityImpact: updateData.operationalCapacityImpact,
+      factoryId: updateData.factoryId,
+      processOwner: updateData.processOwner,
+      ownerRole: updateData.ownerRole,
+      ownerEmail: updateData.ownerEmail,
+      ownerPhone: updateData.ownerPhone,
+      interimManagers: updateData.interimManagers,
+    };
+
+    // 2. Dépendances et Ressources (IT, Infra, Personnel)
+    const resourceUpdateData = {
+      mainFunctionality: updateData.mainFunctionality,
+      productDependencies: updateData.productDependencies,
+      interServiceDependencies: updateData.interServiceDependencies,
+      externalSuppliers: updateData.externalSuppliers,
+      supplierTasks: updateData.supplierTasks,
+      supplierContact: updateData.supplierContact,
+      supplierContinuityPlan: updateData.supplierContinuityPlan,
+      hasSLAClause: updateData.hasSLAClause,
+      supplierRTO: updateData.supplierRTO,
+      supplierMTPD: updateData.supplierMTPD,
+      legalObligations: updateData.legalObligations,
+      legalReferences: updateData.legalReferences,
+      legalAuthority: updateData.legalAuthority,
+      legalDetails: updateData.legalDetails,
+      nonComplianceConsequences: updateData.nonComplianceConsequences,
+      itSystems: updateData.itSystems,
+      systemCriticality: updateData.systemCriticality,
+      systemImpact: updateData.systemImpact,
+      supportedActivities: updateData.supportedActivities,
+      hasBackupSystems: updateData.hasBackupSystems,
+      systemRTO: updateData.systemRTO,
+      systemRPO: updateData.systemRPO,
+      systemMTPD: updateData.systemMTPD,
+      workarounds: updateData.workarounds,
+      previousIncidents: updateData.previousIncidents,
+      dependsOnPhysicalInfra: updateData.dependsOnPhysicalInfra,
+      infrastructureType: updateData.infrastructureType,
+      infraRTO: updateData.infraRTO,
+      infraMTPD: updateData.infraMTPD,
+      canWorkRemotely: updateData.canWorkRemotely,
+      canUseOtherInfra: updateData.canUseOtherInfra,
+      staffRoles: updateData.staffRoles,
+      staffCount: updateData.staffCount,
+      staffTasks: updateData.staffTasks,
+      uniqueSkills: updateData.uniqueSkills,
+      criticalityAfterDisruption: updateData.criticalityAfterDisruption,
+      roleRecoveryTime: updateData.roleRecoveryTime,
+      canBeReplaced: updateData.canBeReplaced,
+      replacementBy: updateData.replacementBy,
+      staffWorkarounds: updateData.staffWorkarounds,
+    };
+
+    // 3. Équipements, Documentation et JSON Arrays
+    const extendedUpdateData = {
+      industrialEquipment: updateData.industrialEquipment,
+      equipmentTasks: updateData.equipmentTasks,
+      equipmentCriticality: updateData.equipmentCriticality,
+      canReassignEquipment: updateData.canReassignEquipment,
+      equipmentRTO: updateData.equipmentRTO,
+      equipmentMTPD: updateData.equipmentMTPD,
+      equipmentWorkarounds: updateData.equipmentWorkarounds,
+      voltage: updateData.voltage,
+      currentType: updateData.currentType,
+      powerRating: updateData.powerRating,
+      dailyConsumption: updateData.dailyConsumption,
+      backupCompatible: updateData.backupCompatible,
+      officeEquipment: updateData.officeEquipment,
+      equipmentQuantity: updateData.equipmentQuantity,
+      officeEquipmentTasks: updateData.officeEquipmentTasks,
+      officeEquipmentCriticality: updateData.officeEquipmentCriticality,
+      officeRTO: updateData.officeRTO,
+      officeMTPD: updateData.officeMTPD,
+      requiredAfterDisruption: updateData.requiredAfterDisruption,
+      canReassignOfficeEquipment: updateData.canReassignOfficeEquipment,
+      officeWorkarounds: updateData.officeWorkarounds,
+      requiredDocumentation: updateData.requiredDocumentation,
+      documentationLocation: updateData.documentationLocation,
+      neededAfterDisruption: updateData.neededAfterDisruption,
+      documentationRTO: updateData.documentationRTO,
+      hasAlternativeAccess: updateData.hasAlternativeAccess,
+      hasReplacement: updateData.hasReplacement,
+      replacementMeasures: updateData.replacementMeasures,
+      keySuppliers: updateData.keySuppliers,
+      providedService: updateData.providedService,
+      supplierDetails: updateData.supplierDetails,
+      supplierCriticality: updateData.supplierCriticality,
+      hasAlternativeSupplier: updateData.hasAlternativeSupplier,
+      supplierHasContinuityPlan: updateData.supplierHasContinuityPlan,
+      activitesCritiques: updateData.activitesCritiques,
+      fournisseursExternes: updateData.fournisseursExternes,
+      obligationsLegales: updateData.obligationsLegales,
+      systemesInformatiques: updateData.systemesInformatiques,
+      infrastructuresPhysiques: updateData.infrastructuresPhysiques,
+      rolesPersonnel: updateData.rolesPersonnel,
+      equipementsIndustriels: updateData.equipementsIndustriels,
+      equipementsBureautiques: updateData.equipementsBureautiques,
+      documentationsCritiques: updateData.documentationsCritiques,
+    };
+
+    // Nettoyer chaque morceau (on garde null pour effacer, on vire undefined)
+    const clean = (obj: any) => {
+      const result: any = {};
+      Object.keys(obj).forEach((key) => {
+        if (obj[key] !== undefined) result[key] = obj[key];
+      });
+      return result;
+    };
+
+    const cleanBasic = clean(basicUpdateData);
+    const cleanResource = clean(resourceUpdateData);
+    const cleanExtended = clean(extendedUpdateData);
+
+    // Exécuter les mises à jour en séquence
+    // Note: on utilise des appels séparés plutôt qu'une transaction car Prisma peut combiner 
+    // les opérations dans un seul pipeline même au sein d'une transaction MongoDB.
+    
+    let lastResult;
+
+    if (Object.keys(cleanBasic).length > 0) {
+      lastResult = await processModel.update({
+        where: { id },
+        data: cleanBasic,
+      });
+    }
+
+    if (Object.keys(cleanResource).length > 0) {
+      lastResult = await processModel.update({
+        where: { id },
+        data: cleanResource,
+      });
+    }
+
+    if (Object.keys(cleanExtended).length > 0) {
+      lastResult = await processModel.update({
+        where: { id },
+        data: cleanExtended,
+      });
+    }
+
+    const process = lastResult || (await getProcessById(id)).data;
 
     revalidatePath("/bia");
     revalidatePath(`/bia/processes/${id}`);

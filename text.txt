@@ -1,0 +1,18 @@
+
+ Phase 1 : Lecture & Dashboard
+ Accéder au dashboard BIA (/bia)
+ Vérifier le chargement de la liste et de la Heatmap
+ Tester les filtres et la recherche
+ Phase 2 : Création
+ Créer un processus manuellement via le formulaire (/bia/processes/new)
+ Tester l'extraction IA avec un document de test
+ Vérifier la persistance en base de données
+ Phase 3 : Modification
+ Modifier un processus existant (champs simples + listes JSON)
+ Vérifier la mise à jour en temps réel sur le dashboard
+ Phase 4 : Suppression
+ Supprimer un processus de test
+ Confirmer qu'il est retiré de la liste et du dashboard
+ Phase 5 : Consolidation
+ Vérifier les redirections (/bia-form)
+ Vérifier l'Assistant Vocal de confirmation

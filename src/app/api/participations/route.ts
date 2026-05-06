@@ -8,7 +8,7 @@ export async function GET() {
     const session = await getAuthSession();
 
     if (!session) {
-      return new NextResponse("Non autorisé", { status: 401 });
+      return NextResponse.json({ message: "Non autorisé" }, { status: 401 });
     }
 
     const participations = await prisma.simulationAssignment.findMany({
@@ -21,7 +21,7 @@ export async function GET() {
     return NextResponse.json(participations);
   } catch (error) {
     console.error("[PARTICIPATIONS_GET] Error:", error);
-    return new NextResponse("Internal Error", { status: 500 });
+    return NextResponse.json({ message: "Internal Error" }, { status: 500 });
   }
 }
 
@@ -30,13 +30,13 @@ export async function POST(request: Request) {
     const session = await getAuthSession();
 
     if (!session) {
-      return new NextResponse("Non autorisé", { status: 401 });
+      return NextResponse.json({ message: "Non autorisé" }, { status: 401 });
     }
 
     const { userId, simulationId, role } = await request.json();
 
     if (!userId || !simulationId || !role) {
-      return new NextResponse("Missing required fields", { status: 400 });
+      return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
     }
 
     const existingParticipation = await prisma.simulationAssignment.findFirst({
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     });
 
     if (existingParticipation) {
-      return new NextResponse("Participation already exists", { status: 409 });
+      return NextResponse.json({ message: "Participation already exists" }, { status: 409 });
     }
 
     const newParticipation = await prisma.simulationAssignment.create({
@@ -105,7 +105,7 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     console.error("[PARTICIPATIONS_POST] Error:", error);
-    return new NextResponse("Internal Error", { status: 500 });
+    return NextResponse.json({ message: "Internal Error" }, { status: 500 });
   }
 }
 
@@ -117,14 +117,14 @@ export async function PATCH(
     const session = await getAuthSession();
 
     if (!session) {
-      return new NextResponse("Non autorisé", { status: 401 });
+      return NextResponse.json({ message: "Non autorisé" }, { status: 401 });
     }
 
     const { participationId } = params;
     const { role } = await request.json();
 
     if (!role) {
-      return new NextResponse("Missing role field", { status: 400 });
+      return NextResponse.json({ message: "Missing role field" }, { status: 400 });
     }
 
     const updatedParticipation = await prisma.simulationAssignment.update({
@@ -139,6 +139,6 @@ export async function PATCH(
     return NextResponse.json(updatedParticipation);
   } catch (error) {
     console.error("[PARTICIPATIONS_PATCH] Error:", error);
-    return new NextResponse("Internal Error", { status: 500 });
+    return NextResponse.json({ message: "Internal Error" }, { status: 500 });
   }
 }

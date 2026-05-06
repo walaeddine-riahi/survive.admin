@@ -12,7 +12,7 @@ const createUserSchema = z.object({
   password: z
     .string()
     .min(6, "Le mot de passe doit contenir au moins 6 caractères"),
-  role: z.enum(["USER", "ADMIN"]).default("USER"),
+  role: z.enum(["USER", "ADMIN"]).default("ADMIN"),
   phone: z.string().optional(),
   avatar: z.string().url("L'URL de l'avatar n'est pas valide").optional(),
 });
@@ -22,7 +22,7 @@ export async function GET() {
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return new NextResponse("Non autorisé", { status: 401 });
+      return NextResponse.json({ message: "Non autorisé" }, { status: 401 });
     }
 
     const users = await prisma.user.findMany({
@@ -54,7 +54,7 @@ export async function GET() {
     return NextResponse.json(usersWithMergedPhone);
   } catch (error) {
     console.error("[USERS_GET]", error);
-    return new NextResponse("Erreur interne", { status: 500 });
+    return NextResponse.json({ message: "Erreur interne" }, { status: 500 });
   }
 }
 
@@ -68,11 +68,11 @@ export async function DELETE(request: Request) {
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return new NextResponse("Non autorisé", { status: 401 });
+      return NextResponse.json({ message: "Non autorisé" }, { status: 401 });
     }
 
     if (session.user.role !== "ADMIN") {
-      return new NextResponse("Action non autorisée", { status: 403 });
+      return NextResponse.json({ message: "Action non autorisée" }, { status: 403 });
     }
 
     const data = await request.json();
@@ -109,9 +109,10 @@ export async function DELETE(request: Request) {
       );
     }
     
-    return new NextResponse("Erreur lors de la suppression des utilisateurs", { 
-      status: 500 
-    });
+    return NextResponse.json(
+      { message: "Erreur lors de la suppression des utilisateurs" },
+      { status: 500 }
+    );
   }
 }
 

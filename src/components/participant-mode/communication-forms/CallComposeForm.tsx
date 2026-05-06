@@ -21,10 +21,12 @@ export default function CallComposeForm({
   onSubmit,
   onCancel,
   simulationId,
+  teamId,
 }: {
   onSubmit: (data: CallFormData) => void;
   onCancel: () => void;
   simulationId?: string;
+  teamId?: string | null;
 }) {
   const { data: session } = useSession();
   const [users, setUsers] = useState<User[]>([]);
@@ -62,6 +64,10 @@ export default function CallComposeForm({
           const usersList =
             simulationId && Array.isArray(data)
               ? data
+                  .filter(
+                    (assignment: { user: User; teamId?: string | null }) =>
+                      !teamId || assignment.teamId === teamId
+                  )
                   .map((assignment: { user: User }) => assignment.user)
                   .filter(Boolean)
               : data;
@@ -80,7 +86,7 @@ export default function CallComposeForm({
     if (session?.user?.id) {
       fetchUsers();
     }
-  }, [session, simulationId]);
+  }, [session?.user?.id, simulationId, teamId]);
 
   // Mettre à jour les données du formulaire quand des destinataires sont sélectionnés
   useEffect(() => {

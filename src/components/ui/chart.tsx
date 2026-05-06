@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import * as RechartsPrimitive from "recharts"
+import { useTheme } from "next-themes"
 
 import { cn } from "@/lib/utils"
 
@@ -70,6 +71,7 @@ function ChartContainer({
 }
 
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
+  const { theme = "light" } = useTheme()
   const colorConfig = Object.entries(config).filter(
     ([, config]) => config.theme || config.color
   )
@@ -80,6 +82,7 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
 
   return (
     <style
+      key={theme}
       dangerouslySetInnerHTML={{
         __html: Object.entries(THEMES)
           .map(

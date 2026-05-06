@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { RealTimeSummaryModal } from "@/components/RealTimeSummaryModal";
 import {
+  Brain,
   Users,
   MessageSquare,
   Bell,
@@ -362,6 +363,24 @@ export default function InstructorViewPage({
                 Rapport avec IA
               </>
             )}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.open(`/simulation/${simulationId}/dashboard`, "_blank")}
+            className="gap-2"
+          >
+            <Activity className="h-4 w-4 text-green-600" />
+            Dashboard live
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.open(`/simulation/${simulationId}/analysis`, "_blank")}
+            className="gap-2"
+          >
+            <Brain className="h-4 w-4 text-blue-600" />
+            Analyse IA
           </Button>
         </div>
       </div>

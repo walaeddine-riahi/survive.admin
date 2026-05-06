@@ -76,6 +76,8 @@ export interface ExtractedProcessData {
   industrialEquipment?: string;
   officeEquipment?: string;
 
+  dependencies?: any[];
+
   // Informations supplémentaires
   extractedText?: string;
   confidence?: number;
@@ -143,210 +145,69 @@ async function analyzeWithAI(text: string): Promise<ExtractedProcessData> {
       deployment,
     });
 
-    const prompt = `Tu es un extracteur de données STRICT pour Business Impact Analysis (BIA).
+    const prompt = `Tu es une IA EXPERTE en Analyse d'Impact Métier (BIA) et Continuité d'Activité (ISO 22301). 
+Ta mission est d'extraire des données de documents PDF/Word de manière CHIRURGICALE.
 
-⛔ INTERDICTIONS ABSOLUES - TU SERAS REJETÉ SI TU VIOLES CES RÈGLES:
-1. ❌ N'INVENTE AUCUN NOM de personne, entreprise ou fournisseur
-2. ❌ NE CRÉE PAS de numéros de téléphone ou emails
-3. ❌ NE DEVINE PAS de valeurs numériques (RTO, RPO, MTPD, etc.)
-4. ❌ NE GÉNÈRE PAS d'exemples ou de données plausibles
-5. ❌ NE COMPLÈTE PAS avec des informations logiques
+⛔ RÈGLES D'OR ANTI-HALLUCINATION:
+1. ❌ NE JAMAIS INVENTER de données. Si un champ n'est pas explicitement mentionné -> null.
+2. ❌ NE JAMAIS ESTIMER de chiffres (RTO, RPO, etc.). Si pas de chiffre précis -> null.
+3. ❌ NE JAMAIS GÉNÉRER de noms de personnes, de mails ou de téléphones "probables".
+4. ❌ NE PAS REFORMULER les descriptions. Copie le texte original.
 
-✅ RÈGLES STRICTES D'EXTRACTION:
-- Si une information N'EST PAS écrite dans le document → utilise null
-- Si tu n'es pas CERTAIN à 100% → utilise null
-- COPIE mot pour mot, ne reformule JAMAIS
-- Garde la langue d'origine du document
-- Pour les tableaux: copie UNIQUEMENT les lignes présentes dans le document
+🔍 CHAMPS PRIORITAIRES À EXTRAIRE:
+- Identité : Nom du processus, département, site géographique, responsable.
+- Métriques Temporelles (HEURES UNIAUEMENT) : RTO, MTPD, RPO.
+- Impacts : Décrire les conséquences financières, opérationnelles et d'image.
+- Ressources Critiques : Systèmes IT (ERP, CRM...), Personnel (nb et rôles), Équipements.
 
-❌ EXEMPLES DE CE QU'IL NE FAUT PAS FAIRE:
-Document: "Le processus nécessite 2 personnes"
-❌ MAUVAIS: "staffRoles": "Opérateurs et techniciens" (INVENTÉ!)
-✅ BON: "staffRoles": null (car les rôles ne sont pas mentionnés)
-
-Document: "Fournisseurs: voir annexe"
-❌ MAUVAIS: "externalSuppliers": "PharmaChem SARL, PackTech International" (INVENTÉ!)
-✅ BON: "externalSuppliers": null (car les noms ne sont pas donnés)
-
-Document: "RTO critique"
-❌ MAUVAIS: "rto": 4 (DEVINÉ!)
-✅ BON: "rto": null (car le chiffre n'est pas précisé)
-
-DOCUMENT:
+DOCUMENT À ANALYSER:
 ${text.substring(0, 50000)}
 
-INSTRUCTIONS:
-Lis le document de manière COMPLÈTE ET DÉTAILLÉE. Extrais TOUTES les informations disponibles.
-Pour chaque champ:
-- Si l'information est présente dans le document: copie-la exactement (même si c'est long)
-- Si l'information n'est PAS dans le document: utilise null (pas de valeur par défaut)
-- Pour les tableaux: extrais TOUTES les lignes présentes, ne limite pas le nombre
-- Pour les booléens: true/false SEULEMENT si explicitement mentionné, sinon null
+INSTRUCTIONS DE SORTIE:
+Génère un JSON respectant STRICTEMENT la structure suivante.
+Pour chaque liste (ex: activitesCritiques, systemesInformatiques), extrais TOUTES les lignes si un tableau est présent.
 
 Structure attendue:
 {
-  "name": "Nom EXACT du processus tel qu'écrit dans le document",
-  "description": "Description EXACTE et COMPLÈTE copiée du document ou null",
-  "department": "Département EXACT tel qu'écrit (ex: RH, IT, Finance) ou null",
-  "location": "Localisation EXACTE telle qu'écrite ou null",
-  "processOwner": "Nom EXACT du responsable de processus ou null",
-  "ownerRole": "Fonction EXACTE du responsable ou null",
-  "ownerEmail": "Email EXACT du responsable ou null",
-  "ownerPhone": "Téléphone EXACT du responsable ou null",
+  "name": "Nom du processus",
+  "description": "Description complète",
+  "department": "Département (ex: Production, Finance, IT)",
+  "location": "Site ou bâtiment",
+  "processOwner": "Nom du responsable",
+  "ownerRole": "Poste du responsable",
+  "ownerEmail": "Email professionnel",
+  "ownerPhone": "Numéro de téléphone",
   
-  "impact": "Type d'impact SI MENTIONNÉ: financial/reputation/legal/operational/safety/environmental ou null",
-  "criticality": "Criticité SI MENTIONNÉE: low/medium/high/critical ou null",
-  "rto": Nombre EXACT d'heures SI MENTIONNÉ ou null,
-  "mtpd": Nombre EXACT d'heures SI MENTIONNÉ ou null,
-  "rpo": Nombre EXACT d'heures SI MENTIONNÉ ou null,
-  "mbco": "Valeur EXACTE SI MENTIONNÉE ou null",
-  "criticalTimes": "Périodes critiques EXACTES copiées du document ou null",
+  "criticality": "LOW/MEDIUM/HIGH/CRITICAL (choisir le plus proche selon le document)",
+  "rto": nombre d'heures (convertis si mentionné en jours/minutes),
+  "mtpd": nombre d'heures,
+  "rpo": nombre d'heures (ou fraction d'heure),
+  "mbco": "Niveau minimum de service acceptable",
   
-  "financialImpact": "Impact financier EXACT et COMPLET copié du document ou null",
-  "operationalImpact": "Impact opérationnel EXACT et COMPLET copié du document ou null",
-  "reputationImpact": "Impact réputation EXACT et COMPLET copié du document ou null",
-  "operationalCapacityImpact": "Impact capacité opérationnelle EXACT copié du document ou null",
-  
-  "mainFunctionality": "Fonctionnalité principale EXACTE et COMPLÈTE copiée du document ou null",
-  "productDependencies": "Dépendances produits EXACTES et COMPLÈTES copiées du document ou null",
-  "interServiceDependencies": "Dépendances inter-services EXACTES et COMPLÈTES copiées du document ou null",
+  "impacts": [
+    { "type": "Financier", "level": "low/medium/high", "description": "détails" },
+    { "type": "Opérationnel", "level": "low/medium/high", "description": "détails" },
+    { "type": "Réputation", "level": "low/medium/high", "description": "détails" }
+  ],
   
   "activitesCritiques": [
-    {
-      "nom": "Nom EXACT de l'activité critique",
-      "criticite": "critical/high/medium/low",
-      "delai": "Délai EXACT",
-      "rto": nombre d'heures,
-      "mtpd": nombre d'heures,
-      "rpo": nombre d'heures,
-      "mbco": "MBCO EXACT",
-      "impactsOperationnels": "Impacts opérationnels EXACTS",
-      "impactsReglementaires": "Impacts réglementaires EXACTS",
-      "impactsImage": "Impacts image EXACTS"
-    }
-  ] SI présentes dans le document, sinon [],
-  
-  "fournisseursExternes": [
-    {
-      "nom": "Nom EXACT du fournisseur",
-      "servicesOfferts": "Services EXACTS offerts",
-      "contactNom": "Nom EXACT du contact",
-      "contactTelephone": "Téléphone EXACT",
-      "contactEmail": "Email EXACT",
-      "zoneGeographique": "Zone géographique EXACTE",
-      "isUniqueSupplier": true/false si mentionné,
-      "rto": nombre d'heures,
-      "mtpd": nombre d'heures,
-      "planContinuiteActivite": "oui/non/inconnu",
-      "clauseSLA": "oui/non/inconnu"
-    }
-  ] SI présents dans le document, sinon [],
+    { "nom": "nom", "rto": nombre, "impactsOperationnels": "détails" }
+  ],
   
   "systemesInformatiques": [
-    {
-      "nom": "Nom EXACT du système",
-      "typeSysteme": "Type EXACT (ERP, CRM, SCADA, etc.)",
-      "criticite": "critical/high/medium/low",
-      "impactIndisponibilite": "Impact EXACT en cas d'indisponibilité",
-      "activitesAssociees": "Activités EXACTES associées",
-      "sauvegardesEnPlace": "oui/non/inconnu",
-      "rto": nombre d'heures,
-      "rpo": nombre d'heures,
-      "mtpd": nombre d'heures
-    }
-  ] SI présents dans le document, sinon [],
-  
-  "infrastructuresPhysiques": [
-    {
-      "nom": "Nom EXACT de l'infrastructure",
-      "type": "Type EXACT",
-      "criticite": "critical/high/medium/low",
-      "impactIndisponibilite": "Impact EXACT",
-      "activitesAssociees": "Activités EXACTES"
-    }
-  ] SI présentes dans le document, sinon [],
+    { "nom": "nom", "typeSysteme": "ERP/CRM/etc", "rto": nombre, "rpo": nombre }
+  ],
   
   "rolesPersonnel": [
-    {
-      "role": "Rôle EXACT",
-      "effectif": nombre,
-      "tachesResponsabilites": "Tâches et responsabilités EXACTES",
-      "competenceUnique": "oui/non",
-      "remplacable": "oui/non"
-    }
-  ] SI présents dans le document, sinon [],
+    { "role": "intitulé", "effectif": nombre, "competenceUnique": "oui/non" }
+  ],
   
-  "equipementsIndustriels": [
-    {
-      "designation": "Désignation EXACTE",
-      "modeleReference": "Modèle/Référence EXACT",
-      "tachesRealise": "Tâches EXACTES réalisées",
-      "criticite": "critical/high/medium/low",
-      "rto": nombre d'heures,
-      "mtpd": nombre d'heures
-    }
-  ] SI présents dans le document, sinon [],
-  
-  "equipementsBureautiques": [
-    {
-      "type": "Type EXACT",
-      "quantiteActuelle": nombre,
-      "tachesUtilisation": "Tâches EXACTES",
-      "criticite": "critical/high/medium/low",
-      "rto": nombre d'heures,
-      "mtpd": nombre d'heures
-    }
-  ] SI présents dans le document, sinon [],
-  
-  "documentationsCritiques": [
-    {
-      "type": "Type EXACT de documentation",
-      "format": "papier/numerique/les_deux",
-      "emplacementPrincipal": "Emplacement EXACT",
-      "necessaireApresIncident": "oui/non",
-      "criticite": "critical/high/medium/low"
-    }
-  ] SI présentes dans le document, sinon [],
-  
-  "obligationsLegales": [
-    {
-      "domaine": "Domaine EXACT",
-      "obligationLegale": "Obligation EXACTE",
-      "reference": "Référence EXACTE",
-      "autoriteRegulation": "Autorité EXACTE",
-      "details": "Détails EXACTS",
-      "consequencesNonRespect": "Conséquences EXACTES"
-    }
-  ] SI présentes dans le document, sinon [],
-  
-  "externalSuppliers": "Fournisseurs externes EXACTS copiés du document ou null",
-  "keySuppliers": "Fournisseurs clés EXACTS copiés du document ou null",
-  
-  "staffRoles": "Rôles du personnel EXACTS copiés du document ou null",
-  "staffCount": Nombre EXACT SI MENTIONNÉ ou null,
-  
-  "itSystems": "Systèmes IT EXACTS copiés du document ou null",
-  "systemCriticality": "Criticité IT EXACTE copiée du document ou null",
-  
-  "dependsOnPhysicalInfra": true/false SI EXPLICITEMENT MENTIONNÉ, sinon null,
-  "infrastructureType": "Type d'infrastructure EXACT copié du document ou null",
-  
-  "requiredDocumentation": "Documentation requise EXACTE copiée du document ou null",
-  "industrialEquipment": "Équipements industriels EXACTS copiés du document ou null",
-  "officeEquipment": "Équipements bureautiques EXACTS copiés du document ou null",
-  
-  "confidence": Score de confiance de 0 à 100 basé sur la quantité d'informations trouvées
+  "confidence": score de 0 à 100
 }
 
-RAPPEL IMPORTANT:
-- LIS LE DOCUMENT EN ENTIER et extrais TOUTES les informations disponibles
-- Pour les tableaux: extrais TOUTES les lignes, pas juste quelques exemples
-- Utilise null pour toute information NON présente dans le document
-- Ne complète PAS avec des valeurs logiques ou probables
-- Copie les textes EXACTEMENT comme ils apparaissent (même s'ils sont longs)
+RÉPONDS UNIQUEMENT EN JSON VALIDE.
 - Les valeurs numériques doivent être EXACTES, pas estimées
-
-Réponds UNIQUEMENT avec le JSON, sans texte supplémentaire.`;
+- Réponds UNIQUEMENT avec le JSON, sans texte supplémentaire.`;
 
     const completion = await client.chat.completions.create({
       model: deployment,

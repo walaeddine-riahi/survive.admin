@@ -3,12 +3,52 @@ import { NextResponse } from "next/server";
 
 export default withAuth(
   function middleware(req) {
-    // Vérifier si l'utilisateur est un admin pour les routes admin
-    if (req.nextUrl.pathname.startsWith("/admin")) {
-      const token = req.nextauth.token;
-      if (token?.role !== "ADMIN") {
-        return NextResponse.redirect(new URL("/", req.url));
-      }
+    const token = req.nextauth.token;
+    const pathname = req.nextUrl.pathname;
+
+    // Routes réservées aux ADMINS uniquement
+    const adminOnlyPaths = [
+      "/admin",
+      "/factories",
+      "/plan",
+      "/plan-type",
+      "/risk",
+      "/scenario",
+      "/incident",
+      "/report",
+      "/bia",
+      "/bia-form",
+      "/compliance",
+      "/conformity",
+      "/training",
+      "/task",
+      "/injections",
+      "/instructor-simulations",
+    ];
+
+    // Routes accessibles aux utilisateurs réguliers
+    const userAccessPaths = [
+      "/participant-mode",
+      "/participant-view",
+      "/simulation",
+      "/participations",
+      "/notifications",
+      "/profile",
+      "/settings",
+      "/team-members",
+      "/team-chat",
+      "/dashboard",
+    ];
+
+    // Vérifier si l'utilisateur accède à une route admin
+    const isAdminPath = adminOnlyPaths.some((path) =>
+      pathname.startsWith(path)
+    );
+
+    if (isAdminPath && token?.role !== "ADMIN") {
+      const url = new URL("/participant-mode", req.url);
+      url.searchParams.set("error", "unauthorized");
+      return NextResponse.redirect(url);
     }
 
     return NextResponse.next();

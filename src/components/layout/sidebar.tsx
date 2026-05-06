@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import {
@@ -12,16 +11,19 @@ import {
   PlayCircle,
   Presentation,
   Shield,
+  Sparkles,
   User,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Dispatch, SetStateAction, useState } from "react";
+import { useSession } from "next-auth/react";
 
 interface RouteChild {
   title: string;
   href: string;
+  rolesRequired?: string[];
 }
 
 interface Route {
@@ -29,6 +31,7 @@ interface Route {
   icon: LucideIcon;
   href?: string;
   children?: RouteChild[];
+  rolesRequired?: string[];
 }
 
 const routes: Route[] = [
@@ -36,205 +39,76 @@ const routes: Route[] = [
     title: "Accueil",
     icon: Home,
     href: "/dashboard",
+    rolesRequired: ["ADMIN", "USER"],
   },
-
-  // =====================================================
-  // MODULE 1: SIMULATION
-  // =====================================================
   {
     title: "Simulation",
     icon: PlayCircle,
     children: [
-      {
-        title: "Liste des simulations",
-        href: "/simulation",
-      },
-      {
-        title: "Créer simulation",
-        href: "/simulation/create",
-      },
-      {
-        title: "Scénarios",
-        href: "/scenario",
-      },
-      {
-        title: "Injections",
-        href: "/injections",
-      },
-      {
-        title: "Mode Participant",
-        href: "/participant-mode",
-      },
-      {
-        title: "Participations",
-        href: "/participations",
-      },
+      { title: "Liste des simulations", href: "/simulation", rolesRequired: ["ADMIN"] },
+      { title: "Créer simulation", href: "/simulation/create", rolesRequired: ["ADMIN"] },
+      { title: "Scénarios", href: "/scenario", rolesRequired: ["ADMIN"] },
+      { title: "Injections", href: "/injections", rolesRequired: ["ADMIN"] },
+      { title: "Mode Participant", href: "/participant-mode", rolesRequired: ["ADMIN", "USER"] },
+      { title: "Participations", href: "/participations", rolesRequired: ["ADMIN"] },
     ],
   },
-
-  // =====================================================
-  // MODULE 2: INSTRUCTEUR
-  // =====================================================
   {
     title: "Instructeur",
     icon: Presentation,
     children: [
-      {
-        title: "Vue Instructeur",
-        href: "/instructor-simulations",
-      },
-      {
-        title: "Gestion d'équipes",
-        href: "/team",
-      },
-      {
-        title: "Liste des équipes",
-        href: "/teams",
-      },
-      {
-        title: "Membres d'équipe",
-        href: "/team-members",
-      },
-      {
-        title: "Membre (ancien)",
-        href: "/team-member",
-      },
-      {
-        title: "Chat d'équipe",
-        href: "/team-chat",
-      },
-      {
-        title: "Gestion des tâches",
-        href: "/task",
-      },
-      {
-        title: "Incidents",
-        href: "/incident",
-      },
-      {
-        title: "Créer incident",
-        href: "/incident/create",
-      },
-      {
-        title: "Rapports",
-        href: "/report",
-      },
+      { title: "Vue Instructeur", href: "/instructor-simulations", rolesRequired: ["ADMIN"] },
+      { title: "Gestion d'équipes", href: "/team", rolesRequired: ["ADMIN"] },
+      { title: "Liste des équipes", href: "/teams", rolesRequired: ["ADMIN"] },
+      { title: "Membres d'équipe", href: "/team-members", rolesRequired: ["ADMIN"] },
+      { title: "Chat d'équipe", href: "/team-chat", rolesRequired: ["ADMIN"] },
+      { title: "Gestion des tâches", href: "/task", rolesRequired: ["ADMIN"] },
+      { title: "Incidents", href: "/incident", rolesRequired: ["ADMIN"] },
+      { title: "Créer incident", href: "/incident/create", rolesRequired: ["ADMIN"] },
+      { title: "Rapports", href: "/report", rolesRequired: ["ADMIN"] },
     ],
   },
-
-  // =====================================================
-  // MODULE 3: BIA (Business Impact Analysis)
-  // =====================================================
   {
     title: "BIA",
     icon: BarChart3,
     children: [
-      {
-        title: "Dashboard BIA",
-        href: "/bia/dashboard",
-      },
-      {
-        title: "Liste des processus",
-        href: "/bia",
-      },
-      {
-        title: "Nouveau processus",
-        href: "/bia/processes/new",
-      },
-      {
-        title: "Éditer processus",
-        href: "/bia/processes/edit",
-      },
-      {
-        title: "Usines / Factories",
-        href: "/bia/factories",
-      },
-      {
-        title: "Rapports BIA",
-        href: "/bia/reports",
-      },
-      {
-        title: "Conformité",
-        href: "/compliance",
-      },
-      {
-        title: "Conformité (alt)",
-        href: "/conformity",
-      },
-      {
-        title: "Gestion des risques",
-        href: "/risk",
-      },
+      { title: "Dashboard BIA", href: "/bia/dashboard", rolesRequired: ["ADMIN"] },
+      { title: "Liste des processus", href: "/bia", rolesRequired: ["ADMIN"] },
+      { title: "Nouveau processus", href: "/bia/processes/new", rolesRequired: ["ADMIN"] },
+      { title: "Usines / Factories", href: "/bia/factories", rolesRequired: ["ADMIN"] },
+      { title: "Rapports BIA", href: "/bia/reports", rolesRequired: ["ADMIN"] },
+      { title: "Résumé de Document", href: "/document-summary", rolesRequired: ["ADMIN"] },
+      { title: "Conformité", href: "/compliance", rolesRequired: ["ADMIN"] },
+      { title: "Gestion des risques", href: "/risk", rolesRequired: ["ADMIN"] },
     ],
   },
-
-  // =====================================================
-  // MODULE 4: WORKSHOP (Formation & Développement)
-  // =====================================================
   {
     title: "Workshop",
     icon: GraduationCap,
+    rolesRequired: ["ADMIN"],
     children: [
-      {
-        title: "Formations",
-        href: "/training",
-      },
-      {
-        title: "Plans d'action",
-        href: "/plan",
-      },
-      {
-        title: "Types de plans",
-        href: "/plan-type",
-      },
-      {
-        title: "Événements",
-        href: "/participations",
-      },
-      {
-        title: "Notifications",
-        href: "/notifications",
-      },
+      { title: "Formations", href: "/training", rolesRequired: ["ADMIN"] },
+      { title: "Plans d'action", href: "/plan", rolesRequired: ["ADMIN"] },
+      { title: "Types de plans", href: "/plan-type", rolesRequired: ["ADMIN"] },
+      { title: "Événements", href: "/participations", rolesRequired: ["ADMIN"] },
+      { title: "Notifications", href: "/notifications", rolesRequired: ["ADMIN"] },
     ],
   },
-
-  // =====================================================
-  // PROFIL & COMPTE
-  // =====================================================
   {
     title: "Profil",
     icon: User,
     children: [
-      {
-        title: "Mon Profil",
-        href: "/profile",
-      },
-      {
-        title: "Paramètres",
-        href: "/settings",
-      },
+      { title: "Mon Profil", href: "/profile", rolesRequired: ["ADMIN", "USER"] },
+      { title: "Paramètres", href: "/settings", rolesRequired: ["ADMIN", "USER"] },
     ],
   },
-
-  // =====================================================
-  // ADMINISTRATION
-  // =====================================================
   {
     title: "Admin",
     icon: Shield,
     children: [
-      {
-        title: "Panel Admin",
-        href: "/admin",
-      },
-      {
-        title: "Utilisateurs",
-        href: "/users",
-      },
-      {
-        title: "Super Admin",
-        href: "/super-admin",
-      },
+      { title: "Panel Admin", href: "/admin", rolesRequired: ["ADMIN"] },
+      { title: "Utilisateurs", href: "/users", rolesRequired: ["ADMIN"] },
+      { title: "Super Admin", href: "/super-admin", rolesRequired: ["ADMIN"] },
     ],
   },
 ];
@@ -249,7 +123,28 @@ export function Sidebar({
   setIsMobileMenuOpen,
 }: SidebarProps) {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const userRole = session?.user?.role || "USER";
+
+  const canAccessRoute = (rolesRequired?: string[]): boolean => {
+    if (!rolesRequired || rolesRequired.length === 0) return true;
+    return rolesRequired.includes(userRole);
+  };
+
+  const getFilteredChildren = (children: RouteChild[]): RouteChild[] => {
+    return children.filter((child) => canAccessRoute(child.rolesRequired));
+  };
+
+  const getFilteredRoutes = (): Route[] => {
+    return routes
+      .filter((route) => canAccessRoute(route.rolesRequired))
+      .map((route) => ({
+        ...route,
+        children: route.children ? getFilteredChildren(route.children) : undefined,
+      }))
+      .filter((route) => !route.children || route.children.length > 0);
+  };
 
   const handleMenuClick = (menuId: string) => {
     setOpenMenuId((currentId) => (currentId === menuId ? null : menuId));
@@ -265,62 +160,78 @@ export function Sidebar({
     return children?.some((child) => child.href === pathname);
   };
 
+  const filteredRoutes = getFilteredRoutes();
+
+  const btnIconStyle = "flex items-center gap-[10px] px-3 py-2 rounded-[8px] text-[14px] transition-[var(--transition)] cursor-pointer w-full text-left";
+
   return (
     <div
       className={cn(
-        "fixed inset-y-0 left-0 z-40 w-64 transform bg-background border-r border-border transition-transform duration-200 ease-in-out md:translate-x-0",
+        "fixed inset-y-0 left-0 z-40 w-[220px] transform bg-[var(--bg-secondary)] border-r border-[var(--border)] transition-transform duration-300 ease-in-out md:translate-x-0",
         isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
       )}
     >
-      <div className="flex h-full flex-col">
-        {/* Logo Section - YouTube Style */}
-        <div className="h-14 px-4 flex items-center border-b border-border">
-          <Link href="/dashboard" className="flex items-center gap-2 group">
-            <div className="h-8 w-8 rounded-sm bg-primary flex items-center justify-center">
-              <span className="text-white font-bold text-base">S</span>
+      <div className="flex h-full flex-col p-[var(--s4)] gap-[var(--s2)]">
+        {/* Logo Section */}
+        <div className="mb-[var(--s4)] px-1">
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-[var(--radius-md)] bg-gradient-to-br from-[#A54D32] to-[#DA7757] flex items-center justify-center shrink-0">
+              <Sparkles size={16} color="white" strokeWidth={1.5} />
             </div>
-            <span className="font-medium text-base">SURVIVE</span>
+            <div className="flex flex-col">
+              <span className="font-bold text-[13px] tracking-tight text-[#FAFAF9] leading-tight">SURVIVE</span>
+              <span className="text-[10px] uppercase tracking-[0.1em] text-[#78716C]">Resilience</span>
+            </div>
           </Link>
         </div>
 
-        {/* Navigation Section - YouTube Style */}
-        <ScrollArea className="flex-1 px-3 py-2">
-          <div className="space-y-1">
-            {routes.map((route) => (
+        {/* Navigation Section */}
+        <ScrollArea className="flex-1 -mx-2 px-2">
+          <div className="flex flex-col gap-[var(--s1)]">
+            {filteredRoutes.map((route) => (
               <div key={route.href || route.title}>
                 {route.children ? (
                   <>
                     <button
                       onClick={() => handleMenuClick(route.title)}
                       className={cn(
-                        "w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-sm font-normal transition-colors",
-                        isChildActive(route.children)
-                          ? "bg-muted font-medium"
-                          : "hover:bg-muted/50"
+                        btnIconStyle,
+                        isChildActive(route.children) || openMenuId === route.title
+                          ? "bg-[var(--bg-hover)] text-[var(--text-primary)] border-l-2 border-[var(--accent)] rounded-l-none pl-[10px]"
+                          : "text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
                       )}
                     >
-                      <div className="flex items-center gap-3">
-                        <route.icon className="h-5 w-5 flex-shrink-0" />
-                        <span className="truncate text-sm">{route.title}</span>
+                      <div className="flex items-center gap-[10px] flex-1">
+                        <route.icon 
+                          size={16} 
+                          strokeWidth={1.5} 
+                          className={cn(
+                            "shrink-0",
+                            isChildActive(route.children) ? "text-[#D97706]" : "text-[#A8A29E]"
+                          )} 
+                        />
+                        <span className="truncate">{route.title}</span>
                       </div>
                       <ChevronDown
+                        size={14}
+                        strokeWidth={1.5}
                         className={cn(
-                          "h-4 w-4 flex-shrink-0 transition-transform duration-200",
+                          "transition-transform duration-300",
                           openMenuId === route.title && "rotate-180"
                         )}
                       />
                     </button>
                     {openMenuId === route.title && (
-                      <div className="ml-8 mt-1 space-y-0.5 pb-1">
+                      <div className="mt-1 space-y-1 ml-4 border-l border-[var(--border)] pl-3">
                         {route.children.map((child) => (
                           <Link
                             key={child.href}
                             href={child.href}
                             className={cn(
-                              "block px-3 py-1.5 text-xs rounded-lg transition-colors",
+                              "block px-3 py-1.5 text-[13px] rounded-[8px] transition-[var(--transition)]",
                               isActive(child.href)
-                                ? "bg-muted font-medium text-foreground"
-                                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                                ? "bg-[var(--bg-hover)] text-[var(--text-primary)] font-medium"
+                                : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]/50 hover:text-[var(--text-primary)]"
                             )}
                             onClick={() => setIsMobileMenuOpen(false)}
                           >
@@ -331,37 +242,52 @@ export function Sidebar({
                     )}
                   </>
                 ) : (
-                  <Link
-                    href={route.href || "#"}
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-normal transition-colors",
-                      isActive(route.href || "")
-                        ? "bg-muted font-medium text-foreground"
-                        : "text-foreground hover:bg-muted/50"
-                    )}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <route.icon className="h-5 w-5 flex-shrink-0" />
-                    <span className="truncate text-sm">{route.title}</span>
-                  </Link>
+                    <Link
+                      href={route.href || "#"}
+                      className={cn(
+                        btnIconStyle,
+                        isActive(route.href || "")
+                          ? "bg-[var(--bg-hover)] text-[var(--text-primary)] border-l-2 border-[var(--accent)] rounded-l-none pl-[10px]"
+                          : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]/10 hover:text-[var(--text-primary)]"
+                      )}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <route.icon 
+                        size={16} 
+                        strokeWidth={1.5} 
+                        className={cn(
+                          "shrink-0",
+                          isActive(route.href || "") ? "text-[var(--accent)]" : "text-[var(--text-secondary)]"
+                        )} 
+                      />
+                      <span className="truncate">{route.title}</span>
+                    </Link>
                 )}
               </div>
             ))}
           </div>
         </ScrollArea>
 
-        {/* Footer Section - YouTube Style */}
-        <div className="border-t border-border p-3">
-          <Button
-            variant="ghost"
-            className="w-full justify-start gap-3 px-3 py-2 text-sm font-normal hover:bg-muted rounded-lg"
+        {/* Footer Section */}
+        <div className="mt-auto pt-2 border-t border-[var(--border)] mx-3">
+          <div className="flex items-center gap-2 p-3">
+            <div className="h-7 w-7 rounded-[6px] bg-[var(--bg-tertiary)] flex items-center justify-center text-[12px] font-medium text-[var(--text-primary)] shrink-0 border border-[var(--border)]">
+              {session?.user?.name?.charAt(0) || "A"}
+            </div>
+            <div className="flex flex-col truncate">
+              <span className="text-[13px] font-medium text-[var(--text-primary)] truncate leading-tight">{session?.user?.name || "Administrateur"}</span>
+              <span className="text-[11px] text-[var(--text-muted)] truncate">{session?.user?.email}</span>
+            </div>
+          </div>
+          <button
+            className={cn(btnIconStyle, "text-[var(--text-secondary)] hover:bg-red-500/10 hover:text-red-400 mt-1")}
             onClick={() => {
-              setIsMobileMenuOpen(false);
+              // Add logout logic if needed
             }}
           >
-            <LogOut className="h-5 w-5" />
+            <LogOut size={16} strokeWidth={1.5} />
             <span>Déconnexion</span>
-          </Button>
+          </button>
         </div>
       </div>
     </div>

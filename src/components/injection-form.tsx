@@ -22,7 +22,9 @@ type FormData = {
   attachments: string;
   payload: string;
 };
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
+import { useState, useEffect } from "react";
+import { toast as sonnerToast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -143,6 +145,7 @@ interface InjectionFormProps {
   initialData?: Partial<InjectionFormData>;
   onSimulationChange?: (simulationId: string) => void;
   users?: UserOption[];
+  simulationId?: string;
   scenarioId?: string;
   scenarios?: ScenarioOption[];
 }
@@ -156,6 +159,8 @@ export function InjectionForm({
   initialData,
   onSimulationChange,
   users = [],
+  simulationId,
+  scenarioId,
   scenarios = [],
 }: InjectionFormProps) {
   const methods = useForm<FormData>({
@@ -168,8 +173,8 @@ export function InjectionForm({
       timeOffset: initialData?.timeOffset || null,
       isRepeating: initialData?.isRepeating || false,
       repeatInterval: initialData?.repeatInterval || null,
-      scenarioId: initialData?.scenarioId || "",
-      simulationId: initialData?.simulationId || "",
+      scenarioId: initialData?.scenarioId || scenarioId || "",
+      simulationId: initialData?.simulationId || simulationId || "",
       isActive: initialData?.isActive ?? true,
       type: initialData?.type || InjectionTypeEnum.EMAIL,
       imageUrl: initialData?.imageUrl || "",
@@ -179,6 +184,31 @@ export function InjectionForm({
       payload: initialData?.payload || "",
     },
   });
+
+  // Réinitialiser le formulaire lorsque les données initiales ou l'état d'ouverture changent
+  useEffect(() => {
+    if (open) {
+      methods.reset({
+        title: initialData?.title || "",
+        content: initialData?.content || "",
+        triggerType: initialData?.triggerType || InjectionTriggerTypeEnum.MANUAL,
+        timeOffset: initialData?.timeOffset || null,
+        isRepeating: initialData?.isRepeating || false,
+        repeatInterval: initialData?.repeatInterval || null,
+        scenarioId: initialData?.scenarioId || scenarioId || "",
+        simulationId: initialData?.simulationId || simulationId || "",
+        isActive: initialData?.isActive ?? true,
+        type: initialData?.type || InjectionTypeEnum.EMAIL,
+        imageUrl: initialData?.imageUrl || "",
+        videoUrl: initialData?.videoUrl || "",
+        targetUserId: initialData?.targetUserId || "",
+        attachments: initialData?.attachments || "",
+        payload: initialData?.payload || "",
+      });
+    }
+  }, [open, initialData, simulationId, scenarioId, methods]);
+
+  const [generatingAI, setGeneratingAI] = useState(false);
 
   const { control, watch } = methods;
   const triggerType = watch("triggerType");
@@ -194,6 +224,41 @@ export function InjectionForm({
 
   const handleFormSubmit = (data: FormData) => {
     onSubmit(data as InjectionFormData);
+  };
+
+  const handleAIGenerate = async () => {
+    const type = methods.getValues("type");
+    const title = methods.getValues("title");
+    const simulationId = methods.getValues("simulationId");
+    
+    const sim = simulations.find(s => s.id === simulationId);
+
+    try {
+      setGeneratingAI(true);
+      const response = await fetch("/api/ai/generate-injection", {
+        method: "POST",
+        body: JSON.stringify({
+          type,
+          context: title || "Générer une injection réaliste",
+          simulationInfo: sim ? { title: sim.name } : undefined
+        }),
+      });
+
+      if (!response.ok) throw new Error("Erreur IA");
+      const data = await response.json();
+
+      methods.setValue("content", data.content, { shouldDirty: true });
+      if (data.title && !title) {
+        methods.setValue("title", data.title, { shouldDirty: true });
+      }
+      
+      sonnerToast.success("Contenu généré par l'IA");
+    } catch (error) {
+      console.error(error);
+      sonnerToast.error("Échec de la génération IA");
+    } finally {
+      setGeneratingAI(false);
+    }
   };
 
   return (
@@ -289,7 +354,7 @@ export function InjectionForm({
                       <FormLabel>Type d&apos;injection *</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -439,10 +504,27 @@ export function InjectionForm({
                 name="content"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Contenu *</FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Contenu *</FormLabel>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-purple-600 hover:text-purple-700 hover:bg-purple-50 gap-1"
+                        onClick={handleAIGenerate}
+                        disabled={generatingAI}
+                      >
+                        {generatingAI ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-3 w-3" />
+                        )}
+                        Générer avec l&apos;IA
+                      </Button>
+                    </div>
                     <FormControl>
                       <Textarea
-                        placeholder="Contenu de l'injection"
+                        placeholder="Contenu de l'injection (ou utilisez l'IA pour générer un brouillon basé sur le titre)"
                         className="min-h-[100px]"
                         {...field}
                       />

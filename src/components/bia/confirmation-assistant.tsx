@@ -83,6 +83,8 @@ interface ConfirmationAssistantProps {
   onClose: () => void;
   extractedFields: ExtractedFieldReview[];
   onComplete: (confirmedData: Record<string, unknown>) => void;
+  title?: string;
+  description?: string;
 }
 
 export function ConfirmationAssistant({
@@ -90,6 +92,8 @@ export function ConfirmationAssistant({
   onClose,
   extractedFields,
   onComplete,
+  title = "Validation des Données Extraites",
+  description = "L'IA a extrait des informations du PDF. Vérifiez et validez chaque donnée.",
 }: ConfirmationAssistantProps) {
   console.log("🎨 ConfirmationAssistant rendu:", {
     isOpen,
@@ -679,30 +683,29 @@ export function ConfirmationAssistant({
     }
   };
 
-  const getConfidenceColor = (confidence?: string) => {
-    switch (confidence) {
-      case "high":
-        return "bg-green-100 text-green-800 border-green-300";
-      case "medium":
-        return "bg-yellow-100 text-yellow-800 border-yellow-300";
-      case "low":
-        return "bg-red-100 text-red-800 border-red-300";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-300";
-    }
+  const getConfidenceBadge = (confidence?: number) => {
+    const score = confidence || 0;
+    if (score >= 90) return <Badge className="bg-emerald-500 text-white border-none shadow-[0_0_10px_rgba(16,185,129,0.3)]">✓ Confiance : {score}%</Badge>;
+    if (score >= 70) return <Badge className="bg-blue-500 text-white border-none">✓ Confiance : {score}%</Badge>;
+    if (score >= 40) return <Badge className="bg-orange-500 text-white border-none">⚠ Confiance : {score}%</Badge>;
+    return <Badge className="bg-red-500 text-white border-none">⚠ Faible Confiance : {score}%</Badge>;
   };
 
-  const getConfidenceLabel = (confidence?: string) => {
-    switch (confidence) {
-      case "high":
-        return "✓ Confiance élevée";
-      case "medium":
-        return "⚠ Confiance moyenne";
-      case "low":
-        return "⚠ Confiance faible";
-      default:
-        return "📄 Extrait du document";
+  const getConfidenceColor = (confidenceScore?: number | string) => {
+    if (typeof confidenceScore === "string") {
+        switch (confidenceScore) {
+          case "high": return "bg-green-100 text-green-800 border-green-300";
+          case "medium": return "bg-blue-100 text-blue-800 border-blue-300";
+          case "low": return "bg-red-100 text-red-800 border-red-300";
+          default: return "bg-gray-100 text-gray-800 border-gray-300";
+        }
     }
+    
+    const score = confidenceScore || 0;
+    if (score >= 90) return "bg-green-100 text-green-800 border-green-300";
+    if (score >= 70) return "bg-blue-100 text-blue-800 border-blue-300";
+    if (score >= 40) return "bg-yellow-100 text-yellow-800 border-yellow-300";
+    return "bg-red-100 text-red-800 border-red-300";
   };
 
   if (!currentField) return null;
@@ -716,15 +719,14 @@ export function ConfirmationAssistant({
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2">
               <Bot className="h-6 w-6 text-blue-600" />
-              Validation des Données Extraites
+              {title}
             </DialogTitle>
             <Button variant="ghost" size="icon" onClick={onClose}>
               <X className="h-4 w-4" />
             </Button>
           </div>
           <DialogDescription>
-            L&apos;IA a extrait {extractedFields.length} informations du PDF.
-            Vérifiez et validez chaque donnée.
+            {description}
           </DialogDescription>
         </DialogHeader>
 
@@ -842,12 +844,7 @@ export function ConfirmationAssistant({
             {currentField.category && (
               <Badge variant="outline">{currentField.category}</Badge>
             )}
-            <Badge
-              className={getConfidenceColor(currentField.confidence)}
-              variant="outline"
-            >
-              {getConfidenceLabel(currentField.confidence)}
-            </Badge>
+            {getConfidenceBadge(typeof currentField.confidence === 'number' ? currentField.confidence : undefined)}
           </div>
 
           {/* Question de l'IA */}

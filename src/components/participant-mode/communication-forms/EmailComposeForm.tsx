@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { UserSelect, User } from "@/components/user-select";
-import { Mail } from "lucide-react";
+import { Mail, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { RichTextEditor } from "@/app/(app)/simulation/[simulationId]/participant-view/components/RichTextEditor";
 
 export type EmailFormData = {
   to: string[]; // Tableau d'IDs des utilisateurs destinataires
@@ -20,10 +21,12 @@ export default function EmailComposeForm({
   onSubmit,
   onCancel,
   simulationId,
+  teamId,
 }: {
   onSubmit: (data: EmailFormData) => void | Promise<void>;
   onCancel: () => void;
   simulationId?: string;
+  teamId?: string | null;
 }) {
   const { data: session } = useSession();
   const [users, setUsers] = useState<User[]>([]);
@@ -54,6 +57,10 @@ export default function EmailComposeForm({
           const usersList =
             simulationId && Array.isArray(data)
               ? data
+                  .filter(
+                    (assignment: { user: User; teamId?: string | null }) =>
+                      !teamId || assignment.teamId === teamId
+                  )
                   .map((assignment: { user: User }) => assignment.user)
                   .filter(Boolean)
               : data;
@@ -72,7 +79,7 @@ export default function EmailComposeForm({
     if (session?.user?.id) {
       fetchUsers();
     }
-  }, [session, simulationId]);
+  }, [session?.user?.id, simulationId, teamId]);
 
   // Mettre à jour les données du formulaire quand des destinataires sont sélectionnés
   useEffect(() => {
@@ -152,12 +159,15 @@ export default function EmailComposeForm({
       </div>
       <div className="space-y-2">
         <Label htmlFor="body">Corps du message</Label>
-        <Textarea
+        <RichTextEditor
           id="body"
           value={formData.body}
-          onChange={handleChange}
-          required
-          rows={10}
+          onChange={(value) => setFormData(prev => ({ ...prev, body: value }))}
+          placeholder="Rédigez votre email professionnel ici..."
+          onAIDraft={() => {
+            // Logic for AI drafting can be added here or passed from parent
+            console.log("Drafting with AI...");
+          }}
         />
       </div>
       <div className="flex justify-end space-x-2">

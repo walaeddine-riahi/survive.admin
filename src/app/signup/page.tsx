@@ -9,6 +9,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { signIn } from "next-auth/react";
 import * as z from "zod";
 
 const signUpSchema = z
@@ -81,7 +82,7 @@ export default function SignUpPage() {
           lastName: validatedData.lastName,
           email: validatedData.email,
           password: validatedData.password,
-          role: "USER", // Rôle par défaut
+          role: "ADMIN", // Rôle ADMIN par défaut pour le développement
         }),
       });
 
@@ -93,9 +94,21 @@ export default function SignUpPage() {
 
       toast({
         title: "Inscription réussie",
-        description: "Votre compte a été créé avec succès.",
+        description: "Connexion automatique en cours...",
       });
-      router.push("/connection");
+
+      // Connexion automatique après inscription
+      const result = await signIn("credentials", {
+        email: validatedData.email,
+        password: validatedData.password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        router.push("/connection");
+      } else {
+        router.push("/dashboard");
+      }
     } catch (error) {
       if (error instanceof z.ZodError) {
         const fieldErrors: Partial<SignUpFormValues> = {};

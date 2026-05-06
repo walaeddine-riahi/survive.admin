@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import {
   Bar,
   BarChart,
@@ -90,237 +91,185 @@ const incidentData = [
   { name: "Juin", incidents: 2 },
 ];
 
+import { AlertTriangle, Zap, CheckCircle, FileText, GraduationCap, TrendingUp, TrendingDown, Users } from "lucide-react";
+
 export default function DashboardPage() {
   return (
-    <div className="space-y-8">
-      <h2 className="text-3xl font-bold tracking-tight">Tableau de bord</h2>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-card/80 shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total des tâches
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">12</div>
-            <p className="text-xs text-muted-foreground">
-              +2 depuis la semaine dernière
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/80 shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Tâches en cours
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">4</div>
-            <p className="text-xs text-muted-foreground">
-              -1 depuis la semaine dernière
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/80 shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Tâches terminées
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">8</div>
-            <p className="text-xs text-muted-foreground">
-              +3 depuis la semaine dernière
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/80 shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Membres de l&apos;équipe
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">6</div>
-            <p className="text-xs text-muted-foreground">
-              +1 depuis le mois dernier
-            </p>
-          </CardContent>
-        </Card>
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-[28px] font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
+          Tableau de bord
+        </h1>
+        <p className="text-[14px] text-[var(--text-secondary)]">Bienvenue sur votre interface de résilience augmentée.</p>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Card className="bg-card/80 shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Risques actifs
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">7</div>
-            <p className="text-xs text-muted-foreground">+1 ce mois-ci</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/80 shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Incidents</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">2</div>
-            <p className="text-xs text-muted-foreground">-1 ce mois-ci</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/80 shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Conformité (%)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">97%</div>
-            <p className="text-xs text-muted-foreground">+2% ce mois-ci</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/80 shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Plans actifs</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">8</div>
-            <p className="text-xs text-muted-foreground">+1 ce mois-ci</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-card/80 shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Formations</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">3</div>
-            <p className="text-xs text-muted-foreground">+1 ce mois-ci</p>
-          </CardContent>
-        </Card>
+
+      {/* Stats Grid - Row 1 (Large Cards) */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {[
+          { title: "Total des tâches", value: "12", trend: "+2", isPos: true },
+          { title: "Tâches en cours", value: "4", trend: "-1", isPos: false },
+          { title: "Tâches terminées", value: "8", trend: "+3", isPos: true },
+          { title: "Membres d'équipe", value: "6", trend: "+1", isPos: true },
+        ].map((stat, i) => (
+          <Card key={i} className="bg-[var(--bg-surface)] border-[var(--border)] rounded-[12px] p-[20px_24px] hover:border-[var(--border-subtle)] transition-colors duration-150 group">
+            <div className="flex flex-col gap-2">
+              <span className="text-[11px] font-medium text-[var(--text-muted)] tracking-[0.05em]">
+                {stat.title}
+              </span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-[32px] font-semibold text-[var(--text-primary)]">{stat.value}</span>
+                <div className={cn(
+                  "inline-flex items-center gap-[3px] text-[12px]", 
+                  stat.isPos ? "text-[#10B981]" : "text-[#EF4444]"
+                )}>
+                  {stat.isPos ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                  <span>{stat.trend}</span>
+                </div>
+              </div>
+            </div>
+          </Card>
+        ))}
       </div>
-      {/* Section Graphiques */}
-      <div className="grid gap-8 md:grid-cols-2">
-        <Card className="bg-card/80 shadow-lg">
-          <CardHeader>
-            <CardTitle>Évolution des revenus</CardTitle>
-          </CardHeader>
-          <CardContent className="h-72">
+
+      {/* Stats Grid - Row 2 (Small Cards) */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
+        {[
+          { title: "Risques actifs", value: "7", icon: AlertTriangle },
+          { title: "Incidents", value: "2", icon: Zap },
+          { title: "Conformité", value: "97%", icon: CheckCircle },
+          { title: "Plans actifs", value: "8", icon: FileText },
+          { title: "Formations", value: "3", icon: GraduationCap },
+        ].map((stat, i) => (
+          <Card key={i} className="bg-[var(--bg-surface)] border-[var(--border)] rounded-[12px] p-[16px_20px] relative hover:border-[var(--border-subtle)] transition-colors duration-150">
+            <stat.icon size={16} className="absolute top-4 right-4 text-[var(--border)]" />
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] font-medium text-[var(--text-muted)] tracking-[0.05em]">
+                {stat.title}
+              </span>
+              <span className="text-[24px] font-semibold text-[var(--text-primary)]">{stat.value}</span>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid gap-8 lg:grid-cols-2">
+        <Card className="bg-[var(--bg-surface)] border-[var(--border)] rounded-[12px] p-5">
+          <div className="flex items-center gap-2 mb-6">
+            <div className="h-2 w-2 rounded-full bg-[#DA7757]" />
+            <h3 className="text-[14px] font-medium text-[var(--text-primary)]">Évolution des revenus</h3>
+          </div>
+          <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={revenueData}
-                margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="name" stroke="#8884d8" />
-                <YAxis stroke="#8884d8" />
+              <LineChart data={revenueData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--bg-tertiary)" vertical={false} />
+                <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} dy={10} />
+                <YAxis stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} dx={-10} />
                 <Tooltip
                   contentStyle={{
-                    background: "#fff",
-                    borderRadius: 8,
-                    border: "1px solid #e5e7eb",
+                    backgroundColor: "var(--bg-hover)",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border)",
+                    padding: "8px 12px",
                   }}
+                  itemStyle={{ fontSize: "13px", color: "var(--text-primary)" }}
                 />
-                <Legend />
                 <Line
                   type="monotone"
                   dataKey="total"
-                  stroke="#008080"
-                  strokeWidth={3}
-                  dot={{ r: 5 }}
-                  activeDot={{ r: 8 }}
+                  stroke="#DA7757"
+                  strokeWidth={2}
+                  dot={{ fill: "var(--bg-primary)", stroke: "#DA7757", strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6, strokeWidth: 0 }}
                 />
               </LineChart>
             </ResponsiveContainer>
-          </CardContent>
+          </div>
         </Card>
-        <Card className="bg-card/80 shadow-lg">
-          <CardHeader>
-            <CardTitle>Nombre de tâches par mois</CardTitle>
-          </CardHeader>
-          <CardContent className="h-72">
+
+        <Card className="bg-[var(--bg-surface)] border-[var(--border)] rounded-[12px] p-5">
+          <div className="flex items-center gap-2 mb-6">
+            <div className="h-2 w-2 rounded-full bg-[#6366F1]" />
+            <h3 className="text-[14px] font-medium text-[var(--text-primary)]">Nombre de tâches par mois</h3>
+          </div>
+          <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={taskData}
-                margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="name" stroke="#8884d8" />
-                <YAxis stroke="#8884d8" />
+              <BarChart data={taskData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--bg-tertiary)" vertical={false} />
+                <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} dy={10} />
+                <YAxis stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} dx={-10} />
                 <Tooltip
                   contentStyle={{
-                    background: "#fff",
-                    borderRadius: 8,
-                    border: "1px solid #e5e7eb",
+                    backgroundColor: "var(--bg-hover)",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border)",
+                    padding: "8px 12px",
                   }}
+                  itemStyle={{ fontSize: "13px", color: "var(--text-primary)" }}
                 />
-                <Legend />
-                <Bar dataKey="tasks" fill="#f9b233" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="tasks" fill="#6366F1" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
-          </CardContent>
+          </div>
         </Card>
       </div>
-      {/* Section Graphiques avancés */}
-      <div className="grid gap-8 md:grid-cols-2 mt-8">
-        <Card className="bg-card/80 shadow-lg">
-          <CardHeader>
-            <CardTitle>Évolution des risques</CardTitle>
-          </CardHeader>
-          <CardContent className="h-72">
+
+      {/* Lower Charts Grid */}
+      <div className="grid gap-8 lg:grid-cols-2">
+        <Card className="bg-[var(--bg-surface)] border-[var(--border)] rounded-[12px] p-5">
+          <div className="flex items-center gap-2 mb-6">
+            <div className="h-2 w-2 rounded-full bg-[#EF4444]" />
+            <h3 className="text-[14px] font-medium text-[var(--text-primary)]">Évolution des risques</h3>
+          </div>
+          <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={riskData}
-                margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="name" stroke="#8884d8" />
-                <YAxis stroke="#8884d8" />
+              <LineChart data={riskData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--bg-tertiary)" vertical={false} />
+                <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} dy={10} />
+                <YAxis stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} dx={-10} />
                 <Tooltip
                   contentStyle={{
-                    background: "#fff",
-                    borderRadius: 8,
-                    border: "1px solid #e5e7eb",
+                    backgroundColor: "var(--bg-hover)",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border)",
                   }}
+                  itemStyle={{ fontSize: "13px", color: "var(--text-primary)" }}
                 />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="risks"
-                  stroke="#008080"
-                  strokeWidth={3}
-                  dot={{ r: 5 }}
-                  activeDot={{ r: 8 }}
+                <Line 
+                  type="monotone" 
+                  dataKey="risks" 
+                  stroke="#EF4444" 
+                  strokeWidth={2} 
+                  dot={{ fill: "var(--bg-primary)", stroke: "#EF4444", strokeWidth: 2, r: 4 }} 
                 />
               </LineChart>
             </ResponsiveContainer>
-          </CardContent>
+          </div>
         </Card>
-        <Card className="bg-card/80 shadow-lg">
-          <CardHeader>
-            <CardTitle>Incidents par mois</CardTitle>
-          </CardHeader>
-          <CardContent className="h-72">
+
+        <Card className="bg-[var(--bg-surface)] border-[var(--border)] rounded-[12px] p-5">
+          <div className="flex items-center gap-2 mb-6">
+            <div className="h-2 w-2 rounded-full bg-[#EF4444]" />
+            <h3 className="text-[14px] font-medium text-[var(--text-primary)]">Incidents par mois</h3>
+          </div>
+          <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={incidentData}
-                margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="name" stroke="#8884d8" />
-                <YAxis stroke="#8884d8" />
+              <BarChart data={incidentData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--bg-tertiary)" vertical={false} />
+                <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} dy={10} />
+                <YAxis stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} dx={-10} />
                 <Tooltip
                   contentStyle={{
-                    background: "#fff",
-                    borderRadius: 8,
-                    border: "1px solid #e5e7eb",
+                    backgroundColor: "var(--bg-hover)",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border)",
                   }}
+                  itemStyle={{ fontSize: "13px", color: "var(--text-primary)" }}
                 />
-                <Legend />
-                <Bar dataKey="incidents" fill="#f87171" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="incidents" fill="#EF4444" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
-          </CardContent>
+          </div>
         </Card>
       </div>
     </div>

@@ -1,0 +1,16 @@
+Processus : Maintenance des Infrastructure IT
+Département : Support Technique
+Localisation : Data Center - Salle 4B
+Responsable : Jean Dupont
+Description : Ce processus assure la maintenance préventive et curative des serveurs critiques de l'entreprise.
+Impact : Une interruption prolongée entraîne l'arrêt total des services numériques internes.
+Criticité : CRITIQUE
+RTO : 2 heures
+MTPD : 6 heures
+RPO : 1 heure
+MBCO : Disponibilité de 50% des serveurs cœurs.
+Systèmes IT : Cluster VMware, Baie de stockage NetApp, commutateurs Cisco.
+Personnel : 2 ingénieurs système, 1 technicien réseau.
+Equipement : Consoles KVM, Outillage réseau.
+Fournisseurs : Dell, Microsoft, Cisco.
+Procédures : Plan de reprise d'activité (PRA) v3.2.

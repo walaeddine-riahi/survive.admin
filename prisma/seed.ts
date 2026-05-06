@@ -5,6 +5,21 @@ const prisma = new PrismaClient();
 
 async function main() {
   // Nettoyer la base de données
+  await prisma.simulationDebrief.deleteMany();
+  await prisma.participantScore.deleteMany();
+  await prisma.injectResponse.deleteMany();
+  await prisma.injection.deleteMany();
+  await prisma.simulationAssignment.deleteMany();
+  await prisma.evaluationCriteria.deleteMany();
+  await prisma.simulationCrisisPlan.deleteMany();
+  await prisma.simulation.deleteMany();
+  await prisma.continuityStrategy.deleteMany();
+  await prisma.continuityGap.deleteMany();
+  await prisma.riskAssessment.deleteMany();
+  await prisma.continuitySettings.deleteMany();
+  await prisma.process.deleteMany();
+  await prisma.factory.deleteMany();
+  await prisma.biaReport.deleteMany();
   await prisma.teamChat.deleteMany();
   await prisma.incident.deleteMany();
   await prisma.task.deleteMany();
@@ -59,17 +74,17 @@ async function main() {
   // Créer les utilisateurs
   const adminUser = await prisma.user.create({
     data: {
-      email: "admin@example.com",
-      password: await bcrypt.hash("admin123", 10),
-      firstName: "Admin",
-      lastName: "User",
+      email: "admin@survive.tn",
+      password: await bcrypt.hash("Admin@123456", 10),
+      firstName: "Administrator",
+      lastName: "System",
       role: "ADMIN",
       profile: {
         create: {
-          bio: "Administrateur système",
+          bio: "Administrateur système - Accès complet",
           avatar: "/avatars/admin.png",
-          phone: "+33600000000",
-          address: "123 Admin Street",
+          phone: "+216 71 000 000",
+          address: "admin@survive.tn",
         },
       },
     },
@@ -77,17 +92,17 @@ async function main() {
 
   const regularUser = await prisma.user.create({
     data: {
-      email: "user@example.com",
-      password: await bcrypt.hash("user123", 10),
-      firstName: "Regular",
-      lastName: "User",
+      email: "participant@survive.tn",
+      password: await bcrypt.hash("Participant@123456", 10),
+      firstName: "Participant",
+      lastName: "Test",
       role: "USER",
       profile: {
         create: {
-          bio: "Utilisateur régulier",
+          bio: "Utilisateur participant - Accès mode participant uniquement",
           avatar: "/avatars/user.png",
-          phone: "+33600000001",
-          address: "456 User Street",
+          phone: "+216 71 000 001",
+          address: "participant@survive.tn",
         },
       },
     },
