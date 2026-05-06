@@ -2,7 +2,8 @@ import React from "react";
 import { 
   Mail, Phone, MessageSquare, Bell, FileText, 
   Newspaper, Rss, Users, User2, User, Clock, 
-  Check, Paperclip, Heart, Repeat2, Share2, Search
+  Check, Paperclip, Heart, Repeat2, Share2, Search,
+  Plus, ChevronRight
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
