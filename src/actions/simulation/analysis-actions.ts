@@ -14,14 +14,17 @@ import {
 // ─── Azure OpenAI call ────────────────────────────────────────────────────────
 
 async function callAzureAI(systemPrompt: string, userPrompt: string): Promise<string> {
-  const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
-  const apiKey = process.env.AZURE_OPENAI_API_KEY;
+  let endpoint = process.env.AZURE_OPENAI_ENDPOINT;
+  let apiKey = process.env.AZURE_OPENAI_API_KEY;
   const deployment = process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-4o";
   const apiVersion = process.env.AZURE_OPENAI_API_VERSION || "2024-02-15-preview";
 
+  if (endpoint) endpoint = endpoint.replace(/^["']|["']$/g, "");
+  if (apiKey) apiKey = apiKey.replace(/^["']|["']$/g, "");
+
   if (!endpoint || !apiKey) throw new Error("Azure OpenAI not configured");
 
-  const url = `${endpoint}openai/deployments/${deployment}/chat/completions?api-version=${apiVersion}`;
+  const url = `${endpoint.endsWith("/") ? endpoint : endpoint + "/"}openai/deployments/${deployment}/chat/completions?api-version=${apiVersion}`;
 
   const response = await fetch(url, {
     method: "POST",

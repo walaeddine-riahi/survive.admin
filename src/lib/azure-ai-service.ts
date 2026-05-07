@@ -57,8 +57,11 @@ export class AIService {
   }
 
   private initializeAzureOpenAI() {
-    const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
-    const apiKey = process.env.AZURE_OPENAI_API_KEY;
+    let endpoint = process.env.AZURE_OPENAI_ENDPOINT;
+    let apiKey = process.env.AZURE_OPENAI_API_KEY;
+
+    if (endpoint) endpoint = endpoint.replace(/^["']|["']$/g, "");
+    if (apiKey) apiKey = apiKey.replace(/^["']|["']$/g, "");
 
     if (!endpoint || !apiKey) {
       console.warn(
@@ -68,9 +71,10 @@ export class AIService {
     }
 
     try {
+      const cleanEndpoint = endpoint.replace(/\/$/, "");
       this.openAIClient = new OpenAI({
         apiKey: apiKey,
-        baseURL: `${endpoint.replace(/\/$/, "")}/openai/deployments/${
+        baseURL: `${cleanEndpoint}/openai/deployments/${
           this.deploymentName
         }`,
         defaultQuery: {
