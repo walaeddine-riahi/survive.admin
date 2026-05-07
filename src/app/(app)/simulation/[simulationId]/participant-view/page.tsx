@@ -1837,10 +1837,13 @@ export default function ParticipantViewFixedPage() {
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
                 <div 
-                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6"
-                  style={{ backgroundColor: "#2E2B28", border: "1px solid #3C3835" }}
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 transition-colors duration-150"
+                  style={{ 
+                    backgroundColor: isLight ? "#E7E5E4" : "#2E2B28", 
+                    border: isLight ? "1px solid #D6D3D1" : "1px solid #3C3835" 
+                  }}
                 >
-                  <MessageSquare className="w-8 h-8 text-[#3C3835]" />
+                  <MessageSquare className="w-8 h-8 text-[#78716C] dark:text-[#3C3835]" />
                 </div>
                 <h3 className="text-[15px] font-medium text-[#57534E] mb-2">
                   Aucun canal sélectionné
@@ -1857,76 +1860,100 @@ export default function ParticipantViewFixedPage() {
       {/* Compose Form Modal */}
       {isComposing && selectedChannel && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-[#3C3835] bg-[#1C1917] p-1 shadow-2xl">
+          <div className={`w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border shadow-2xl transition-all duration-150 ${
+            isLight 
+              ? "bg-[#FAF8F5] border-[#E4E2DC]" 
+              : "bg-[#1C1917] border-[#3C3835]"
+          }`}>
             {selectedChannel === "email" && (
-              <EmailComposeForm
-                onSubmit={handleEmailSubmit}
-                onCancel={() => setIsComposing(false)}
-                simulationId={simulationId}
-                teamId={currentTeamId}
-              />
+              <div className="p-6">
+                <EmailComposeForm
+                  onSubmit={handleEmailSubmit}
+                  onCancel={() => setIsComposing(false)}
+                  simulationId={simulationId}
+                  teamId={currentTeamId}
+                />
+              </div>
             )}
             {selectedChannel === "sms" && (
-              <SmsComposeForm
-                onSubmit={handleSmsSubmit}
-                onCancel={() => setIsComposing(false)}
-                simulationId={simulationId}
-                teamId={currentTeamId}
-              />
+              <div className="p-6">
+                <SmsComposeForm
+                  onSubmit={handleSmsSubmit}
+                  onCancel={() => setIsComposing(false)}
+                  simulationId={simulationId}
+                  teamId={currentTeamId}
+                />
+              </div>
             )}
             {selectedChannel === "call" && (
-              <CallComposeForm
-                onSubmit={handleCallSubmit}
-                onCancel={() => setIsComposing(false)}
-                simulationId={simulationId}
-                teamId={currentTeamId}
-              />
+              <div className="p-6">
+                <CallComposeForm
+                  onSubmit={handleCallSubmit}
+                  onCancel={() => setIsComposing(false)}
+                  simulationId={simulationId}
+                  teamId={currentTeamId}
+                />
+              </div>
             )}
             {selectedChannel === "alert" && (
-              <AlertComposeForm
-                onSubmit={handleAlertSubmit}
-                onCancel={() => setIsComposing(false)}
-                simulationId={simulationId}
-                teamId={currentTeamId}
-              />
+              <div className="p-6">
+                <AlertComposeForm
+                  onSubmit={handleAlertSubmit}
+                  onCancel={() => setIsComposing(false)}
+                  simulationId={simulationId}
+                  teamId={currentTeamId}
+                />
+              </div>
             )}
             {selectedChannel === "memo" && (
-              <MemoComposeForm
-                onSubmit={handleMemoSubmit}
-                onCancel={() => setIsComposing(false)}
-                simulationId={simulationId}
-                teamId={currentTeamId}
-              />
+              <div className="p-6">
+                <MemoComposeForm
+                  onSubmit={handleMemoSubmit}
+                  onCancel={() => setIsComposing(false)}
+                  simulationId={simulationId}
+                  teamId={currentTeamId}
+                />
+              </div>
             )}
             {selectedChannel === "newsBroadcast" && (
-              <NewsBroadcastComposeForm
-                onSubmit={handleNewsBroadcastSubmit}
-                onCancel={() => setIsComposing(false)}
-              />
+              <div className="p-6">
+                <NewsBroadcastComposeForm
+                  onSubmit={handleNewsBroadcastSubmit}
+                  onCancel={() => setIsComposing(false)}
+                />
+              </div>
             )}
             {selectedChannel === "newspaper" && (
-              <NewspaperComposeForm
-                onSubmit={handleNewspaperSubmit}
-                onCancel={() => setIsComposing(false)}
-              />
+              <div className="p-6">
+                <NewspaperComposeForm
+                  onSubmit={handleNewspaperSubmit}
+                  onCancel={() => setIsComposing(false)}
+                />
+              </div>
             )}
             {selectedChannel === "social" && (
-              <SocialComposeForm
-                onSubmit={handleSocialSubmit}
-                onCancel={() => setIsComposing(false)}
-              />
+              <div className="p-6">
+                <SocialComposeForm
+                  onSubmit={handleSocialSubmit}
+                  onCancel={() => setIsComposing(false)}
+                />
+              </div>
             )}
             {selectedChannel === "report" && (
               <div className="p-6 flex flex-col gap-6">
                 <div className="flex flex-col gap-1">
-                  <h3 className="text-[16px] font-semibold text-[#FAFAF9]">Gestion des Rapports</h3>
+                  <h3 className={`text-[16px] font-semibold transition-colors duration-150 ${isLight ? "text-stone-900" : "text-[#FAFAF9]"}`}>Gestion des Rapports</h3>
                   <p className="text-[12px] text-[#78716C]">Générer un SITREP ou uploader un document PDF</p>
                 </div>
 
                 {/* SITREP Draft Section */}
-                <div className="p-4 rounded-xl bg-[#2E2B28] border border-[#3C3835] flex flex-col gap-4">
+                <div className={`p-4 rounded-xl border flex flex-col gap-4 transition-colors duration-150 ${
+                  isLight 
+                    ? "bg-white border-[#E4E2DC]" 
+                    : "bg-[#2E2B28] border-[#3C3835]"
+                }`}>
                   <div className="flex items-center justify-between">
-                    <span className="text-[13px] font-medium text-[#FAFAF9]">Brouillon de SITREP</span>
+                    <span className={`text-[13px] font-medium transition-colors duration-150 ${isLight ? "text-stone-800" : "text-[#FAFAF9]"}`}>Brouillon de SITREP</span>
                     <Button
                       size="sm"
                       variant="outline"
@@ -1949,22 +1976,30 @@ export default function ParticipantViewFixedPage() {
                       placeholder="Titre du rapport..."
                       value={reportTitle}
                       onChange={(e) => setReportTitle(e.target.value)}
-                      className="w-full bg-[#1C1917] border-[#3C3835] border rounded-lg px-3 py-2 text-[13px] text-[#FAFAF9] placeholder-[#78716C] focus:border-[#D97706] outline-none"
+                      className={`w-full border rounded-lg px-3 py-2 text-[13px] placeholder-[#78716C] focus:border-[#D97706] outline-none transition-colors ${
+                        isLight 
+                          ? "bg-white border-[#E4E2DC] text-stone-900" 
+                          : "bg-[#1C1917] border-[#3C3835] text-[#FAFAF9]"
+                      }`}
                     />
                     <textarea
                       placeholder="Description ou contenu du SITREP..."
                       value={reportDescription}
                       onChange={(e) => setReportDescription(e.target.value)}
-                      className="w-full bg-[#1C1917] border-[#3C3835] border rounded-lg px-3 py-2 text-[13px] text-[#FAFAF9] placeholder-[#78716C] focus:border-[#D97706] outline-none min-h-[100px] resize-none"
+                      className={`w-full border rounded-lg px-3 py-2 text-[13px] placeholder-[#78716C] focus:border-[#D97706] outline-none min-h-[100px] resize-none transition-colors ${
+                        isLight 
+                          ? "bg-white border-[#E4E2DC] text-stone-900" 
+                          : "bg-[#1C1917] border-[#3C3835] text-[#FAFAF9]"
+                      }`}
                     />
                   </div>
                 </div>
 
-                <div className="w-full h-px bg-[#3C3835]"></div>
+                <div className={`w-full h-px transition-colors ${isLight ? "bg-[#E4E2DC]" : "bg-[#3C3835]"}`}></div>
 
                 {/* PDF Upload Section */}
                 <div className="flex flex-col gap-3">
-                  <span className="text-[13px] font-medium text-[#FAFAF9]">Upload de document PDF</span>
+                  <span className={`text-[13px] font-medium transition-colors duration-150 ${isLight ? "text-stone-800" : "text-[#FAFAF9]"}`}>Upload de document PDF</span>
                   <div className="flex gap-2">
                     <input
                       ref={fileInputRef}
@@ -1975,7 +2010,11 @@ export default function ParticipantViewFixedPage() {
                     />
                     <Button
                       variant="outline"
-                      className="flex-1 border-dashed border-2 border-[#3C3835] hover:border-[#D97706]/40 hover:bg-[#2C2118] h-12 text-[12px] text-[#78716C]"
+                      className={`flex-1 border-dashed border-2 h-12 text-[12px] transition-colors ${
+                        isLight 
+                          ? "border-[#E4E2DC] hover:border-[#D97706]/40 hover:bg-[#FAF8F5] text-stone-500" 
+                          : "border-[#3C3835] hover:border-[#D97706]/40 hover:bg-[#2C2118] text-[#78716C]"
+                      }`}
                       onClick={() => fileInputRef.current?.click()}
                     >
                       {reportFile ? reportFile.name : "Sélectionner un fichier PDF"}
@@ -1986,14 +2025,14 @@ export default function ParticipantViewFixedPage() {
                 <div className="flex items-center justify-end gap-3 pt-4">
                   <Button
                     variant="ghost"
-                    className="text-[13px] text-[#78716C] hover:text-[#FAFAF9]"
+                    className={`text-[13px] hover:bg-transparent ${isLight ? "text-stone-500 hover:text-stone-900" : "text-[#78716C] hover:text-[#FAFAF9]"}`}
                     onClick={() => setIsComposing(false)}
                   >
                     Annuler
                   </Button>
                   <Button
                     className="px-6 py-2 text-[13px] font-semibold rounded-lg"
-                    style={{ backgroundColor: "#D97706", color: "#1C1917" }}
+                    style={{ backgroundColor: "#D97706", color: isLight ? "#FFFFFF" : "#1C1917" }}
                     onClick={handleReportUpload}
                     disabled={reportUploading || (!reportFile && !reportTitle)}
                   >

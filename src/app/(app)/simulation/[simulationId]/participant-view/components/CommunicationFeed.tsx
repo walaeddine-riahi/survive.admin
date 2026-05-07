@@ -8,6 +8,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useTheme } from "next-themes";
 import WhatsAppIcon from "@/components/icons/WhatsAppIcon";
 import { 
   ParticipantViewData, Communication, Injection, 
@@ -25,9 +26,15 @@ interface CommunicationFeedProps {
   onViewReport: (reportId: string, fileName: string) => void;
 }
 
-const getIconForType = (type: string): React.ReactElement => {
+const getIconForType = (type: string, isInjection: boolean, isLight: boolean): React.ReactElement => {
   const iconProps = {
-    className: "h-6 w-6 text-white drop-shadow-sm",
+    className: `h-5 w-5 drop-shadow-sm transition-colors duration-150 ${
+      isInjection 
+        ? "text-[#D97706]" 
+        : isLight 
+          ? "text-stone-600" 
+          : "text-stone-400"
+    }`,
     strokeWidth: 1.75,
   };
 
@@ -61,6 +68,9 @@ export function CommunicationFeed({
   onViewCommunication,
   onViewReport
 }: CommunicationFeedProps) {
+  const { resolvedTheme } = useTheme();
+  const isLight = resolvedTheme === "light";
+
   if (!data) return null;
 
   const channelCommunications = data.communications[channelType] || [];
@@ -98,12 +108,15 @@ export function CommunicationFeed({
     if (socialItems.length === 0 && searchQuery) {
       return (
         <div 
-          className="flex flex-col items-center justify-center p-12 text-center rounded-2xl border-2 border-dashed"
-          style={{ backgroundColor: "#252220", borderColor: "#3C3835" }}
+          className="flex flex-col items-center justify-center p-12 text-center rounded-2xl border-2 border-dashed transition-colors duration-150"
+          style={{ 
+            backgroundColor: isLight ? "#FAF8F5" : "#252220", 
+            borderColor: isLight ? "#E7E5E4" : "#3C3835" 
+          }}
         >
-          <Search className="h-8 w-8 text-[#3C3835] mb-4" />
-          <h3 className="text-[15px] font-medium text-[#57534E]">Aucun résultat</h3>
-          <p className="text-[13px] text-[#78716C] mt-2">Aucun message ne correspond à &quot;{searchQuery}&quot;.</p>
+          <Search className={`h-8 w-8 mb-4 transition-colors duration-150 ${isLight ? "text-stone-300" : "text-[#3C3835]"}`} />
+          <h3 className={`text-[15px] font-medium transition-colors duration-150 ${isLight ? "text-stone-500" : "text-[#57534E]"}`}>Aucun résultat</h3>
+          <p className={`text-[13px] mt-2 transition-colors duration-150 ${isLight ? "text-stone-400" : "text-[#78716C]"}`}>Aucun message ne correspond à &quot;{searchQuery}&quot;.</p>
         </div>
       );
     }
@@ -164,11 +177,14 @@ export function CommunicationFeed({
   if (filteredContent.length === 0) {
     return (
       <div 
-        className="flex flex-col items-center justify-center p-12 text-center rounded-2xl border-2 border-dashed"
-        style={{ backgroundColor: "#252220", borderColor: "#3C3835" }}
+        className="flex flex-col items-center justify-center p-12 text-center rounded-2xl border-2 border-dashed transition-colors duration-150"
+        style={{ 
+          backgroundColor: isLight ? "#FAF8F5" : "#252220", 
+          borderColor: isLight ? "#E7E5E4" : "#3C3835" 
+        }}
       >
-        <MessageSquare className="h-8 w-8 text-[#3C3835] mb-4" />
-        <h3 className="text-[15px] font-medium text-[#57534E]">
+        <MessageSquare className={`h-8 w-8 mb-4 transition-colors duration-150 ${isLight ? "text-stone-300" : "text-[#3C3835]"}`} />
+        <h3 className={`text-[15px] font-medium transition-colors duration-150 ${isLight ? "text-stone-500" : "text-[#57534E]"}`}>
           {searchQuery ? "Aucun résultat trouvé" : "Flux vide"}
         </h3>
         <p className="text-[13px] text-[#78716C] mt-2 max-w-xs leading-relaxed">
@@ -184,8 +200,12 @@ export function CommunicationFeed({
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header du Flux — Style Email comme demandé */}
       <div 
-        className="px-6 py-4 flex items-center justify-between border-t-2"
-        style={{ backgroundColor: "#252220", borderTopColor: "#D97706", borderBottom: "1px solid #3C3835" }}
+        className="px-6 py-4 flex items-center justify-between border-t-2 transition-colors duration-150"
+        style={{ 
+          backgroundColor: isLight ? "#FFFFFF" : "#252220", 
+          borderTopColor: "#D97706", 
+          borderBottom: isLight ? "1px solid #E4E2DC" : "1px solid #3C3835" 
+        }}
       >
         <div className="flex flex-col">
           <span className="text-[14px] font-semibold text-[#D97706]">
@@ -198,7 +218,7 @@ export function CommunicationFeed({
         <Button 
           size="sm"
           className="rounded-lg px-4 py-1.5 text-[12px] font-medium"
-          style={{ backgroundColor: "#D97706", color: "#1C1917" }}
+          style={{ backgroundColor: "#D97706", color: isLight ? "#FFFFFF" : "#1C1917" }}
           onClick={() => {}} // This should trigger compose, logic handled in parent usually
         >
           <Plus className="w-3.5 h-3.5 mr-1.5" />
@@ -207,7 +227,7 @@ export function CommunicationFeed({
       </div>
 
       {/* Barre de Recherche */}
-      <div className="p-4" style={{ borderBottom: "1px solid #3C3835" }}>
+      <div className="p-4 transition-colors duration-150" style={{ borderBottom: isLight ? "1px solid #E4E2DC" : "1px solid #3C3835" }}>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#78716C]" />
           <input 
@@ -215,7 +235,11 @@ export function CommunicationFeed({
             placeholder="Rechercher..."
             value={searchQuery}
             readOnly // Managed by parent
-            className="w-full bg-[#1E1C1A] border-[#3C3835] border rounded-lg pl-10 pr-4 py-2 text-[13px] text-[#FAFAF9] placeholder-[#78716C] focus:border-[#D97706] focus:ring-2 focus:ring-[#D97706]/10 outline-none transition-all"
+            className={`w-full border rounded-lg pl-10 pr-4 py-2 text-[13px] placeholder-[#78716C] focus:border-[#D97706] focus:ring-2 focus:ring-[#D97706]/10 outline-none transition-all ${
+              isLight 
+                ? "bg-white border-[#E4E2DC] text-stone-900" 
+                : "bg-[#1E1C1A] border-[#3C3835] text-[#FAFAF9]"
+            }`}
           />
         </div>
       </div>
@@ -231,20 +255,28 @@ export function CommunicationFeed({
               transition={{ duration: 0.2, delay: index * 0.03 }}
               className={`group flex flex-col gap-3 p-5 rounded-xl border transition-all duration-200 ${
                 item.isInjection && !item.acknowledged 
-                  ? "border-[#D97706]/40 bg-[#2C2118]" 
-                  : "border-[#3C3835] bg-[#252220] hover:border-[#57534E]"
+                  ? "border-[#D97706]/40 bg-[#FFF7ED] dark:bg-[#2C2118]" 
+                  : `
+                    ${isLight 
+                      ? "border-[#E4E2DC] bg-white hover:border-stone-400" 
+                      : "border-[#3C3835] bg-[#252220] hover:border-[#57534E]"
+                    }
+                  `
               }`}
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-4">
                   <div 
-                    className={`p-2.5 rounded-lg ${item.isInjection ? "bg-[#D97706]/10 text-[#D97706]" : "bg-[#1C1917] text-[#78716C]"}`}
-                    style={{ border: "1px solid", borderColor: item.isInjection ? "rgba(217,119,6,0.2)" : "#3C3835" }}
+                    className={`p-2.5 rounded-lg transition-colors duration-150 ${item.isInjection ? "bg-[#D97706]/10 text-[#D97706]" : isLight ? "bg-[#FAF8F5] text-stone-500" : "bg-[#1C1917] text-[#78716C]"}`}
+                    style={{ 
+                      border: "1px solid", 
+                      borderColor: item.isInjection ? "rgba(217,119,6,0.2)" : isLight ? "#E4E2DC" : "#3C3835" 
+                    }}
                   >
-                    {getIconForType(item.type)}
+                    {getIconForType(item.type, item.isInjection, isLight)}
                   </div>
                   <div className="flex flex-col gap-1">
-                    <h3 className="text-[15px] font-semibold text-[#FAFAF9] leading-tight">
+                    <h3 className={`text-[15px] font-semibold leading-tight transition-colors duration-150 ${isLight ? "text-stone-900" : "text-[#FAFAF9]"}`}>
                       {item.isInjection ? (item as Injection).title : (item as Communication).subject || "Sans sujet"}
                     </h3>
                     <div className="flex items-center gap-3 text-[10px] text-[#78716C]">
@@ -270,7 +302,7 @@ export function CommunicationFeed({
                     </button>
                   )}
                   <button 
-                    className="p-2 text-[#78716C] hover:text-[#FAFAF9] transition-colors"
+                    className={`p-2 transition-colors ${isLight ? "text-stone-400 hover:text-stone-800" : "text-[#78716C] hover:text-[#FAFAF9]"}`}
                     onClick={() => item.isInjection ? onViewInjection(item as Injection) : onViewCommunication(item as Communication)}
                   >
                     <ChevronRight className="w-4 h-4" />
@@ -278,17 +310,21 @@ export function CommunicationFeed({
                 </div>
               </div>
               
-              <div className="text-[13px] text-[#A8A29E] leading-relaxed line-clamp-3">
+              <div className={`text-[13px] leading-relaxed line-clamp-3 transition-colors duration-150 ${isLight ? "text-stone-600" : "text-[#A8A29E]"}`}>
                 {item.content}
               </div>
 
               {item.type === "report" && (
                 <button 
-                  className="mt-2 flex items-center gap-3 p-3 rounded-lg bg-[#1C1917] border border-[#3C3835] hover:border-[#57534E] transition-all"
+                  className={`mt-2 flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                    isLight 
+                      ? "bg-[#FAF8F5] border-[#E4E2DC] hover:border-stone-400" 
+                      : "bg-[#1C1917] border-[#3C3835] hover:border-[#57534E]"
+                  }`}
                   onClick={() => onViewReport(item.payload?.reportId as string, (item.payload?.originalFileName as string) || "Rapport PDF")}
                 >
                   <FileText className="w-4 h-4 text-[#D97706]" />
-                  <span className="text-[12px] text-[#A8A29E] font-medium truncate">
+                  <span className={`text-[12px] font-medium truncate transition-colors duration-150 ${isLight ? "text-stone-600" : "text-[#A8A29E]"}`}>
                     {(item.payload?.originalFileName as string) || "Visualiser le rapport"}
                   </span>
                 </button>
