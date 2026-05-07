@@ -37,6 +37,7 @@ import {
   Search,
   Trash2,
   Eye,
+  LayoutDashboard,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -393,7 +394,16 @@ export default function SimulationPage() {
                           </TableCell>
                           <TableCell className="text-right pr-8">
                             <div className="flex items-center justify-end gap-2">
-                              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-white/5" onClick={() => setSelectedSimulation(simulation)}>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-9 w-9 rounded-xl hover:bg-white/5 text-primary" 
+                                onClick={() => router.push(`/simulation/${simulation.id}/dashboard`)}
+                                title="Tableau de bord"
+                              >
+                                <LayoutDashboard className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-white/5" onClick={() => setSelectedSimulation(simulation)} title="Voir les scénarios">
                                 <Eye className="h-4 w-4" />
                               </Button>
                               <DropdownMenu>
@@ -402,7 +412,10 @@ export default function SimulationPage() {
                                     <MoreHorizontal className="h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="glass-card min-w-[160px]">
+                                <DropdownMenuContent align="end" className="glass-card min-w-[180px]">
+                                  <DropdownMenuItem onClick={() => router.push(`/simulation/${simulation.id}/dashboard`)} className="gap-2 cursor-pointer">
+                                    <LayoutDashboard className="h-4 w-4" /> Tableau de Bord
+                                  </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => { setSelectedSimulation(simulation); setIsSimulationFormOpen(true); }} className="gap-2 cursor-pointer">
                                     <Edit className="h-4 w-4" /> Modifier
                                   </DropdownMenuItem>
@@ -447,9 +460,20 @@ export default function SimulationPage() {
                                <TableCell>{getStatusBadge(sim.status)}</TableCell>
                                <TableCell className="text-xs font-bold text-muted-foreground">{formatDate(sim.startDate)} — {formatDate(sim.endDate)}</TableCell>
                                <TableCell className="text-right pr-8">
-                                  <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-white/5" onClick={() => setSelectedSimulation(sim)}>
-                                    <Eye className="h-4 w-4" />
-                                  </Button>
+                                  <div className="flex items-center justify-end gap-2">
+                                     <Button 
+                                       variant="ghost" 
+                                       size="icon" 
+                                       className="h-9 w-9 rounded-xl hover:bg-white/5 text-primary" 
+                                       onClick={() => router.push(`/simulation/${sim.id}/dashboard`)}
+                                       title="Tableau de bord"
+                                     >
+                                       <LayoutDashboard className="h-4 w-4" />
+                                     </Button>
+                                     <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-white/5" onClick={() => setSelectedSimulation(sim)} title="Voir les scénarios">
+                                       <Eye className="h-4 w-4" />
+                                     </Button>
+                                  </div>
                                </TableCell>
                             </TableRow>
                           ))
@@ -482,9 +506,20 @@ export default function SimulationPage() {
                                <TableCell>{getStatusBadge(sim.status)}</TableCell>
                                <TableCell className="text-xs font-bold text-muted-foreground">{formatDate(sim.startDate)} — {formatDate(sim.endDate)}</TableCell>
                                <TableCell className="text-right pr-8">
-                                  <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-white/5" onClick={() => setSelectedSimulation(sim)}>
-                                    <Eye className="h-4 w-4" />
-                                  </Button>
+                                  <div className="flex items-center justify-end gap-2">
+                                     <Button 
+                                       variant="ghost" 
+                                       size="icon" 
+                                       className="h-9 w-9 rounded-xl hover:bg-white/5 text-primary" 
+                                       onClick={() => router.push(`/simulation/${sim.id}/dashboard`)}
+                                       title="Tableau de bord"
+                                     >
+                                       <LayoutDashboard className="h-4 w-4" />
+                                     </Button>
+                                     <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-white/5" onClick={() => setSelectedSimulation(sim)} title="Voir les scénarios">
+                                       <Eye className="h-4 w-4" />
+                                     </Button>
+                                  </div>
                                </TableCell>
                             </TableRow>
                           ))

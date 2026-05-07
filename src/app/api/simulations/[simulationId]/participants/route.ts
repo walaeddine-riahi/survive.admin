@@ -178,11 +178,16 @@ export async function POST(
 
     let emailSent = false;
 
-    // Send welcome email using TypeScript function
     if (user.firstName) {
       try {
         console.log("Tentative d'envoi de l'email de bienvenue...");
-        await sendWelcomeEmail(user.email, user.firstName, simulation.title);
+        await sendWelcomeEmail({
+          email: user.email,
+          firstName: user.firstName,
+          password: user.password,
+          simulationTitle: simulation.title,
+          simulationId
+        });
         console.log("Email de bienvenue envoyé avec succès.");
         emailSent = true;
       } catch (emailError) {

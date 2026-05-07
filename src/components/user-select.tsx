@@ -205,12 +205,8 @@ export function UserSelect({
                           return (
                             <CommandItem
                               key={user.id}
+                              value={`${user.firstName} ${user.lastName} ${user.email} ${user.id}`}
                               onSelect={() => formHandleSelect(user)}
-                              onPointerDown={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                formHandleSelect(user);
-                              }}
                             >
                               <div className="flex items-center gap-2 w-full">
                                 <div
@@ -295,12 +291,8 @@ export function UserSelect({
                     return (
                       <CommandItem
                         key={user.id}
+                        value={`${user.firstName} ${user.lastName} ${user.email} ${user.id}`}
                         onSelect={() => handleSelect(user)}
-                        onPointerDown={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleSelect(user);
-                        }}
                       >
                         <div className="flex items-center gap-2 w-full">
                           <div

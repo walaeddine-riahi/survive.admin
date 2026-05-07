@@ -78,6 +78,6 @@ export const config = {
      * - register (registration page)
      * - payments (payment pages)
      */
-    "/((?!api|_next/static|_next/image|favicon.ico|connection|signup|password-reset|register|payments).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|connection|signup|password-reset|register|payments|magic-login).*)",
   ],
 };

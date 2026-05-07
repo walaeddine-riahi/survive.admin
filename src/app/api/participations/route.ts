@@ -78,13 +78,13 @@ export async function POST(request: Request) {
       simulation.id
     ) {
       try {
-        console.log("Tentative d'envoi de l'email de bienvenue...");
-        await sendWelcomeEmail(
-          user.email,
-          user.firstName,
-          simulation.title,
-          simulation.id
-        );
+        await sendWelcomeEmail({
+          email: user.email,
+          firstName: user.firstName,
+          password: user.password,
+          simulationTitle: simulation.title,
+          simulationId: simulation.id
+        });
         console.log("Email de bienvenue envoyé avec succès.");
         emailSent = true;
       } catch (emailError) {

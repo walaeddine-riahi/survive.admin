@@ -1,7 +1,5 @@
 import { prisma } from "@/lib/prisma";
 import SimulationDashboard from "@/components/simulation/simulation-dashboard";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
 
 export default async function SimulationDashboardPage({
   params,
@@ -10,7 +8,11 @@ export default async function SimulationDashboardPage({
 }) {
   const { simulationId } = await params;
 
-  const [injections, communications, assignments, participantScores] = await Promise.all([
+  const [simulation, injections, communications, assignments, participantScores] = await Promise.all([
+    prisma.simulation.findUnique({
+      where: { id: simulationId },
+      select: { title: true }
+    }),
     prisma.injection.findMany({
       where: { simulationId },
       orderBy: { createdAt: "asc" },
@@ -42,6 +44,7 @@ export default async function SimulationDashboardPage({
   const activeInject = injections.filter(i => !i.acknowledged).slice(-1)[0];
 
   const initialData = {
+    simulationTitle: simulation?.title || "Simulation",
     injections: injections.map(i => ({
       id: i.id, title: i.title, type: i.type,
       acknowledged: i.acknowledged, sentAt: i.createdAt.toISOString(),

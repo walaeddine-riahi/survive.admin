@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
+import { verifyMagicToken } from "@/lib/magic-token";
 
 declare module "next-auth" {
   interface User {
@@ -53,29 +54,45 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        magicToken: { label: "Magic Token", type: "text" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("Invalid credentials");
+        let userEmail = credentials?.email;
+
+        if (credentials?.magicToken) {
+          const verifiedEmail = verifyMagicToken(credentials.magicToken);
+          if (!verifiedEmail) {
+            throw new Error("Le lien magique a expiré ou est invalide");
+          }
+          userEmail = verifiedEmail;
+        } else if (!credentials?.email || !credentials?.password) {
+          throw new Error("Identifiants manquants");
         }
 
         const user = await prisma.user.findUnique({
           where: {
-            email: credentials.email,
+            email: userEmail,
           },
         });
 
-        if (!user || !user?.password) {
-          throw new Error("Invalid credentials");
+        if (!user) {
+          throw new Error("Utilisateur non trouvé");
         }
 
-        const isCorrectPassword = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
+        // Si ce n'est pas une connexion via lien magique, on valide le mot de passe
+        if (!credentials?.magicToken) {
+          if (!user?.password) {
+            throw new Error("Identifiants invalides");
+          }
 
-        if (!isCorrectPassword) {
-          throw new Error("Invalid credentials");
+          const isCorrectPassword = await bcrypt.compare(
+            credentials.password,
+            user.password
+          );
+
+          if (!isCorrectPassword) {
+            throw new Error("Identifiants invalides");
+          }
         }
 
         // Récupérer le numéro de téléphone depuis le profil si disponible

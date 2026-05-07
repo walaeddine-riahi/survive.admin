@@ -10,7 +10,11 @@ export async function GET(
   try {
     const { simulationId } = await params;
 
-    const [injections, communications, assignments, participantScores] = await Promise.all([
+    const [simulation, injections, communications, assignments, participantScores] = await Promise.all([
+      prisma.simulation.findUnique({
+        where: { id: simulationId },
+        select: { title: true }
+      }),
       prisma.injection.findMany({
         where: { simulationId },
         orderBy: { createdAt: "asc" },
@@ -68,6 +72,7 @@ export async function GET(
     const reactedUserIds = new Set(lastInjectComms.map(c => c.sender.id));
 
     const liveData = {
+      simulationTitle: simulation?.title || "Simulation",
       injections: injections.map(i => ({
         id: i.id,
         title: i.title,

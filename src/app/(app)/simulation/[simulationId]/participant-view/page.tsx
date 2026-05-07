@@ -1535,22 +1535,30 @@ export default function ParticipantViewFixedPage() {
     );
   }
 
+  const isLight = resolvedTheme === "light";
+
   return ( 
     <div 
-      className={`min-h-screen flex flex-col font-sans text-[#FAFAF9] selection:bg-[#D97706]/30`}
-      style={{ backgroundColor: "#1C1917" }}
+      className={`min-h-screen flex flex-col font-sans transition-colors duration-150 selection:bg-[#D97706]/30`}
+      style={{ 
+        backgroundColor: isLight ? "#FAF9F5" : "#1C1917",
+        color: isLight ? "#1C1917" : "#FAFAF9"
+      }}
     >
       {/* 🔝 TOPBAR — Simplifiée */}
       <header 
-        className="h-14 flex items-center justify-between px-4 sticky top-0 z-50 backdrop-blur-md"
-        style={{ backgroundColor: "#1A1816", borderBottom: "1px solid #33302D" }}
+        className="h-14 flex items-center justify-between px-4 sticky top-0 z-50 backdrop-blur-md transition-colors duration-150"
+        style={{ 
+          backgroundColor: isLight ? "#FFFFFF" : "#1A1816", 
+          borderBottom: isLight ? "1px solid #E4E2DC" : "1px solid #33302D" 
+        }}
       >
         {/* Logo zone (gauche) */}
         <div className="flex items-center gap-3">
           <Logo size="sm" />
           <div className="w-px h-6 bg-[#33302D] mx-1 hidden sm:block"></div>
           <div className="flex flex-col leading-tight">
-            <span className="text-[14px] font-semibold text-[#FAFAF9]">
+            <span className={`text-[14px] font-semibold ${isLight ? "text-stone-900" : "text-[#FAFAF9]"}`}>
               {data?.simulation?.title || "Simulation"}
             </span>
             <span className="text-[11px] text-[#78716C]">
@@ -1563,7 +1571,7 @@ export default function ParticipantViewFixedPage() {
         <div className="hidden md:flex items-center gap-8">
           <div className="flex flex-col items-center">
             <span className="text-[10px] text-[#78716C]">Équipe</span>
-            <span className="text-[13px] font-medium text-[#FAFAF9]">
+            <span className={`text-[13px] font-medium ${isLight ? "text-stone-800" : "text-[#FAFAF9]"}`}>
               {currentTeamName || "Équipe de sécurité"}
             </span>
           </div>
@@ -1577,14 +1585,15 @@ export default function ParticipantViewFixedPage() {
         </div>
 
         {/* Droite — Actions */}
-        <div className="flex items-center gap-4">
-          <button className="p-2 text-[#78716C] hover:text-[#FAFAF9] transition-colors">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <ThemeToggle />
+          <button className={`p-2 transition-colors ${isLight ? "text-stone-500 hover:text-stone-800" : "text-[#78716C] hover:text-[#FAFAF9]"}`}>
             <Zap className="w-5 h-5" /> 
           </button>
           <Button 
             onClick={() => setIsComposing(true)}
-            className="rounded-lg px-3.5 py-2 text-[13px] font-medium transition-all"
-            style={{ backgroundColor: "#D97706", color: "#1C1917" }}
+            className="rounded-lg px-3.5 py-2 text-[13px] font-medium transition-all shadow-sm hover:opacity-90"
+            style={{ backgroundColor: "#D97706", color: isLight ? "#FFFFFF" : "#1C1917" }}
           >
             <Plus className="w-4 h-4 mr-1.5" />
             Communication
@@ -1595,12 +1604,15 @@ export default function ParticipantViewFixedPage() {
       <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* 📋 PANEL GAUCHE — "Aperçu de la Simulation" */}
         <aside 
-          className="w-full md:w-[380px] lg:w-[420px] flex flex-col p-5 overflow-y-auto gap-5"
-          style={{ backgroundColor: "#252220", borderRight: "1px solid #3C3835" }}
+          className="w-full md:w-[380px] lg:w-[420px] flex flex-col p-5 overflow-y-auto gap-5 transition-colors duration-150"
+          style={{ 
+            backgroundColor: isLight ? "#F5F4EE" : "#252220", 
+            borderRight: isLight ? "1px solid #E4E2DC" : "1px solid #3C3835" 
+          }}
         >
           {/* Header du panel */}
           <div className="flex flex-col gap-1">
-            <h1 className="text-[18px] font-semibold text-[#FAFAF9] tracking-tight">
+            <h1 className={`text-[18px] font-semibold tracking-tight ${isLight ? "text-stone-950" : "text-[#FAFAF9]"}`}>
               Aperçu de la Simulation
             </h1>
             <div className="flex items-center justify-between">
@@ -1609,7 +1621,11 @@ export default function ParticipantViewFixedPage() {
               </span>
               <div 
                 className="px-2 py-0.5 rounded-md text-[11px] font-medium"
-                style={{ backgroundColor: "#2E2B28", border: "1px solid #57534E", color: "#A8A29E" }}
+                style={{ 
+                  backgroundColor: isLight ? "#FAF9F5" : "#2E2B28", 
+                  border: isLight ? "1px solid #E4E2DC" : "1px solid #57534E", 
+                  color: isLight ? "#57534E" : "#A8A29E" 
+                }}
               >
                 {data?.simulation?.status || "planned"}
               </div>
@@ -1618,12 +1634,15 @@ export default function ParticipantViewFixedPage() {
 
           {/* Card Principale - Infos Simulation */}
           <div 
-            className="rounded-xl p-5 flex flex-col"
-            style={{ backgroundColor: "#2E2B28", border: "1px solid #3C3835" }}
+            className="rounded-xl p-5 flex flex-col transition-colors duration-150"
+            style={{ 
+              backgroundColor: isLight ? "#FFFFFF" : "#2E2B28", 
+              border: isLight ? "1px solid #E4E2DC" : "1px solid #3C3835" 
+            }}
           >
             <h2 
-              className="text-[16px] font-medium text-[#FAFAF9] pb-3 mb-4"
-              style={{ borderBottom: "1px solid #3C3835" }}
+              className={`text-[16px] font-medium pb-3 mb-4 ${isLight ? "text-stone-900 border-b border-stone-100" : "text-[#FAFAF9]"}`}
+              style={isLight ? {} : { borderBottom: "1px solid #3C3835" }}
             >
               {data?.simulation?.title || "Simulation en cours"}
             </h2>
@@ -1634,15 +1653,18 @@ export default function ParticipantViewFixedPage() {
                 Directives stratégiques
               </h3>
               <div 
-                className="p-4 rounded-lg flex flex-col gap-3"
-                style={{ backgroundColor: "#1C1917", borderLeft: "2px solid #D97706" }}
+                className="p-4 rounded-lg flex flex-col gap-3 transition-colors duration-150"
+                style={{ 
+                  backgroundColor: isLight ? "#FAF9F5" : "#1C1917", 
+                  borderLeft: "2px solid #D97706" 
+                }}
               >
                 {(data?.simulation?.description || "Aucune directive spécifique pour le moment.")
                   .split("\n")
                   .map((line, i) => (
                     <div key={i} className="flex gap-2.5 items-start">
                       <ChevronRight className="w-3.5 h-3.5 mt-0.5 text-[#D97706] flex-shrink-0" />
-                      <span className="text-[13px] text-[#A8A29E] leading-relaxed">
+                      <span className={`text-[13px] leading-relaxed ${isLight ? "text-stone-600" : "text-[#A8A29E]"}`}>
                         {line}
                       </span>
                     </div>
@@ -1660,8 +1682,11 @@ export default function ParticipantViewFixedPage() {
                 <div className="flex flex-col gap-1.5">
                   <span className="text-[10px] text-[#78716C]">Assignation</span>
                   <div 
-                    className="px-2.5 py-1.5 rounded-md text-[12px] font-medium text-[#A8A29E] text-center"
-                    style={{ backgroundColor: "#1C1917", border: "1px solid #3C3835" }}
+                    className={`px-2.5 py-1.5 rounded-md text-[12px] font-medium text-center ${isLight ? "text-stone-600" : "text-[#A8A29E]"}`}
+                    style={{ 
+                      backgroundColor: isLight ? "#FAF9F5" : "#1C1917", 
+                      border: isLight ? "1px solid #E4E2DC" : "1px solid #3C3835" 
+                    }}
                   >
                     Non assigné
                   </div>
@@ -1683,10 +1708,13 @@ export default function ParticipantViewFixedPage() {
 
           {/* Card "Chronologie de la simulation" */}
           <div 
-            className="rounded-xl p-5 flex flex-col gap-4"
-            style={{ backgroundColor: "#2E2B28", border: "1px solid #3C3835" }}
+            className="rounded-xl p-5 flex flex-col gap-4 transition-colors duration-150"
+            style={{ 
+              backgroundColor: isLight ? "#FFFFFF" : "#2E2B28", 
+              border: isLight ? "1px solid #E4E2DC" : "1px solid #3C3835" 
+            }}
           >
-            <h3 className="text-[13px] font-semibold text-[#FAFAF9]">
+            <h3 className={`text-[13px] font-semibold ${isLight ? "text-stone-900" : "text-[#FAFAF9]"}`}>
               Chronologie de la simulation
             </h3>
             <div className="flex flex-col gap-0 pl-1">
@@ -1702,17 +1730,17 @@ export default function ParticipantViewFixedPage() {
                       className={`w-2.5 h-2.5 rounded-full z-10 ${
                         step.status === "past" ? "bg-[#10B981]" : 
                         step.status === "current" ? "bg-[#D97706] animate-pulse" : 
-                        "bg-[#3C3835]"
+                        (isLight ? "bg-stone-300" : "bg-[#3C3835]")
                       }`}
                     ></div>
                     {i < arr.length - 1 && (
-                      <div className="w-px flex-1 bg-[#3C3835] my-1"></div>
+                      <div className={`w-px flex-1 my-1 ${isLight ? "bg-stone-200" : "bg-[#3C3835]"}`}></div>
                     )}
                   </div>
                   <div className="pb-6">
                     <span className={`text-[13px] ${
-                      step.status === "past" ? "text-[#A8A29E]" : 
-                      step.status === "current" ? "text-[#FAFAF9] font-medium" : 
+                      step.status === "past" ? (isLight ? "text-stone-500" : "text-[#A8A29E]") : 
+                      step.status === "current" ? (isLight ? "text-stone-900 font-bold" : "text-[#FAFAF9] font-medium") : 
                       "text-[#78716C]"
                     }`}>
                       {step.label}
@@ -1725,10 +1753,13 @@ export default function ParticipantViewFixedPage() {
 
           {/* Card "Actions rapides" */}
           <div 
-            className="rounded-xl p-5 flex flex-col gap-4"
-            style={{ backgroundColor: "#2E2B28", border: "1px solid #3C3835" }}
+            className="rounded-xl p-5 flex flex-col gap-4 transition-colors duration-150"
+            style={{ 
+              backgroundColor: isLight ? "#FFFFFF" : "#2E2B28", 
+              border: isLight ? "1px solid #E4E2DC" : "1px solid #3C3835" 
+            }}
           >
-            <h3 className="text-[13px] font-semibold text-[#FAFAF9]">
+            <h3 className={`text-[13px] font-semibold ${isLight ? "text-stone-900" : "text-[#FAFAF9]"}`}>
               Actions rapides
             </h3>
             <div className="grid grid-cols-3 gap-2">
@@ -1740,10 +1771,13 @@ export default function ParticipantViewFixedPage() {
                 <button 
                   key={i}
                   className="flex flex-col items-center gap-2 p-3 rounded-lg border transition-all hover:scale-[1.02]"
-                  style={{ backgroundColor: "#1C1917", border: "1px solid #3C3835" }}
+                  style={{ 
+                    backgroundColor: isLight ? "#FAF9F5" : "#1C1917", 
+                    border: isLight ? "1px solid #E4E2DC" : "1px solid #3C3835" 
+                  }}
                 >
                   <action.icon className="w-4 h-4 text-[#78716C]" />
-                  <span className="text-[10px] text-[#A8A29E] font-medium text-center leading-tight">
+                  <span className={`text-[10px] font-medium text-center leading-tight ${isLight ? "text-stone-600" : "text-[#A8A29E]"}`}>
                     {action.label}
                   </span>
                 </button>
@@ -1754,17 +1788,20 @@ export default function ParticipantViewFixedPage() {
 
         {/* 📡 PANEL DROIT — "Canaux de Communication" */}
         <section 
-          className="flex-1 flex flex-col overflow-hidden relative"
-          style={{ backgroundColor: "#1E1C1A" }}
+          className="flex-1 flex flex-col overflow-hidden relative transition-colors duration-150"
+          style={{ backgroundColor: isLight ? "#FAF9F5" : "#1E1C1A" }}
         >
           {/* Barre latérale des canaux (en haut ou à gauche) */}
           <div 
-            className="w-full flex flex-col p-4 border-b"
-            style={{ backgroundColor: "#1E1C1A", borderBottom: "1px solid #3C3835" }}
+            className="w-full flex flex-col p-4 border-b transition-colors duration-150"
+            style={{ 
+              backgroundColor: isLight ? "#FFFFFF" : "#1E1C1A", 
+              borderBottom: isLight ? "1px solid #E4E2DC" : "1px solid #3C3835" 
+            }}
           >
             <div className="flex items-center gap-2 mb-4 px-1">
               <MessageSquare className="w-4 h-4 text-[#78716C]" />
-              <h2 className="text-[13px] font-semibold text-[#FAFAF9]">
+              <h2 className={`text-[13px] font-semibold ${isLight ? "text-stone-900" : "text-[#FAFAF9]"}`}>
                 Canaux de communication
               </h2>
             </div>

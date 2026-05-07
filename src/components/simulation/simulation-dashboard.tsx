@@ -21,6 +21,7 @@ import Link from "next/link";
 type ViewRole = "instructor" | "participant" | "observer";
 
 interface LiveData {
+  simulationTitle?: string;
   injections: Array<{
     id: string; title: string; type: string; acknowledged: boolean;
     sentAt: string; responseCount: number; conformityScore?: number;
@@ -98,24 +99,24 @@ export default function SimulationDashboard({
   const [isLive, setIsLive] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Fusionner les données de la base avec la maquette si nécessaire
-  const injections = data.injections.length > 0 ? data.injections : DEFAULT_INJECTS;
-  const communications = data.communications.length > 0 ? data.communications : DEFAULT_COMMS;
-  const assignments = data.assignments.length > 0 ? data.assignments.map((a, idx) => ({
+  // Utilisation exclusive des données dynamiques de la base pour un dynamisme complet à 100%
+  const injections = data.injections || [];
+  const communications = data.communications || [];
+  const assignments = (data.assignments || []).map((a, idx) => ({
     ...a,
-    score: DEFAULT_ASSIGNMENTS[idx]?.score ?? 70,
-    reactedToLastInject: DEFAULT_ASSIGNMENTS[idx]?.reactedToLastInject ?? false,
-    badge: DEFAULT_ASSIGNMENTS[idx]?.badge ?? "Évalué",
-    status: DEFAULT_ASSIGNMENTS[idx]?.status ?? "active",
-    color: DEFAULT_ASSIGNMENTS[idx]?.color ?? "bg-stone-500"
-  })) : DEFAULT_ASSIGNMENTS;
+    score: a.score ?? null,
+    reactedToLastInject: a.reactedToLastInject ?? false,
+    badge: a.score !== null && a.score !== undefined ? (a.score >= 80 ? "Excellent +" : a.score >= 55 ? "Acceptable" : "Insuffisant -") : "En attente",
+    status: a.reactedToLastInject ? "active" : "inactive",
+    color: (a as any).color || "bg-[#DA7757]"
+  }));
 
-  const totalInjects = 9;
-  const sentInjectsCount = injections.filter(i => i.sentAt).length;
-  const conformityRate = data.conformityRate ?? 71;
-  const teamScore = data.teamScore ?? 68;
-  const avgReactionDelay = data.avgReactionDelay ?? 8;
-  const commsCount = data.communications.length > 0 ? data.communications.length : 47;
+  const totalInjects = injections.length;
+  const sentInjectsCount = injections.filter(i => i.acknowledged).length;
+  const conformityRate = data.conformityRate ?? 0;
+  const teamScore = data.teamScore ?? 0;
+  const avgReactionDelay = data.avgReactionDelay ?? 0;
+  const commsCount = communications.length;
 
   const fetchLiveData = useCallback(async () => {
     try {
@@ -181,7 +182,7 @@ export default function SimulationDashboard({
         <div className="space-y-1">
           <div className="flex items-center gap-3 flex-wrap">
             <h2 className="text-lg md:text-xl font-bold text-stone-900 dark:text-stone-100 tracking-tight">
-              Simulation cyberattaque — Exercice T2 2025
+              {data.simulationTitle || "Simulation cyberattaque — Exercice T2 2025"}
             </h2>
             <div className="flex items-center gap-1.5">
               <Badge className="bg-emerald-50 hover:bg-emerald-50 text-emerald-700 border-emerald-100 font-semibold px-2 py-0.5 text-[10px] uppercase">
@@ -398,6 +399,9 @@ export default function SimulationDashboard({
                   </div>
                 );
               })}
+              {injections.length === 0 && (
+                <div className="text-center py-12 text-stone-400 text-xs font-semibold">Aucun inject pour cette simulation.</div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -459,68 +463,74 @@ export default function SimulationDashboard({
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {assignments.map((a) => {
-              const initials = `${a.user.firstName[0] || ""}${a.user.lastName[0] || ""}`;
-              const score = a.score;
-              const hasScore = score !== null && score !== undefined;
+          {assignments.length === 0 ? (
+            <div className="text-center py-12 text-stone-400 text-xs font-semibold bg-white dark:bg-[#252220] border border-stone-200/60 dark:border-stone-800/60 rounded-xl">
+              Aucun participant affecté à cette simulation.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {assignments.map((a) => {
+                const initials = `${a.user.firstName[0] || ""}${a.user.lastName[0] || ""}`;
+                const score = a.score;
+                const hasScore = score !== null && score !== undefined;
 
-              return (
-                <Card key={a.id} className="bg-white dark:bg-[#252220] border-stone-200/60 dark:border-stone-800/60 shadow-sm text-center relative overflow-hidden transition-all duration-150 hover:shadow-md hover:border-stone-300 dark:hover:border-stone-700">
-                  <div className="p-4 flex flex-col items-center gap-3">
-                    {/* Circle Avatar with Initials */}
-                    <div className={cn(
-                      "w-11 h-11 rounded-full flex items-center justify-center text-white text-sm font-extrabold shadow-sm uppercase",
-                      a.color || "bg-indigo-600"
-                    )}>
-                      {initials}
-                    </div>
+                return (
+                  <Card key={a.id} className="bg-white dark:bg-[#252220] border-stone-200/60 dark:border-stone-800/60 shadow-sm text-center relative overflow-hidden transition-all duration-150 hover:shadow-md hover:border-stone-300 dark:hover:border-stone-700">
+                    <div className="p-4 flex flex-col items-center gap-3">
+                      {/* Circle Avatar with Initials */}
+                      <div className={cn(
+                        "w-11 h-11 rounded-full flex items-center justify-center text-white text-sm font-extrabold shadow-sm uppercase",
+                        a.color || "bg-[#DA7757]"
+                      )}>
+                        {initials}
+                      </div>
 
-                    {/* Metadata */}
-                    <div className="space-y-0.5">
-                      <p className="text-xs font-bold text-stone-950 dark:text-stone-50 truncate max-w-full leading-tight">{a.user.firstName} {a.user.lastName}</p>
-                      <p className="text-[10px] text-stone-400 font-semibold truncate max-w-full leading-none">{a.role}</p>
-                    </div>
+                      {/* Metadata */}
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-bold text-stone-950 dark:text-stone-50 truncate max-w-full leading-tight">{a.user.firstName} {a.user.lastName}</p>
+                        <p className="text-[10px] text-stone-400 font-semibold truncate max-w-full leading-none">{a.role}</p>
+                      </div>
 
-                    {/* Score section */}
-                    <div className="w-full space-y-1">
-                      {hasScore ? (
-                        <>
-                          <div className={cn("text-2xl font-black tracking-tight leading-none", getScoreColor(score))}>
-                            {score}
+                      {/* Score section */}
+                      <div className="w-full space-y-1">
+                        {hasScore ? (
+                          <>
+                            <div className={cn("text-2xl font-black tracking-tight leading-none", getScoreColor(score))}>
+                              {score}
+                            </div>
+                            <Progress value={score} className={cn("h-1 bg-stone-100", getScoreBg(score))} />
+                          </>
+                        ) : (
+                          <div className="text-stone-400 dark:text-stone-600 text-lg font-bold tracking-tight py-1">
+                            —
                           </div>
-                          <Progress value={score} className={cn("h-1 bg-stone-100", getScoreBg(score))} />
-                        </>
-                      ) : (
-                        <div className="text-stone-400 dark:text-stone-600 text-lg font-bold tracking-tight py-1">
-                          —
-                        </div>
-                      )}
-                    </div>
+                        )}
+                      </div>
 
-                    {/* Active/Inactive state indicator */}
-                    <div className="flex items-center gap-1.5 py-0.5 px-2 bg-stone-50 dark:bg-stone-900 rounded-full border border-stone-100 dark:border-stone-800">
-                      <span className={cn(
-                        "w-1.5 h-1.5 rounded-full shrink-0",
-                        a.status === "active" ? "bg-emerald-500 animate-pulse" : a.status === "pending" ? "bg-stone-300" : "bg-stone-400"
-                      )} />
-                      <span className="text-[9px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wide">
-                        {a.status === "active" ? "Actif sur inject 6" : a.status === "pending" ? "En attente" : "Inactif"}
-                      </span>
-                    </div>
+                      {/* Active/Inactive state indicator */}
+                      <div className="flex items-center gap-1.5 py-0.5 px-2 bg-stone-50 dark:bg-stone-900 rounded-full border border-stone-100 dark:border-stone-800">
+                        <span className={cn(
+                          "w-1.5 h-1.5 rounded-full shrink-0",
+                          a.status === "active" ? "bg-emerald-500 animate-pulse" : a.status === "pending" ? "bg-stone-300" : "bg-stone-400"
+                        )} />
+                        <span className="text-[9px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wide">
+                          {a.status === "active" ? "Actif sur inject" : a.status === "pending" ? "En attente" : "Inactif"}
+                        </span>
+                      </div>
 
-                    {/* Badge showing traits */}
-                    <Badge className={cn(
-                      "text-[9px] font-bold px-2 py-0.5 uppercase tracking-wider border rounded-md shrink-0 w-full justify-center text-center",
-                      getBadgeClass(a.badge)
-                    )}>
-                      {a.badge}
-                    </Badge>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
+                      {/* Badge showing traits */}
+                      <Badge className={cn(
+                        "text-[9px] font-bold px-2 py-0.5 uppercase tracking-wider border rounded-md shrink-0 w-full justify-center text-center",
+                        getBadgeClass(a.badge)
+                      )}>
+                        {a.badge}
+                      </Badge>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
