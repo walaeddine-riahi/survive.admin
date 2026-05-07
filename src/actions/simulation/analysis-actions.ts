@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import type { ParsedCrisisPlan } from "./crisis-plan-actions";
+import { ConformityStatus } from "@prisma/client";
+import OpenAI from "openai";
+import type { ParsedCrisisPlan, CrisisProcedure, ProcedureStep } from "@/lib/simulation/crisis-plan-types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -24,27 +26,26 @@ async function callAzureAI(systemPrompt: string, userPrompt: string): Promise<st
 
   if (!endpoint || !apiKey) throw new Error("Azure OpenAI not configured");
 
-  const url = `${endpoint.endsWith("/") ? endpoint : endpoint + "/"}openai/deployments/${deployment}/chat/completions?api-version=${apiVersion}`;
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "api-key": apiKey,
-    },
-    body: JSON.stringify({
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      max_tokens: 2000,
-      temperature: 0.3,
-    }),
+  const baseEndpoint = endpoint.replace(/\/$/, "");
+  const client = new OpenAI({
+    apiKey: apiKey,
+    baseURL: `${baseEndpoint}/openai/deployments/${deployment}`,
+    defaultQuery: { "api-version": apiVersion },
+    defaultHeaders: { "api-key": apiKey },
+    timeout: 30000,
   });
 
-  if (!response.ok) throw new Error(`Azure AI error: ${response.status}`);
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || "";
+  const response = await client.chat.completions.create({
+    model: deployment,
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    max_tokens: 2000,
+    temperature: 0.3,
+  });
+
+  return response.choices?.[0]?.message?.content || "";
 }
 
 // ─── Parse Crisis Plan with AI ────────────────────────────────────────────────
@@ -57,43 +58,46 @@ export async function parseCrisisPlanWithAI(simulationId: string, rawText: strin
 }> {
   try {
     const systemPrompt = `Tu es un expert en gestion de crise et continuité d'activité (ISO 22301, BCI GPG).
-Analyse ce plan de gestion de crise et extrais sa structure de manière précise.
-Réponds UNIQUEMENT en JSON valide, sans markdown, sans explication.`;
+Analyse ce plan de gestion de crise et extrais sa structure de manière extrêmement précise, en prêtant une attention particulière aux fiches-actions concrètes (par exemple: FA-003 Incendie, FA-013 Panique, FA-018 Accident, FA-026 Fuite de fuel/gasoil, etc.).
+Réponds uniquement en JSON valide, sans markdown, sans explication.`;
 
-    const userPrompt = `Analyse ce plan de gestion de crise et retourne un JSON avec cette structure exacte:
+    const userPrompt = `Analyse ce plan de gestion de crise et retourne un JSON avec cette structure exacte. 
+IMPORTANT: Parcours l'intégralité du plan fourni. Extrais en priorité les fiches-actions industrielles et d'urgence opérationnelle réelles découlant des fiches FA-xxx (comme les incendies, fuites de carburant, accidents graves du travail ou crises de panique), avec leurs étapes pas-à-pas, durées, rôles opérationnels associés et numéros de contact d'urgence réels s'ils sont présents.
+
+Structure JSON attendue:
 {
   "procedures": [
     {
       "id": "proc_1",
-      "type_incident": "Type d'incident couvert",
-      "titre": "Titre de la procédure",
+      "type_incident": "Type d'incident couvert (ex: Incendie, Fuite fuel, Accident grave du travail, Crise de panique)",
+      "titre": "Titre de la procédure / Fiche-action",
       "declencheurs": ["Condition déclencheur 1", "..."],
       "etapes": [
         {
           "ordre": 1,
-          "action": "Action à réaliser",
+          "action": "Action précise à réaliser",
           "responsable": "Rôle/Fonction responsable",
-          "delai_max_min": 30,
+          "delai_max_min": 10,
           "obligatoire": true
         }
       ],
-      "escalade": ["Niveau d'escalade 1"],
-      "communication_externe": ["Communication externe requise"]
+      "escalade": ["Niveau d'escalade 1", "..."],
+      "communication_externe": ["Communication externe requise", "..."]
     }
   ],
   "roles": [
     {
-      "role": "Directeur de Crise",
+      "role": "Rôle ou Fonction (ex: Responsable HSE, Responsable Maintenance, Référent RH, Responsable Utilités)",
       "responsabilites": ["Responsabilité 1", "..."]
     }
   ],
-  "seuils_activation": ["Seuil 1", "..."],
-  "communication_externe": ["Procédure communication externe"],
+  "seuils_activation": ["Seuil d'activation / Critère d'escalade 1", "..."],
+  "communication_externe": ["Procédure de communication externe", "..."],
   "keywords": ["mot-clé1", "mot-clé2"]
 }
 
-PLAN DE GESTION DE CRISE:
-${rawText.substring(0, 8000)}`;
+PLAN DE GESTION DE CRISE À ANALYSER:
+${rawText.substring(0, 40000)}`;
 
     const aiResponse = await callAzureAI(systemPrompt, userPrompt);
 
@@ -113,12 +117,14 @@ ${rawText.substring(0, 8000)}`;
     }
 
     // Generate summary
-    const summaryPrompt = `Résume ce plan de gestion de crise en 3-4 phrases pour un instructeur de simulation d'exercice.
-Mentionne : les types d'incidents couverts, les rôles clés, et les procédures principales.
-Plan: ${rawText.substring(0, 3000)}`;
+    const summaryPrompt = `Rédige un résumé professionnel, précis et concret de ce plan de gestion de crise en 3-4 phrases pour un instructeur d'exercice de simulation.
+IMPORTANT: Ne génère pas de généralités standard ou de clichés flous sur la cybersécurité ou les catastrophes naturelles si elles ne figurent pas explicitement dans ce plan. Fais référence de manière ultra-concrète aux fiches d'urgence réelles présentes dans ce document (par ex: incendie/départ de feu FA-003, crise de panique collective FA-013, accident du travail grave FA-018, fuite sur citerne fuel/gasoil FA-026, etc.). Mentionne les rôles opérationnels clés actifs (HSE, Maintenance, Qualité, RH, Utilités) et les priorités de réponse immédiate.
+
+PLAN À RÉSUMER:
+${rawText.substring(0, 40000)}`;
 
     const summary = await callAzureAI(
-      "Tu es un expert BCM. Réponds en français, de manière concise et professionnelle.",
+      "Tu es un expert de la continuité d'activité (BCM) et de la gestion des urgences industrielles. Réponds en français, de manière concise, directe et ultra-réaliste.",
       summaryPrompt
     );
 
@@ -151,13 +157,13 @@ export async function analyzeInjectWithAI(params: {
     const { injectionTitle, injectionContent, injectionType, injectedAt, communications, crisisPlan } = params;
 
     // Find relevant procedure from crisis plan
-    let relevantProcedure = null;
+    let relevantProcedure: CrisisProcedure | null = null;
     if (crisisPlan?.procedures) {
       const injectionKeywords = `${injectionTitle} ${injectionContent}`.toLowerCase();
-      relevantProcedure = crisisPlan.procedures.find(p =>
-        p.declencheurs.some(d => injectionKeywords.includes(d.toLowerCase())) ||
+      relevantProcedure = crisisPlan.procedures.find((p: CrisisProcedure) =>
+        p.declencheurs.some((d: string) => injectionKeywords.includes(d.toLowerCase())) ||
         injectionKeywords.includes(p.type_incident.toLowerCase())
-      );
+      ) || null;
     }
 
     const commsText = communications
@@ -170,7 +176,7 @@ export async function analyzeInjectWithAI(params: {
 
     const planContext = relevantProcedure
       ? `\nPROCÉDURE DU PLAN APPLICABLE:\nTitre: ${relevantProcedure.titre}\nÉtapes:\n${
-          relevantProcedure.etapes.map(e => `- ${e.ordre}. ${e.action} (${e.responsable}, délai max: ${e.delai_max_min || "?"} min, obligatoire: ${e.obligatoire})`).join("\n")
+          relevantProcedure.etapes.map((e: ProcedureStep) => `- ${e.ordre}. ${e.action} (${e.responsable}, délai max: ${e.delai_max_min || "?"} min, obligatoire: ${e.obligatoire})`).join("\n")
         }`
       : "\nAucune procédure spécifique identifiée dans le plan pour cet inject.";
 
@@ -249,9 +255,9 @@ Retourne un JSON avec cette structure exacte:
         actualAction: typeof analysis.actualAction === "string" ? analysis.actualAction : null,
         actualActor: typeof analysis.firstActor === "string" ? analysis.firstActor : null,
         conformityScore: typeof analysis.conformityScore === "number" ? analysis.conformityScore : 50,
-        conformityStatus: (analysis.conformityStatus as string) || "NOT_APPLICABLE",
+        conformity: (analysis.conformityStatus as ConformityStatus) || ConformityStatus.NOT_APPLICABLE,
         conformityNotes: (analysis.gaps as string[])?.join("; ") || null,
-        aiAnalysis: analysis as Record<string, unknown>,
+        aiAnalysis: analysis as any,
         linkedCommunicationIds: communications.map(c => c.id),
         analyzedAt: new Date(),
       },
@@ -261,9 +267,9 @@ Retourne un JSON avec cette structure exacte:
         actualAction: typeof analysis.actualAction === "string" ? analysis.actualAction : null,
         actualActor: typeof analysis.firstActor === "string" ? analysis.firstActor : null,
         conformityScore: typeof analysis.conformityScore === "number" ? analysis.conformityScore : 50,
-        conformityStatus: (analysis.conformityStatus as string) || "NOT_APPLICABLE",
+        conformity: (analysis.conformityStatus as ConformityStatus) || ConformityStatus.NOT_APPLICABLE,
         conformityNotes: (analysis.gaps as string[])?.join("; ") || null,
-        aiAnalysis: analysis as Record<string, unknown>,
+        aiAnalysis: analysis as any,
         linkedCommunicationIds: communications.map(c => c.id),
         analyzedAt: new Date(),
       },
@@ -458,8 +464,8 @@ export async function generateDebrief(simulationId: string): Promise<{ success: 
     const teamScoreTonality = avg((scores as {scoreTonality:number}[]).map(s => s.scoreTonality));
     const teamScoreTimeliness = avg((scores as {scoreTimeliness:number}[]).map(s => s.scoreTimeliness));
 
-    const conformantInjects = injectResponses.filter((r: {conformityStatus:string}) => r.conformityStatus === "CONFORMANT").length;
-    const nonConformantInjects = injectResponses.filter((r: {conformityStatus:string}) => r.conformityStatus === "NON_CONFORMANT").length;
+    const conformantInjects = injectResponses.filter((r: any) => r.conformityStatus === "CONFORMANT").length;
+    const nonConformantInjects = injectResponses.filter((r: any) => r.conformityStatus === "NON_CONFORMANT").length;
     const avgReactionDelay = avg(injectResponses.filter((r: {reactionDelayMin:number|null}) => r.reactionDelayMin != null).map((r: {reactionDelayMin:number|null}) => r.reactionDelayMin!));
 
     const teamLevel = teamScoreGlobal >= 90 ? "EXCELLENT" : teamScoreGlobal >= 70 ? "GOOD" : teamScoreGlobal >= 50 ? "ACCEPTABLE" : teamScoreGlobal >= 30 ? "INSUFFICIENT" : "CRITICAL";
@@ -545,8 +551,8 @@ Retourne:
         teamStrengths: debriefData.teamStrengths as string[],
         teamWeaknesses: debriefData.teamWeaknesses as string[],
         criticalGaps: debriefData.criticalGaps as string[],
-        planGaps: debriefData.planGaps as Record<string, unknown>[],
-        improvementPlan: debriefData.improvementPlan as Record<string, unknown>,
+        planGaps: debriefData.planGaps as any,
+        improvementPlan: debriefData.improvementPlan as any,
         status: "draft",
         generatedAt: new Date(),
       },
@@ -561,8 +567,8 @@ Retourne:
         teamStrengths: debriefData.teamStrengths as string[],
         teamWeaknesses: debriefData.teamWeaknesses as string[],
         criticalGaps: debriefData.criticalGaps as string[],
-        planGaps: debriefData.planGaps as Record<string, unknown>[],
-        improvementPlan: debriefData.improvementPlan as Record<string, unknown>,
+        planGaps: debriefData.planGaps as any,
+        improvementPlan: debriefData.improvementPlan as any,
         generatedAt: new Date(),
       },
     });
@@ -660,12 +666,15 @@ export async function runFullAnalysis(simulationId: string) {
         injectionContent: injection.content || "",
         injectionType: injection.type,
         injectedAt: new Date(injection.createdAt),
-        communications: injectComms.map((c: {id:string;content:string;type:string;createdAt:Date;sender:{firstName:string;lastName:string}}) => ({
+        communications: injectComms.map(c => ({
           id: c.id,
           content: c.content,
           type: c.type,
           createdAt: new Date(c.createdAt),
-          sender: { firstName: c.sender.firstName, lastName: c.sender.lastName },
+          sender: { 
+            firstName: c.sender?.firstName || "", 
+            lastName: c.sender?.lastName || "" 
+          },
         })),
         crisisPlan: parsed,
       });

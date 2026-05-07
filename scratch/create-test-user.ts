@@ -65,7 +65,7 @@ async function main() {
   }
 }
 
-async function assignToSimulation(userId, simulationId) {
+async function assignToSimulation(userId: string, simulationId: string) {
   // Vérifier si l'assignation existe déjà
   const existingAssignment = await prisma.simulationAssignment.findUnique({
     where: {

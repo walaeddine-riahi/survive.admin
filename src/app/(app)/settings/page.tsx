@@ -53,14 +53,14 @@ const profileFormSchema = z.object({
 });
 
 const notificationFormSchema = z.object({
-  emailNotifications: z.boolean().default(true),
-  pushNotifications: z.boolean().default(true),
-  taskReminders: z.boolean().default(true),
-  incidentAlerts: z.boolean().default(true),
+  emailNotifications: z.boolean(),
+  pushNotifications: z.boolean(),
+  taskReminders: z.boolean(),
+  incidentAlerts: z.boolean(),
 });
 
 const securityFormSchema = z.object({
-  twoFactorAuth: z.boolean().default(false),
+  twoFactorAuth: z.boolean(),
   sessionTimeout: z.string({
     required_error: "Veuillez sélectionner un délai de session.",
   }),
