@@ -108,6 +108,7 @@ export async function POST(
       videoUrl,
       attachments,
       targetUserId,
+      targetUserIds,
     } = requestBody;
 
     // Vérification des champs requis
@@ -135,8 +136,22 @@ export async function POST(
       return new NextResponse("Scenario not found", { status: 404 });
     }
 
-    // Vérifier si l'utilisateur cible existe si spécifié
-    if (targetUserId) {
+    // Vérifier si les utilisateurs cibles existent si spécifiés
+    if (Array.isArray(targetUserIds) && targetUserIds.length > 0) {
+      for (const tUserId of targetUserIds) {
+        if (tUserId) {
+          const targetUser = await prisma.user.findUnique({
+            where: { id: tUserId },
+          });
+
+          if (!targetUser) {
+            return new NextResponse(`L'utilisateur cible ${tUserId} n'existe pas`, {
+              status: 404,
+            });
+          }
+        }
+      }
+    } else if (targetUserId) {
       const targetUser = await prisma.user.findUnique({
         where: { id: targetUserId },
       });
@@ -148,52 +163,39 @@ export async function POST(
       }
     }
 
-    const injectionData = {
-      title,
-      content,
-      type,
-      imageUrl,
-      videoUrl,
-      attachments: attachments || [],
-      triggerType: "MANUAL",
-      simulationId: simulationId,
-      scenarioId: scenario.id,
-      targetUserId: targetUserId || null,
-      isActive:
-        requestBody.isActive !== undefined ? requestBody.isActive : true,
-      payload: {},
-    };
-
-    console.log(
-      "Création de l'injection avec les données:",
-      JSON.stringify(injectionData, null, 2)
-    );
-
     try {
-      const newInjection = await prisma.injection.create({
-        data: {
-          title,
-          content,
-          type,
-          imageUrl,
-          videoUrl,
-          attachments: attachments || [],
-          triggerType: "MANUAL",
-          isActive:
-            requestBody.isActive !== undefined ? requestBody.isActive : true,
-          simulation: {
-            connect: { id: simulationId },
-          },
-          scenario: {
-            connect: { id: scenario.id },
-          },
-          payload: {},
-          ...(targetUserId && { targetUserId }),
-        },
-      });
+      const targetIdsToCreate = Array.isArray(targetUserIds) && targetUserIds.length > 0 
+        ? targetUserIds 
+        : [targetUserId || null];
 
-      console.log("Injection créée avec succès:", newInjection);
-      return NextResponse.json(newInjection, { status: 201 });
+      const createdInjections = [];
+      for (const tUserId of targetIdsToCreate) {
+        const newInjection = await prisma.injection.create({
+          data: {
+            title,
+            content,
+            type,
+            imageUrl,
+            videoUrl,
+            attachments: attachments || [],
+            triggerType: "MANUAL",
+            isActive:
+              requestBody.isActive !== undefined ? requestBody.isActive : true,
+            simulation: {
+              connect: { id: simulationId },
+            },
+            scenario: {
+              connect: { id: scenario.id },
+            },
+            payload: {},
+            ...(tUserId && { targetUserId: tUserId }),
+          },
+        });
+        createdInjections.push(newInjection);
+      }
+
+      console.log("Injections créées avec succès:", createdInjections);
+      return NextResponse.json(createdInjections[0], { status: 201 });
     } catch (dbError) {
       console.error("Erreur lors de la création de l'injection:", dbError);
       if (dbError instanceof Error) {

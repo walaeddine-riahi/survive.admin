@@ -19,10 +19,11 @@ type FormData = {
   imageUrl: string | null;
   videoUrl: string | null;
   targetUserId: string | null;
+  targetUserIds: string[];
   attachments: string;
   payload: string;
 };
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles, Search, Check, ChevronsUpDown, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast as sonnerToast } from "sonner";
 
@@ -52,6 +53,8 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
 
 // Correspond aux enums de Prisma
 export enum InjectionTriggerTypeEnum {
@@ -91,6 +94,7 @@ const injectionFormSchema = z.object({
   imageUrl: z.union([z.string().url().nullable(), z.literal("")]).optional(),
   videoUrl: z.union([z.string().url().nullable(), z.literal("")]).optional(),
   targetUserId: z.union([z.string().nullable(), z.undefined()]).optional(),
+  targetUserIds: z.array(z.string()).default([]),
   attachments: z.string().default("[]"),
   payload: z.string().default("{}"),
 });
@@ -131,6 +135,7 @@ interface InjectionFormData {
   imageUrl?: string | null;
   videoUrl?: string | null;
   targetUserId?: string | null;
+  targetUserIds?: string[];
   attachments?: string;
   payload?: string;
 }
@@ -163,6 +168,16 @@ export function InjectionForm({
   scenarioId,
   scenarios = [],
 }: InjectionFormProps) {
+  const getInitialTargetUserIds = (data: any) => {
+    if (Array.isArray(data?.targetUserIds)) {
+      return data.targetUserIds;
+    }
+    if (data?.targetUserId) {
+      return [data.targetUserId];
+    }
+    return [];
+  };
+
   const methods = useForm<FormData>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(injectionFormSchema) as any,
@@ -180,6 +195,7 @@ export function InjectionForm({
       imageUrl: initialData?.imageUrl || "",
       videoUrl: initialData?.videoUrl || "",
       targetUserId: initialData?.targetUserId || "",
+      targetUserIds: getInitialTargetUserIds(initialData),
       attachments: initialData?.attachments || "",
       payload: initialData?.payload || "",
     },
@@ -202,6 +218,7 @@ export function InjectionForm({
         imageUrl: initialData?.imageUrl || "",
         videoUrl: initialData?.videoUrl || "",
         targetUserId: initialData?.targetUserId || "",
+        targetUserIds: getInitialTargetUserIds(initialData),
         attachments: initialData?.attachments || "",
         payload: initialData?.payload || "",
       });
@@ -214,6 +231,7 @@ export function InjectionForm({
   const triggerType = watch("triggerType");
   const isRepeating = watch("isRepeating");
   const selectedSimulationId = watch("simulationId");
+  const watchedTargetUserIds = watch("targetUserIds") || [];
 
   // Filtrer les scénarios en fonction de la simulation sélectionnée
   const filteredScenarios: ScenarioOption[] = selectedSimulationId
@@ -236,12 +254,12 @@ export function InjectionForm({
     try {
       setGeneratingAI(true);
       const response = await fetch("/api/ai/generate-injection", {
-        method: "POST",
         body: JSON.stringify({
           type,
           context: title || "Générer une injection réaliste",
           simulationInfo: sim ? { title: sim.name } : undefined
         }),
+        method: "POST",
       });
 
       if (!response.ok) throw new Error("Erreur IA");
@@ -283,48 +301,205 @@ export function InjectionForm({
               <div className="grid gap-4 pb-4">
                 <FormField
                   control={control}
-                  name="targetUserId"
+                  name="targetUserIds"
                   render={({ field }) => {
-                    // Gérer la valeur actuelle (peut être null, undefined ou un ID utilisateur)
-                    const currentValue = field.value || "all";
+                    const [localSelected, setLocalSelected] = useState<string[]>(field.value || []);
+                    const [search, setSearch] = useState("");
+                    const [isOpen, setIsOpen] = useState(false);
+
+                    useEffect(() => {
+                      if (field.value && JSON.stringify(localSelected) !== JSON.stringify(field.value)) {
+                        setLocalSelected(field.value || []);
+                      }
+                    }, [field.value]);
+
+                    const selectedIds = localSelected;
+
+                    const filteredUsers = users.filter(user =>
+                      user.name.toLowerCase().includes(search.toLowerCase()) ||
+                      user.email.toLowerCase().includes(search.toLowerCase())
+                    );
+
+                    const toggleUser = (userId: string) => {
+                      const newSelected = selectedIds.includes(userId)
+                        ? selectedIds.filter((id) => id !== userId)
+                        : [...selectedIds, userId];
+                      setLocalSelected(newSelected);
+                      field.onChange(newSelected);
+                    };
+
+                    const selectAll = () => {
+                      const allIds = users.map(u => u.id);
+                      setLocalSelected(allIds);
+                      field.onChange(allIds);
+                    };
+
+                    const clearAll = () => {
+                      setLocalSelected([]);
+                      field.onChange([]);
+                    };
 
                     return (
-                      <FormItem>
-                        <FormLabel>Destinataire (optionnel)</FormLabel>
-                        <Select
-                          value={currentValue}
-                          onValueChange={(value) => {
-                            // Convertir 'all' en null pour la base de données
-                            field.onChange(value === "all" ? null : value);
-                          }}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Sélectionner un utilisateur (tous par défaut)" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="all">
-                              Tous les participants
-                            </SelectItem>
-                            {users?.length > 0 ? (
-                              users.map((user) => (
-                                <SelectItem key={user.id} value={user.id}>
-                                  <div className="flex flex-col">
-                                    <span>{user.name}</span>
-                                    <span className="text-xs text-muted-foreground">
-                                      {user.email}
-                                    </span>
+                      <FormItem className="flex flex-col relative">
+                        <FormLabel>Destinataire(s) (optionnel)</FormLabel>
+                        <div className="relative">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={isOpen}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setIsOpen(!isOpen);
+                            }}
+                            className="w-full justify-between h-auto min-h-10 py-2 px-3 text-left font-normal border-[var(--border)] bg-background hover:bg-white/5"
+                          >
+                            <div className="flex flex-wrap gap-1.5 max-w-[90%]">
+                              {selectedIds.length === 0 ? (
+                                <span className="text-muted-foreground text-sm">
+                                  Tous les participants (public)
+                                </span>
+                              ) : (
+                                selectedIds.map((id) => {
+                                  const user = users.find((u) => u.id === id);
+                                  if (!user) return null;
+                                  return (
+                                    <Badge
+                                      key={id}
+                                      variant="secondary"
+                                      className="bg-primary/20 text-primary border-primary/20 hover:bg-primary/30 flex items-center gap-1 py-0.5 px-2 text-xs"
+                                    >
+                                      {user.name}
+                                      <X
+                                        className="h-3 w-3 cursor-pointer hover:text-red-400"
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          toggleUser(id);
+                                        }}
+                                      />
+                                    </Badge>
+                                  );
+                                })
+                              )}
+                            </div>
+                            <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+
+                          {isOpen && (
+                            <>
+                              {/* Background overlay inside Dialog subtree to safely handle outside clicks */}
+                              <div
+                                className="fixed inset-0 z-40"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setIsOpen(false);
+                                }}
+                              />
+
+                              {/* Premium styled Dropdown panel rendered inline */}
+                              <div className="absolute top-[calc(100%+4px)] left-0 w-full p-0 bg-stone-900 border border-stone-800 shadow-2xl rounded-2xl overflow-hidden z-50">
+                                <div className="p-3 border-b border-white/5 flex items-center gap-2 bg-white/5">
+                                  <Search className="h-4 w-4 text-primary shrink-0" />
+                                  <input
+                                    type="text"
+                                    placeholder="Rechercher un participant..."
+                                    className="flex h-9 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                    }}
+                                  />
+                                  {search && (
+                                    <X
+                                      className="h-4 w-4 text-muted-foreground cursor-pointer hover:text-white"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSearch("");
+                                      }}
+                                    />
+                                  )}
+                                </div>
+                                
+                                <div 
+                                  className="flex justify-between px-3 py-2 border-b border-white/5 bg-white/[0.02] text-xs font-bold uppercase tracking-widest text-muted-foreground"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <span>Participants ({filteredUsers.length})</span>
+                                  <div className="flex gap-3">
+                                    <button
+                                      type="button"
+                                      className="text-primary hover:underline font-bold text-xs"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        selectAll();
+                                      }}
+                                    >
+                                      Tous
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="text-red-400 hover:underline font-bold text-xs"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        clearAll();
+                                      }}
+                                    >
+                                      Aucun
+                                    </button>
                                   </div>
-                                </SelectItem>
-                              ))
-                            ) : (
-                              <div className="p-2 text-sm text-muted-foreground">
-                                Aucun utilisateur disponible
+                                </div>
+
+                                <div 
+                                  className="max-h-[220px] overflow-y-auto p-1.5 space-y-0.5"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {filteredUsers.length > 0 ? (
+                                    filteredUsers.map((user) => {
+                                      const isSelected = selectedIds.includes(user.id);
+                                      return (
+                                        <button
+                                          key={user.id}
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            toggleUser(user.id);
+                                          }}
+                                          className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl cursor-pointer hover:bg-white/5 transition-colors group text-left"
+                                        >
+                                          <div className="flex flex-col text-sm">
+                                            <span className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                                              {user.name}
+                                            </span>
+                                            <span className="text-xs text-muted-foreground">
+                                              {user.email}
+                                            </span>
+                                          </div>
+                                          <div className={`h-5 w-5 rounded-md border flex items-center justify-center transition-all ${
+                                            isSelected 
+                                              ? "bg-primary border-primary text-white shadow-[0_0_10px_rgba(124,58,237,0.3)]" 
+                                              : "border-white/10"
+                                          }`}>
+                                            {isSelected && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+                                          </div>
+                                        </button>
+                                      );
+                                    })
+                                  ) : (
+                                    <div className="p-4 text-center text-xs text-muted-foreground">
+                                      Aucun participant trouvé
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            )}
-                          </SelectContent>
-                        </Select>
+                            </>
+                          )}
+                        </div>
                         <FormMessage />
                       </FormItem>
                     );

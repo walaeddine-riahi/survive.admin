@@ -19,6 +19,7 @@ type InjectionFormValues = {
   imageUrl?: string | null;
   videoUrl?: string | null;
   targetUserId?: string | null;
+  targetUserIds?: string[];
   attachments?: string;
   payload?: string;
 };
@@ -254,6 +255,7 @@ export default function InjectionsPage() {
         imageUrl: formData.imageUrl || null,
         videoUrl: formData.videoUrl || null,
         targetUserId: formData.targetUserId || null,
+        targetUserIds: formData.targetUserIds || [],
         // Gestion des champs JSON
         payload: formData.payload 
           ? typeof formData.payload === 'string' 

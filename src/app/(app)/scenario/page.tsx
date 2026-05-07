@@ -108,6 +108,7 @@ export default function ScenarioPage() {
   };
 
   const [scenarioInjections, setScenarioInjections] = useState<ScenarioInjection[]>([]);
+  const [users, setUsers] = useState<Array<{ id: string; name: string; email: string }>>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isInjectionFormOpen, setIsInjectionFormOpen] = useState(false);
   const [selectedInjection, setSelectedInjection] = useState<Injection | null>(
@@ -145,6 +146,22 @@ export default function ScenarioPage() {
     }
   };
 
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch("/api/users");
+      if (response.ok) {
+        const data = await response.json();
+        setUsers(data.map((user: any) => ({
+          id: user.id,
+          name: user.name || 'Utilisateur sans nom',
+          email: user.email
+        })));
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  };
+
   const fetchScenarioInjections = async (scenarioId: string) => {
     try {
       const response = await fetch(`/api/scenarios/${scenarioId}/injections`);
@@ -165,6 +182,7 @@ export default function ScenarioPage() {
   useEffect(() => {
     fetchScenarios();
     fetchSimulations();
+    fetchUsers();
   }, []);
 
   const handleCreateScenario = async (data: ScenarioFormData) => {
@@ -635,6 +653,7 @@ export default function ScenarioPage() {
           id: s.id,
           name: s.title
         }))}
+        users={users}
         initialData={selectedInjection ? {
           id: selectedInjection.id,
           title: selectedInjection.title,

@@ -69,6 +69,7 @@ interface InjectionData {
   scenarioId: string;
   simulationId: string;
   targetUserId?: string | null;
+  targetUserIds?: string[];
   payload?: any;
 }
 
@@ -107,8 +108,8 @@ export async function POST(request: Request) {
       ? data.triggerType as InjectionTriggerType
       : InjectionTriggerType.MANUAL;
 
-    // Préparer les données pour la création
-    const injectionData = {
+    // Préparer les données de base pour la création
+    const baseInjectionData = {
       title: data.title,
       content: data.content,
       type: validType,
@@ -122,24 +123,49 @@ export async function POST(request: Request) {
       attachments: data.attachments || [],
       scenarioId: data.scenarioId,  // Utiliser directement l'ID pour la relation
       simulationId: scenario.simulationId,  // Utiliser l'ID de la simulation du scénario
-      targetUserId: data.targetUserId || null,
       payload: data.payload || {}
     };
-    
-    // Créer l'injection dans la base de données
-    const injection = await prisma.injection.create({
-      data: injectionData,
-      include: {
-        scenario: {
-          select: {
-            id: true,
-            name: true
+
+    const targetUserIds = data.targetUserIds || [];
+
+    if (Array.isArray(targetUserIds) && targetUserIds.length > 0) {
+      const createdInjections = [];
+      for (const tUserId of targetUserIds) {
+        const injection = await prisma.injection.create({
+          data: {
+            ...baseInjectionData,
+            targetUserId: tUserId || null,
+          },
+          include: {
+            scenario: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        });
+        createdInjections.push(injection);
+      }
+      return NextResponse.json(createdInjections[0], { status: 201 });
+    } else {
+      // Créer l'injection dans la base de données (comportement d'origine / mono-destinataire)
+      const injection = await prisma.injection.create({
+        data: {
+          ...baseInjectionData,
+          targetUserId: data.targetUserId || null,
+        },
+        include: {
+          scenario: {
+            select: {
+              id: true,
+              name: true
+            }
           }
         }
-      }
-    });
-    
-    return NextResponse.json(injection, { status: 201 });
+      });
+      return NextResponse.json(injection, { status: 201 });
+    }
   } catch (error) {
     console.error("Error creating injection:", error);
     return NextResponse.json(
