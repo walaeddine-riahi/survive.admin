@@ -31,16 +31,19 @@ const getIconForType = (type: string): React.ReactElement => {
     strokeWidth: 1.75,
   };
 
-  switch (type.toLowerCase()) {
-    case "email": return <Mail {...iconProps} />;
-    case "sms": return <MessageSquare {...iconProps} />;
-    case "call": return <Phone {...iconProps} />;
-    case "alert": return <Bell {...iconProps} />;
-    case "memo": return <WhatsAppIcon className={iconProps.className} />;
-    case "newsbroadcast": return <Newspaper {...iconProps} />;
-    case "newspaper": return <Rss {...iconProps} />;
-    case "social": return <Users {...iconProps} />;
-    case "report": return <FileText {...iconProps} />;
+  const normalized = (type || "").toUpperCase().replace(/_/g, "");
+  switch (normalized) {
+    case "EMAIL": return <Mail {...iconProps} />;
+    case "SMS": return <MessageSquare {...iconProps} />;
+    case "CALL": return <Phone {...iconProps} />;
+    case "ALERT": return <Bell {...iconProps} />;
+    case "MEMO": return <WhatsAppIcon className={iconProps.className} />;
+    case "NEWSBROADCAST": return <Newspaper {...iconProps} />;
+    case "NEWSPAPER": return <Rss {...iconProps} />;
+    case "SOCIAL":
+    case "SOCIALMEDIA":
+      return <Users {...iconProps} />;
+    case "REPORT": return <FileText {...iconProps} />;
     default: return <MessageSquare {...iconProps} />;
   }
 };

@@ -196,22 +196,24 @@ const formatDate = (dateString: string) => {
 };
 
 const getIconForType = (type: string) => {
-  switch (type.toLowerCase()) {
-    case "email":
+  const normalized = (type || "").toUpperCase().replace(/_/g, "");
+  switch (normalized) {
+    case "EMAIL":
       return <Mail className="mr-2 h-4 w-4" />;
-    case "sms":
+    case "SMS":
       return <MessageSquare className="mr-2 h-4 w-4" />;
-    case "call":
+    case "CALL":
       return <Phone className="mr-2 h-4 w-4" />;
-    case "alert":
+    case "ALERT":
       return <Bell className="mr-2 h-4 w-4" />;
-    case "memo":
+    case "MEMO":
       return <WhatsAppIcon className="mr-2 h-4 w-4" />;
-    case "newsbroadcast":
+    case "NEWSBROADCAST":
       return <Newspaper className="mr-2 h-4 w-4" />;
-    case "newspaper":
+    case "NEWSPAPER":
       return <Rss className="mr-2 h-4 w-4" />;
-    case "social":
+    case "SOCIAL":
+    case "SOCIALMEDIA":
       return <Users className="mr-2 h-4 w-4" />;
     default:
       return null;
@@ -238,6 +240,19 @@ export default function ParticipantViewFixedPage() {
   const [selectedInjection, setSelectedInjection] = useState<Injection | null>(
     null
   );
+
+  const getInjectionCount = (channelType: string) => {
+    if (!data?.injections) return 0;
+    return data.injections.filter((inj) => {
+      if (!inj.type) return false;
+      const normalizedInjType = inj.type.toUpperCase().replace(/_/g, "");
+      const normalizedChannelType = channelType.toUpperCase().replace(/_/g, "");
+      if (normalizedChannelType === "SOCIAL") {
+        return normalizedInjType === "SOCIAL" || normalizedInjType === "SOCIALMEDIA";
+      }
+      return normalizedInjType === normalizedChannelType;
+    }).length;
+  };
 
   const fetchData = useCallback(async () => {
     if (!simulationId) {
@@ -732,10 +747,16 @@ export default function ParticipantViewFixedPage() {
   ) => {
     if (!data) return null;
 
-    const channelCommunications = data.communications[channelType];
-    const channelInjections = data.injections.filter(
-      (inj) => inj.type.toLowerCase() === channelType.toLowerCase()
-    );
+    const channelCommunications = data.communications[channelType] || [];
+    const channelInjections = data.injections.filter((inj) => {
+      if (!inj.type) return false;
+      const normalizedInjType = inj.type.toUpperCase().replace(/_/g, "");
+      const normalizedChannelType = channelType.toUpperCase().replace(/_/g, "");
+      if (normalizedChannelType === "SOCIAL") {
+        return normalizedInjType === "SOCIAL" || normalizedInjType === "SOCIALMEDIA";
+      }
+      return normalizedInjType === normalizedChannelType;
+    });
 
     const combinedContent: CombinedContentItem[] = [
       ...channelCommunications.map((comm) => ({
@@ -1084,56 +1105,31 @@ export default function ParticipantViewFixedPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <CommunicationChannelCard
                   title="Email"
-                  count={
-                    (data?.counts?.email || 0) +
-                    (data?.injections.filter(
-                      (inj) => inj.type.toLowerCase() === "email"
-                    ).length || 0)
-                  }
+                  count={(data?.counts?.email || 0) + getInjectionCount("email")}
                   onClick={() => handleChannelClick("email")}
                   icon={Mail}
                 />
                 <CommunicationChannelCard
                   title="SMS"
-                  count={
-                    (data?.counts?.sms || 0) +
-                    (data?.injections.filter(
-                      (inj) => inj.type.toLowerCase() === "sms"
-                    ).length || 0)
-                  }
+                  count={(data?.counts?.sms || 0) + getInjectionCount("sms")}
                   onClick={() => handleChannelClick("sms")}
                   icon={MessageSquare}
                 />
                 <CommunicationChannelCard
                   title="Appel"
-                  count={
-                    (data?.counts?.call || 0) +
-                    (data?.injections.filter(
-                      (inj) => inj.type.toLowerCase() === "call"
-                    ).length || 0)
-                  }
+                  count={(data?.counts?.call || 0) + getInjectionCount("call")}
                   onClick={() => handleChannelClick("call")}
                   icon={Phone}
                 />
                 <CommunicationChannelCard
                   title="Alerte"
-                  count={
-                    (data?.counts?.alert || 0) +
-                    (data?.injections.filter(
-                      (inj) => inj.type.toLowerCase() === "alert"
-                    ).length || 0)
-                  }
+                  count={(data?.counts?.alert || 0) + getInjectionCount("alert")}
                   onClick={() => handleChannelClick("alert")}
                   icon={Bell}
                 />
                 <CommunicationChannelCard
                   title="WhatsApp"
-                  count={
-                    (data?.counts?.memo || 0) +
-                    (data?.injections.filter(
-                      (inj) => inj.type.toLowerCase() === "memo"
-                    ).length || 0)
-                  }
+                  count={(data?.counts?.memo || 0) + getInjectionCount("memo")}
                   onClick={() => handleChannelClick("memo")}
                   icon={WhatsAppIcon}
                 />
@@ -1141,32 +1137,20 @@ export default function ParticipantViewFixedPage() {
                   title="Diffusion de Nouvelles"
                   count={
                     (data?.counts?.newsBroadcast || 0) +
-                    (data?.injections.filter(
-                      (inj) => inj.type.toLowerCase() === "newsbroadcast"
-                    ).length || 0)
+                    getInjectionCount("newsBroadcast")
                   }
                   onClick={() => handleChannelClick("newsBroadcast")}
                   icon={Newspaper}
                 />
                 <CommunicationChannelCard
                   title="Journal"
-                  count={
-                    (data?.counts?.newspaper || 0) +
-                    (data?.injections.filter(
-                      (inj) => inj.type.toLowerCase() === "newspaper"
-                    ).length || 0)
-                  }
+                  count={(data?.counts?.newspaper || 0) + getInjectionCount("newspaper")}
                   onClick={() => handleChannelClick("newspaper")}
                   icon={Rss}
                 />
                 <CommunicationChannelCard
                   title="Social"
-                  count={
-                    (data?.counts?.social || 0) +
-                    (data?.injections.filter(
-                      (inj) => inj.type.toLowerCase() === "social"
-                    ).length || 0)
-                  }
+                  count={(data?.counts?.social || 0) + getInjectionCount("social")}
                   onClick={() => handleChannelClick("social")}
                   icon={Users}
                 />
@@ -1306,22 +1290,33 @@ export default function ParticipantViewFixedPage() {
               )}
               {selectedInjection.videoUrl && (
                 <div className="mb-4 w-full">
-                  {selectedInjection.videoUrl.includes("youtube.com") ? (
-                    <iframe
-                      className="w-full aspect-video rounded-lg"
-                      src={`https://www.youtube.com/embed/${
-                        selectedInjection.videoUrl.split("v=")[1]?.split("&")[0]
-                      }`}
-                      frameBorder="0"
-                      /* Omit `allow` to improve compatibility (e.g. Firefox for Android) */
-                      allowFullScreen
-                      title="YouTube video player"
-                    ></iframe>
-                  ) : (
+                  {(selectedInjection.videoUrl?.includes("youtube.com") || selectedInjection.videoUrl?.includes("youtu.be")) ? (() => {
+                    const videoId = selectedInjection.videoUrl?.match(/(?:youtu[.]be[/]|youtube[.]com[/](?:embed[/]|v[/]|watch[?]v=|watch[?].+&v=))([^"&?/ ]{11})/)?.[1];
+                    return videoId ? (
+                      <iframe
+                        className="w-full aspect-video rounded-lg"
+                        src={`https://www.youtube.com/embed/${videoId}`}
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        title="YouTube video player"
+                      ></iframe>
+                    ) : (
+                      <video
+                        src={selectedInjection.videoUrl}
+                        controls
+                        playsInline
+                        preload="metadata"
+                        className="rounded-lg w-full max-w-2xl bg-black"
+                      />
+                    );
+                  })() : (
                     <video
                       src={selectedInjection.videoUrl}
                       controls
-                      className="rounded-lg w-full max-w-2xl"
+                      playsInline
+                      preload="metadata"
+                      className="rounded-lg w-full max-w-2xl bg-black"
                     />
                   )}
                 </div>

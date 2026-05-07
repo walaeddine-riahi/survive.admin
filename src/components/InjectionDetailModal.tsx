@@ -222,17 +222,22 @@ export function InjectionDetailModal({
                   Vidéo jointe
                 </h4>
                 <div className="border rounded-lg overflow-hidden aspect-video">
-                  {injection.videoUrl.includes("youtube.com") ||
-                  injection.videoUrl.includes("youtu.be") ? (
-                    <iframe
-                      src={injection.videoUrl.replace("watch?v=", "embed/")}
-                      title={`Vidéo: ${injection.title}`}
-                      className="w-full h-full"
-                      frameBorder="0"
-                      allowFullScreen
-                    />
-                  ) : (
-                    <video src={injection.videoUrl} controls className="w-full h-full" />
+                  {(injection.videoUrl?.includes("youtube.com") || injection.videoUrl?.includes("youtu.be")) ? (() => {
+                    const videoId = injection.videoUrl?.match(/(?:youtu[.]be[/]|youtube[.]com[/](?:embed[/]|v[/]|watch[?]v=|watch[?].+&v=))([^"&?/ ]{11})/)?.[1];
+                    return videoId ? (
+                      <iframe
+                        src={`https://www.youtube.com/embed/${videoId}`}
+                        title={`Vidéo: ${injection.title}`}
+                        className="w-full h-full"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    ) : (
+                      <video src={injection.videoUrl} controls playsInline preload="metadata" className="w-full h-full bg-black" />
+                    );
+                  })() : (
+                    <video src={injection.videoUrl} controls playsInline preload="metadata" className="w-full h-full bg-black" />
                   )}
                 </div>
               </div>

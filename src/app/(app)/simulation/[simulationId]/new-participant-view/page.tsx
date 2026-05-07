@@ -3400,23 +3400,35 @@ function MobileInjectionModal({
 
           {selectedInjection.videoUrl && (
             <div className="mb-6 rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
-              {selectedInjection.videoUrl.includes("youtube.com") ? (
-                <div className="aspect-video w-full">
-                  <iframe
-                    className="w-full h-full"
-                    src={`https://www.youtube.com/embed/${
-                      selectedInjection.videoUrl.split("v=")[1]?.split("&")[0]
-                    }`}
-                    frameBorder="0"
-                    allowFullScreen
-                    title="Vidéo YouTube"
+              {(selectedInjection.videoUrl?.includes("youtube.com") || selectedInjection.videoUrl?.includes("youtu.be")) ? (() => {
+                const videoId = selectedInjection.videoUrl?.match(/(?:youtu[.]be[/]|youtube[.]com[/](?:embed[/]|v[/]|watch[?]v=|watch[?].+&v=))([^"&?/ ]{11})/)?.[1];
+                return videoId ? (
+                  <div className="aspect-video w-full">
+                    <iframe
+                      className="w-full h-full"
+                      src={`https://www.youtube.com/embed/${videoId}`}
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      title="Vidéo YouTube"
+                    />
+                  </div>
+                ) : (
+                  <video
+                    src={selectedInjection.videoUrl}
+                    controls
+                    playsInline
+                    preload="metadata"
+                    className="w-full aspect-video bg-black"
                   />
-                </div>
-              ) : (
+                );
+              })() : (
                 <video
                   src={selectedInjection.videoUrl}
                   controls
-                  className="w-full aspect-video"
+                  playsInline
+                  preload="metadata"
+                  className="w-full aspect-video bg-black"
                 />
               )}
             </div>

@@ -61,6 +61,39 @@ export function InjectionModal({ injection, onClose, onAcknowledge }: InjectionM
               <Image src={injection.imageUrl} alt={injection.title} width={800} height={450} className="w-full h-auto object-cover" />
             </div>
           )}
+          {injection.videoUrl && (
+            <div className="mb-10 rounded-2xl overflow-hidden border border-[var(--border)] bg-[var(--bg-secondary)] shadow-lg aspect-video w-full">
+              {(injection.videoUrl.includes("youtube.com") || injection.videoUrl.includes("youtu.be")) ? (() => {
+                const videoId = injection.videoUrl.match(/(?:youtu[.]be[/]|youtube[.]com[/](?:embed[/]|v[/]|watch[?]v=|watch[?].+&v=))([^"&?/ ]{11})/)?.[1];
+                return videoId ? (
+                  <iframe
+                    className="w-full h-full"
+                    src={`https://www.youtube.com/embed/${videoId}`}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    title="Vidéo YouTube"
+                  />
+                ) : (
+                  <video
+                    src={injection.videoUrl}
+                    controls
+                    playsInline
+                    preload="metadata"
+                    className="w-full h-full bg-black"
+                  />
+                );
+              })() : (
+                <video
+                  src={injection.videoUrl}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  className="w-full h-full bg-black"
+                />
+              )}
+            </div>
+          )}
           {injection.attachments && injection.attachments.length > 0 && (
             <div className="mb-10">
               <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--accent)] mb-4 flex items-center">
