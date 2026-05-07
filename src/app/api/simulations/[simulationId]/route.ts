@@ -1,4 +1,6 @@
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
 export async function GET(
@@ -66,5 +68,81 @@ export async function PUT(
   }
 }
 
-// You might also want to add GET and DELETE handlers for this specific simulation ID
-// import { GET, DELETE } from './[simulationId]/route'; // Example if you had them elsewhere
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ simulationId: string }> }
+) {
+  try {
+    const { simulationId } = await params;
+
+    // Seuls les ADMINS peuvent supprimer des simulations
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ message: "Non autorisé" }, { status: 401 });
+    }
+    if (session.user.role !== "ADMIN") {
+      return NextResponse.json(
+        { message: "Accès refusé - Réservé aux administrateurs" },
+        { status: 403 }
+      );
+    }
+
+    // Supprimer toutes les dépendances requises d'abord pour éviter les conflits relationnels
+    await prisma.$transaction([
+      // Supprimer les réponses aux injections
+      prisma.injectResponse.deleteMany({ where: { simulationId } }),
+      
+      // Supprimer les scores des participants
+      prisma.participantScore.deleteMany({ where: { simulationId } }),
+      
+      // Supprimer les debriefs
+      prisma.simulationDebrief.deleteMany({ where: { simulationId } }),
+      
+      // Supprimer les plans de gestion de crise
+      prisma.simulationCrisisPlan.deleteMany({ where: { simulationId } }),
+      
+      // Supprimer les critères d'évaluation
+      prisma.evaluationCriteria.deleteMany({ where: { simulationId } }),
+      
+      // Supprimer les notifications liées à la simulation
+      prisma.notification.deleteMany({ where: { simulationId } }),
+
+      // Supprimer les injections liées à la simulation
+      prisma.injection.deleteMany({ where: { simulationId } }),
+
+      // Supprimer les scénarios liés à la simulation
+      prisma.scenario.deleteMany({ where: { simulationId } }),
+
+      // Supprimer les communications liées à la simulation
+      prisma.communication.deleteMany({ where: { simulationId } }),
+
+      // Supprimer les assignations de simulation
+      prisma.simulationAssignment.deleteMany({ where: { simulationId } }),
+
+      // Mettre à jour les participations pour détacher la simulation (SetNull)
+      prisma.participation.updateMany({
+        where: { simulationId },
+        data: { simulationId: null },
+      }),
+
+      // Mettre à jour les fichiers uploadés pour détacher la simulation (SetNull)
+      prisma.fileUpload.updateMany({
+        where: { simulationId },
+        data: { simulationId: null },
+      }),
+
+      // Enfin, supprimer la simulation elle-même
+      prisma.simulation.delete({
+        where: { id: simulationId },
+      }),
+    ]);
+
+    return NextResponse.json({ message: "Simulation supprimée avec succès" });
+  } catch (error) {
+    console.error("[SIMULATION_DELETE]", error);
+    return NextResponse.json(
+      { message: "Une erreur est survenue lors de la suppression de la simulation." },
+      { status: 500 }
+    );
+  }
+}
