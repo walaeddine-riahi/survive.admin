@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,13 +17,14 @@ import {
   runFullAnalysis, getSimulationAnalysis,
 } from "@/actions/simulation/analysis-actions";
 import {
-  type AnalysisData,
-} from "@/lib/simulation/analysis-types";
+  bridgeSessionToScoring, getSessionMetricsForSimulation,
+} from "@/actions/simulation/session-bridge-actions";
+import type { ParticipantV2Metrics } from "@/actions/simulation/session-bridge-actions";
 
 import { uploadCrisisPlan } from "@/actions/simulation/crisis-plan-actions";
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from "recharts";
 
-// type AnalysisData = Awaited<ReturnType<typeof getSimulationAnalysis>>["data"];
+type AnalysisData = Awaited<ReturnType<typeof getSimulationAnalysis>>["data"];
 
 // ─── Color helpers ────────────────────────────────────────────────────────────
 const SCORE_COLOR = (s: number) => s >= 90 ? "#0F6E56" : s >= 70 ? "#3B6D11" : s >= 50 ? "#854F0B" : s >= 30 ? "#E24B4A" : "#A32D2D";
@@ -552,6 +553,45 @@ export default function SimulationAnalysisClient({
 }) {
   const [data, setData] = useState(analysisData);
   const [isRunning, startTransition] = useTransition();
+  const [v2Metrics, setV2Metrics] = useState<{
+    session: { id: string; title: string; startedAt: Date | null; endedAt: Date | null } | null;
+    participantMetrics: ParticipantV2Metrics[];
+    teamMetrics: { avgReadRate: number; avgReplyRate: number; avgReplyTimeSeconds: number | null; totalCalls: number; answeredCalls: number; missedCriticals: number };
+  } | null>(null);
+  const [isBridging, setIsBridging] = useState(false);
+  
+  // Load v2 session metrics on mount
+  const loadV2 = async () => {
+    const r = await getSessionMetricsForSimulation(simulationId);
+    if (r.success && r.data) setV2Metrics(r.data);
+  };
+  useEffect(() => { loadV2(); }, [simulationId]);
+
+  async function handleBridgeAndAnalyze() {
+    setIsBridging(true);
+    toast.info("Synchronisation session v2 → scoring...");
+    if (v2Metrics?.session?.id) {
+      const bridgeResult = await bridgeSessionToScoring(v2Metrics.session.id, simulationId);
+      if (!bridgeResult.success) {
+        toast.error("Synchronisation échouée: " + bridgeResult.error);
+        setIsBridging(false);
+        return;
+      }
+      toast.success(`Synchronisé: ${bridgeResult.data?.syncedInjects} injects, ${bridgeResult.data?.syncedParticipants} participants`);
+    }
+    setIsBridging(false);
+    // Refresh analysis data
+    startTransition(async () => {
+      toast.info("Analyse IA en cours...");
+      const result = await runFullAnalysis(simulationId);
+      if (result.success) {
+        toast.success(`Analyse complète: ${result.data?.injectsAnalyzed} injects, ${result.data?.participantsScored} participants scorés`);
+        const refreshed = await getSimulationAnalysis(simulationId);
+        if (refreshed.success) setData(refreshed.data ?? null);
+        await loadV2();
+      } else toast.error(result.error || "Erreur analyse");
+    });
+  }
 
   async function handleRunAnalysis() {
     startTransition(async () => {
@@ -592,9 +632,20 @@ export default function SimulationAnalysisClient({
             <RefreshCw className="h-4 w-4" />
             Actualiser
           </Button>
-          <Button onClick={handleRunAnalysis} disabled={isRunning} className="gap-2">
+          {v2Metrics?.session && (
+            <Button
+              onClick={handleBridgeAndAnalyze}
+              disabled={isRunning || isBridging}
+              className="gap-2 bg-orange-600 hover:bg-orange-700">
+              {isBridging || isRunning
+                ? <RefreshCw className="h-4 w-4 animate-spin" />
+                : <Zap className="h-4 w-4" />}
+              {isBridging ? "Synchronisation..." : isRunning ? "Analyse..." : "Analyser session v2"}
+            </Button>
+          )}
+          <Button onClick={handleRunAnalysis} disabled={isRunning || isBridging} variant="outline" className="gap-2">
             {isRunning ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Brain className="h-4 w-4" />}
-            {isRunning ? "Analyse en cours..." : "Lancer l'analyse IA"}
+            {isRunning ? "Analyse en cours..." : "Analyse v1"}
           </Button>
         </div>
       </div>

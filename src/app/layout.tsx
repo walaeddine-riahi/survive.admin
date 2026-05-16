@@ -42,7 +42,7 @@ export default async function RootLayout({
   const session = await getServerSession(authOptions);
 
   return (
-    <html lang="fr" suppressHydrationWarning>
+    <html lang="fr" suppressHydrationWarning translate="no">
       <body
         className={`${inter.variable} ${serif.variable} ${mono.variable} font-sans`}
         suppressHydrationWarning

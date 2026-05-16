@@ -73,7 +73,13 @@ export function RootLayoutContent({
                 <Menu className="h-6 w-6" />
               )}
             </Button>
-            <span className="text-lg font-bold">S.U.R.V.I.V.E. Resilience</span>
+            <span
+              className="text-lg font-bold"
+              suppressHydrationWarning
+              translate="no"
+            >
+              S.U.R.V.I.V.E. Resilience
+            </span>
           </header>
 
           <div className="flex min-h-screen flex-col md:flex-row pt-16 md:pt-0">

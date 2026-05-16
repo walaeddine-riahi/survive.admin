@@ -56,17 +56,30 @@ model User {
   biaReports             BiaReport[]            @relation("AuthoredBiaReports")
   incidents              Incident[]
   participations         Participation[]
-  notifications          Notification[]
+  notifications          Notification[]         @relation("UserNotifications")
   simulationAssignments  SimulationAssignment[]
   sentCommunications     Communication[]        @relation("SentCommunications")
   receivedCommunications Communication[]        @relation("ReceivedCommunications")
   targetedInjections     Injection[]            @relation("TargetedInjection")
   managedFactories       Factory[]              @relation("ManagedFactories")
   createdFactories       Factory[]              @relation("CreatedFactories")
-  fileUploads            FileUpload[]
   ownedGaps              ContinuityGap[]        @relation("GapOwner")
   ownedStrategies        ContinuityStrategy[]   @relation("StrategyOwner")
   ownedRisks             RiskAssessment[]       @relation("RiskOwner")
+  ownedBcmsDocs          BcmsDocument[]         @relation("BcmsDocOwner")
+  detectedNcs            NonConformity[]        @relation("NcDetectedBy")
+  ownedNcs               NonConformity[]        @relation("NcOwner")
+  assignedActions        CorrectiveAction[]     @relation("ActionAssignedTo")
+  ownedItAssets          ItAsset[]              @relation("ItAssetOwner")
+  ledDrpTests            DrpTest[]              @relation("DrpTestLead")
+  ownedPlaybooks         CyberPlaybook[]        @relation("PlaybookOwner")
+  ownedAiSystems         AiSystem[]             @relation("AiSystemOwner")
+  simParticipations      SimParticipant[]       @relation("SimParticipants")
+  validatedBcmsDocs      BcmsDocument[]         @relation("BcmsDocValidator")
+  orgRole                UserOrgRole?             @relation("UserOrgRoles")
+  siteRoles              UserSiteRole[]           @relation("UserSiteRoles")
+  sentInvitations        UserInvitation[]         @relation("SentInvitations")
+  auditLogs              AuditLog[]               @relation("UserAuditLogs")
 
   @@map("users")
 }
@@ -310,34 +323,42 @@ model Simulation {
   updatedAt      DateTime               @updatedAt
   scenarios      Scenario[]
   assignments    SimulationAssignment[]
-  notifications  Notification[]         @relation("SimulationNotifications")
+  // notifications removed — legacy Notification model replaced by RBAC version
   communications Communication[]
   participations Participation[]        @relation("SimulationParticipation")
   injections     Injection[]            @relation("SimulationToInjections")
-  fileUploads    FileUpload[]
   crisisPlan     SimulationCrisisPlan?
   criteria       EvaluationCriteria[]
   injectResponses InjectResponse[]
   participantScores ParticipantScore[]
   debrief        SimulationDebrief?
   dashboardConfig Json?   // { instructor: [...widgets], participant: [...], observer: [...] }
+  // Wizard fields
+  type            String?  // "tabletop" | "partial" | "full_dr" | "cyber"
+  objectives      String[] @default([])
+  sector          String?
+  scenarioContext String?
+  briefingText    String?
+  estimatedDuration Int?   // minutes
+  draft           SimulationDraft? @relation("SimulationDraft")
+  crisisDocs      CrisisDocument[]  @relation("SimulationDocs")
 
   @@map("simulations")
 }
 
 model SimulationAssignment {
-  id           String       @id @default(auto()) @map("_id") @db.ObjectId
-  role         String       @default("participant")
-  status       String       @default("pending")
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  userId       String       @db.ObjectId
-  simulationId String       @db.ObjectId
-  teamId       String?      @db.ObjectId
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  simulation   Simulation   @relation(fields: [simulationId], references: [id], onDelete: Cascade)
-  team         Team?        @relation(fields: [teamId], references: [id])
-  fileUploads  FileUpload[]
+  id           String     @id @default(auto()) @map("_id") @db.ObjectId
+  role         String     @default("participant")
+  status       String     @default("pending")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  userId       String     @db.ObjectId
+  simulationId String     @db.ObjectId
+  teamId       String?    @db.ObjectId
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  simulation   Simulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
+  team         Team?      @relation(fields: [teamId], references: [id])
+
   scores         ParticipantScore[]
   injectResponses InjectResponse[]
 
@@ -345,24 +366,7 @@ model SimulationAssignment {
   @@map("simulation_assignments")
 }
 
-model Notification {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
-  title        String
-  message      String
-  type         String
-  isRead       Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  userId       String   @db.ObjectId
-  simulationId String?  @db.ObjectId
-  injectionId  String?  @db.ObjectId
-
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  simulation Simulation? @relation("SimulationNotifications", fields: [simulationId], references: [id])
-  injection  Injection?  @relation("InjectionNotifications", fields: [injectionId], references: [id])
-
-  @@map("notifications")
-}
+// Legacy notification model removed — use new Notification model below (RBAC section)
 
 enum InjectionTriggerType {
   MANUAL
@@ -401,12 +405,27 @@ model Injection {
   imageUrl       String?
   videoUrl       String?
   attachments    Json?
-  targetUserId   String?              @db.ObjectId
+  targetUserId   String?        @db.ObjectId
 
   scenario      Scenario       @relation("ScenarioToInjections", fields: [scenarioId], references: [id])
   simulation    Simulation     @relation("SimulationToInjections", fields: [simulationId], references: [id])
-  notifications Notification[] @relation("InjectionNotifications")
+  // notifications removed — legacy Notification model replaced by RBAC version
   targetUser    User?          @relation("TargetedInjection", fields: [targetUserId], references: [id])
+  // Timeline fields
+  offsetMin       Int?             // T+N minutes from simulation start
+  channel         String?          // EMAIL | SMS | CALL | ALERT | FLASH_INFO | WHATSAPP
+  priority        String?          // LOW | NORMAL | HIGH | CRITICAL
+  senderPersona   String?          // "ANSSI", "Direction Générale"...
+  subject         String?          // Email subject
+  phase           String?          // "detection"|"containment"|"escalation"|"recovery"|"comms"
+  expectedActions String[]         @default([])
+  targetRoles     String[]         @default([])  // roles who should receive this
+  description     String?
+  trigger         String?          // legacy compat
+  triggerTime     DateTime?
+  status          String?          // "pending" | "delivered" | "expired"
+  deliveredAt     DateTime?
+  expectedResponse String?
   responses     InjectResponse[] @relation("InjectToResponses")
 
   @@map("injections")
@@ -459,186 +478,196 @@ enum CriticalityLevel {
 // Factory Model - Usines / Sites
 // ============================================
 model Factory {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
 
   // Identification
-  name        String // Nom de l'usine (ex: "Usine A", "Site Principal")
-  code        String  @unique // Code unique (ex: "USA", "SITE_MAIN")
-  description String? // Description de l'usine
+  name            String    // Nom de l'usine (ex: "Usine A", "Site Principal")
+  code            String    @unique // Code unique (ex: "USA", "SITE_MAIN")
+  description     String?   // Description de l'usine
 
   // Informations géographiques
-  address     String? // Adresse complète
-  city        String? // Ville
-  postalCode  String? // Code postal
-  country     String? // Pays
-  region      String? // Région/Province
-  coordinates Json? // { lat: number, lng: number } pour géolocalisation
+  address         String?   // Adresse complète
+  city            String?   // Ville
+  postalCode      String?   // Code postal
+  country         String?   // Pays
+  region          String?   // Région/Province
+  coordinates     Json?     // { lat: number, lng: number } pour géolocalisation
 
   // Informations organisationnelles
-  managerId String? @db.ObjectId
-  manager   User?   @relation("ManagedFactories", fields: [managerId], references: [id])
+  managerId       String?   @db.ObjectId
+  manager         User?     @relation("ManagedFactories", fields: [managerId], references: [id])
 
-  department  String? // Département principal
-  division    String? // Division de l'entreprise
-  phoneNumber String? // Téléphone principal
-  email       String? // Email de contact
-  website     String? // Site web de l'usine
+  department      String?   // Département principal
+  division        String?   // Division de l'entreprise
+  phoneNumber     String?   // Téléphone principal
+  email           String?   // Email de contact
+  website         String?   // Site web de l'usine
 
   // Métadonnées opérationnelles
-  surfaceArea    Float? // Surface en m²
-  employeeCount  Int? // Nombre d'employés
-  operatingHours Json? // { open: "08:00", close: "18:00", days: ["Mon", "Tue", ...] }
-  timezone       String? // Fuseau horaire (ex: "Europe/Paris")
+  surfaceArea     Float?    // Surface en m²
+  employeeCount   Int?      // Nombre d'employés
+  operatingHours  Json?     // { open: "08:00", close: "18:00", days: ["Mon", "Tue", ...] }
+  timezone        String?   // Fuseau horaire (ex: "Europe/Paris")
 
   // Statut et criticité
-  isActive         Boolean @default(true)
-  criticalityLevel String? // "critique", "élevé", "moyen", "faible"
+  isActive        Boolean   @default(true)
+  criticalityLevel String?  // "critique", "élevé", "moyen", "faible"
 
   // Certifications et conformité
-  certifications      String[] @default([]) // ["ISO 9001", "ISO 27001", etc.]
+  certifications  String[]  @default([]) // ["ISO 9001", "ISO 27001", etc.]
   complianceStandards String[] @default([]) // ["RGPD", "SOX", etc.]
 
   // Relations avec d'autres entités
-  processes  Process[]   @relation("FactoryProcesses")
-  biaReports BiaReport[] @relation("FactoryReports")
+  processes       Process[]  @relation("FactoryProcesses")
+  biaReports      BiaReport[] @relation("FactoryReports")
   continuitySettings ContinuitySettings?
   continuityGaps     ContinuityGap[]
   continuityStrategies ContinuityStrategy[]
-  riskAssessments    RiskAssessment[]
+  riskAssessments    RiskAssessment[]   @relation("FactoryRisks")
+  riskMethodConfig   RiskMethodConfig?  @relation("FactoryRiskConfig")
+  bcmsDocuments      BcmsDocument[]
+  bcmsDocumentTypes  BcmsDocumentType[]
+  siteSettings       SiteSettings?     @relation("SiteSettings")
+  nonConformities    NonConformity[]   @relation("FactoryNonConformities")
+  siteRoles          UserSiteRole[]    @relation("SiteRoles")
+  invitations        UserInvitation[]  @relation("SiteInvitations")
+  itAssets           ItAsset[]         @relation("FactoryItAssets")
+  cyberPlaybooks     CyberPlaybook[]   @relation("FactoryPlaybooks")
+  aiSystems          AiSystem[]        @relation("FactoryAiSystems")
 
   // Métadonnées
-  createdById String   @db.ObjectId
-  createdBy   User     @relation("CreatedFactories", fields: [createdById], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdById     String    @db.ObjectId
+  createdBy       User      @relation("CreatedFactories", fields: [createdById], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@map("factories")
 }
 
 model Process {
-  id          String           @id @default(auto()) @map("_id") @db.ObjectId
-  name        String
-  description String?
-  department  String
-  location    String
-  impact      String
-  criticality CriticalityLevel
+  id                               String          @id @default(auto()) @map("_id") @db.ObjectId
+  name                             String
+  description                      String?
+  department                       String
+  location                         String
+  impact                           String
+  criticality                      CriticalityLevel
 
   // Responsable principal
-  processOwner String? // Nom du responsable principal
-  ownerRole    String? // Fonction/Rôle du responsable
-  ownerEmail   String? // Email du responsable
-  ownerPhone   String? // Téléphone du responsable
+  processOwner                     String?         // Nom du responsable principal
+  ownerRole                        String?         // Fonction/Rôle du responsable
+  ownerEmail                       String?         // Email du responsable
+  ownerPhone                       String?         // Téléphone du responsable
 
   // Responsables intérimaires (plusieurs possibles)
-  interimManagers Json? // Array d'objets: { name, role, email, phone, isActive }
+  interimManagers                  Json?           // Array d'objets: { name, role, email, phone, isActive }
 
   // Métriques BIA
-  rto  Int // Recovery Time Objective (en heures)
-  mtpd Int // Maximum Tolerable Period of Disruption (en heures)
-  rpo  Int // Recovery Point Objective (en heures)
-  mbco String // Minimum Business Continuity Objective
+  rto                              Int             // Recovery Time Objective (en heures)
+  mtpd                             Int             // Maximum Tolerable Period of Disruption (en heures)
+  rpo                              Int             // Recovery Point Objective (en heures)
+  mbco                             String          // Minimum Business Continuity Objective
 
   // Analyse d'impact
-  criticalTimes             String? // Périodes critiques d'activité
-  financialImpact           String? // Impact financier
-  operationalImpact         String? // Impact opérationnel
-  reputationImpact          String? // Impact sur la réputation
-  operationalCapacityImpact String? // Impact sur la capacité opérationnelle
+  criticalTimes                    String?         // Périodes critiques d'activité
+  financialImpact                  String?         // Impact financier
+  operationalImpact                String?         // Impact opérationnel
+  reputationImpact                 String?         // Impact sur la réputation
+  operationalCapacityImpact        String?         // Impact sur la capacité opérationnelle
 
   // Périmètre et Dépendances
-  mainFunctionality        String? // Fonctionnalité principale
-  productDependencies      String? // Dépendances produits
-  interServiceDependencies String? // Dépendances inter-services
+  mainFunctionality                String?         // Fonctionnalité principale
+  productDependencies              String?         // Dépendances produits
+  interServiceDependencies         String?         // Dépendances inter-services
 
   // Activités externalisées
-  externalSuppliers      String? // Fournisseurs externes
-  supplierTasks          String? // Tâches confiées aux fournisseurs
-  supplierContact        String? // Contact du fournisseur
-  supplierContinuityPlan Boolean // Plan de continuité fournisseur
-  hasSLAClause           Boolean // Clause SLA présente
-  supplierRTO            Int? // RTO du fournisseur (en heures)
-  supplierMTPD           Int? // MTPD du fournisseur (en heures)
+  externalSuppliers                String?         // Fournisseurs externes
+  supplierTasks                    String?         // Tâches confiées aux fournisseurs
+  supplierContact                  String?         // Contact du fournisseur
+  supplierContinuityPlan           Boolean         // Plan de continuité fournisseur
+  hasSLAClause                     Boolean         // Clause SLA présente
+  supplierRTO                      Int?            // RTO du fournisseur (en heures)
+  supplierMTPD                     Int?            // MTPD du fournisseur (en heures)
 
   // Cadre légal et réglementaire
-  legalObligations          String? // Obligations légales
-  legalReferences           String? // Références légales
-  legalAuthority            String? // Autorité de régulation
-  legalDetails              String? // Détails légaux
-  nonComplianceConsequences String? // Conséquences de la non-conformité
+  legalObligations                String?         // Obligations légales
+  legalReferences                 String?         // Références légales
+  legalAuthority                  String?         // Autorité de régulation
+  legalDetails                    String?         // Détails légaux
+  nonComplianceConsequences       String?         // Conséquences de la non-conformité
 
   // MES - Applications IT
-  itSystems           String? // Applications IT utilisées
-  systemCriticality   String? // Niveau de criticité du système
-  systemImpact        String? // Impact système
-  supportedActivities String? // Activités supportées
-  hasBackupSystems    Boolean // Systèmes de sauvegarde en place
-  systemRTO           Int? // RTO système (en heures)
-  systemRPO           Int? // RPO système (en heures)
-  systemMTPD          Int? // MTPD système (en heures)
-  workarounds         String? // Solutions de contournement
-  previousIncidents   String? // Incidents antérieurs
+  itSystems                       String?         // Applications IT utilisées
+  systemCriticality               String?         // Niveau de criticité du système
+  systemImpact                    String?         // Impact système
+  supportedActivities             String?         // Activités supportées
+  hasBackupSystems                Boolean         // Systèmes de sauvegarde en place
+  systemRTO                       Int?            // RTO système (en heures)
+  systemRPO                       Int?            // RPO système (en heures)
+  systemMTPD                      Int?            // MTPD système (en heures)
+  workarounds                     String?         // Solutions de contournement
+  previousIncidents               String?         // Incidents antérieurs
 
   // Infrastructure
-  dependsOnPhysicalInfra Boolean // Dépend d'une infrastructure physique
-  infrastructureType     String? // Type d'infrastructure
-  infraRTO               Int? // RTO infrastructure (en heures)
-  infraMTPD              Int? // MTPD infrastructure (en heures)
-  canWorkRemotely        Boolean // Travail à distance possible
-  canUseOtherInfra       Boolean // Peut utiliser d'autres infrastructures
+  dependsOnPhysicalInfra          Boolean         // Dépend d'une infrastructure physique
+  infrastructureType              String?         // Type d'infrastructure
+  infraRTO                        Int?            // RTO infrastructure (en heures)
+  infraMTPD                       Int?            // MTPD infrastructure (en heures)
+  canWorkRemotely                 Boolean         // Travail à distance possible
+  canUseOtherInfra                Boolean         // Peut utiliser d'autres infrastructures
 
   // Personnel / Compétences
-  staffRoles                 String? // Rôles du personnel
-  staffCount                 Int? // Nombre de personnes
-  staffTasks                 String? // Tâches du personnel
-  uniqueSkills               String? // Compétences uniques
-  criticalityAfterDisruption String? // Criticité après perturbation
-  roleRecoveryTime           String? // Temps de reprise des rôles
-  canBeReplaced              Boolean // Personnel remplaçable
-  replacementBy              String? // Remplacé par
-  staffWorkarounds           String? // Solutions de contournement pour le personnel
+  staffRoles                      String?         // Rôles du personnel
+  staffCount                      Int?            // Nombre de personnes
+  staffTasks                      String?         // Tâches du personnel
+  uniqueSkills                    String?         // Compétences uniques
+  criticalityAfterDisruption      String?         // Criticité après perturbation
+  roleRecoveryTime                String?         // Temps de reprise des rôles
+  canBeReplaced                   Boolean         // Personnel remplaçable
+  replacementBy                   String?         // Remplacé par
+  staffWorkarounds                String?         // Solutions de contournement pour le personnel
 
   // Équipement industriel
-  industrialEquipment  String? // Équipement industriel
-  equipmentTasks       String? // Tâches de l'équipement
-  equipmentCriticality String? // Criticité de l'équipement
-  canReassignEquipment Boolean // Réaffectation possible de l'équipement
-  equipmentRTO         Int? // RTO équipement (en heures)
-  equipmentMTPD        Int? // MTPD équipement (en heures)
-  equipmentWorkarounds String? // Solutions de contournement pour l'équipement
-  voltage              String? // Tension
-  currentType          String? // Type de courant
-  powerRating          String? // Puissance nominale
-  dailyConsumption     String? // Consommation journalière
-  backupCompatible     Boolean // Compatible avec les systèmes de secours
+  industrialEquipment             String?         // Équipement industriel
+  equipmentTasks                  String?         // Tâches de l'équipement
+  equipmentCriticality            String?         // Criticité de l'équipement
+  canReassignEquipment            Boolean         // Réaffectation possible de l'équipement
+  equipmentRTO                    Int?            // RTO équipement (en heures)
+  equipmentMTPD                   Int?            // MTPD équipement (en heures)
+  equipmentWorkarounds            String?         // Solutions de contournement pour l'équipement
+  voltage                         String?         // Tension
+  currentType                     String?         // Type de courant
+  powerRating                     String?         // Puissance nominale
+  dailyConsumption                String?         // Consommation journalière
+  backupCompatible                Boolean         // Compatible avec les systèmes de secours
 
   // Équipement bureautique
-  officeEquipment            String? // Équipement bureautique
-  equipmentQuantity          Int? // Quantité d'équipement
-  officeEquipmentTasks       String? // Tâches de l'équipement bureautique
-  officeEquipmentCriticality String? // Criticité de l'équipement bureautique
-  officeRTO                  Int? // RTO équipement bureautique (en heures)
-  officeMTPD                 Int? // MTPD équipement bureautique (en heures)
-  requiredAfterDisruption    Int? // Délai avant besoin (en heures)
-  canReassignOfficeEquipment Boolean // Réaffectation possible de l'équipement bureautique
-  officeWorkarounds          String? // Solutions de contournement pour l'équipement bureautique
+  officeEquipment                 String?         // Équipement bureautique
+  equipmentQuantity               Int?            // Quantité d'équipement
+  officeEquipmentTasks            String?         // Tâches de l'équipement bureautique
+  officeEquipmentCriticality      String?         // Criticité de l'équipement bureautique
+  officeRTO                       Int?            // RTO équipement bureautique (en heures)
+  officeMTPD                      Int?            // MTPD équipement bureautique (en heures)
+  requiredAfterDisruption         Int?            // Délai avant besoin (en heures)
+  canReassignOfficeEquipment      Boolean         // Réaffectation possible de l'équipement bureautique
+  officeWorkarounds               String?         // Solutions de contournement pour l'équipement bureautique
 
   // Documentation
-  requiredDocumentation String? // Documentation requise
-  documentationLocation String? // Localisation de la documentation
-  neededAfterDisruption Boolean // Nécessaire après perturbation
-  documentationRTO      Int? // RTO documentation (en heures)
-  hasAlternativeAccess  Boolean // Accès alternatif disponible
-  hasReplacement        Boolean // Documentation de remplacement disponible
-  replacementMeasures   String? // Mesures de remplacement
+  requiredDocumentation           String?         // Documentation requise
+  documentationLocation           String?         // Localisation de la documentation
+  neededAfterDisruption           Boolean         // Nécessaire après perturbation
+  documentationRTO                Int?            // RTO documentation (en heures)
+  hasAlternativeAccess            Boolean         // Accès alternatif disponible
+  hasReplacement                  Boolean         // Documentation de remplacement disponible
+  replacementMeasures             String?         // Mesures de remplacement
 
   // Fournisseurs
-  keySuppliers              String? // Fournisseurs clés
-  providedService           String? // Service fourni
-  supplierDetails           String? // Détails du fournisseur
-  supplierCriticality       String? // Criticité du fournisseur
-  hasAlternativeSupplier    Boolean // Fournisseur alternatif disponible
-  supplierHasContinuityPlan Boolean // Plan de continuité du fournisseur
+  keySuppliers                    String?         // Fournisseurs clés
+  providedService                 String?         // Service fourni
+  supplierDetails                 String?         // Détails du fournisseur
+  supplierCriticality             String?         // Criticité du fournisseur
+  hasAlternativeSupplier          Boolean         // Fournisseur alternatif disponible
+  supplierHasContinuityPlan       Boolean         // Plan de continuité du fournisseur
 
   // ============================================
   // NOUVEAUX CHAMPS MULTI-ÉLÉMENTS (JSON Arrays)
@@ -646,171 +675,175 @@ model Process {
   // ============================================
 
   // 1. Activités Critiques (N éléments avec criticité, RTO, impacts)
-  activitesCritiques Json? // Array d'objets: { nom, delai, impactsOperationnels, impactsReglementaires, impactsImage, criticite, rto, mtpd, rpo, mbco, solutionsContournement }
+  activitesCritiques              Json?           // Array d'objets: { nom, delai, impactsOperationnels, impactsReglementaires, impactsImage, criticite, rto, mtpd, rpo, mbco, solutionsContournement }
 
   // 2. Fournisseurs Externes (N fournisseurs avec leurs caractéristiques BIA)
-  fournisseursExternes Json? // Array d'objets: { nom, servicesOfferts, contactNom, contactTelephone, contactEmail, zoneGeographique, planContinuiteActivite, clauseSLA, rto, mtpd }
+  fournisseursExternes            Json?           // Array d'objets: { nom, servicesOfferts, contactNom, contactTelephone, contactEmail, zoneGeographique, planContinuiteActivite, clauseSLA, rto, mtpd }
 
   // 3. Obligations Légales et Réglementaires (N obligations)
-  obligationsLegales Json? // Array d'objets: { nature, reference, autoriteRegulation, details, consequencesNonRespect }
+  obligationsLegales              Json?           // Array d'objets: { nature, reference, autoriteRegulation, details, consequencesNonRespect }
 
   // 4. Systèmes Informatiques (N systèmes avec RTO/RPO)
-  systemesInformatiques Json? // Array d'objets: { nom, typeSysteme, criticite, impactIndisponibilite, activitesAssociees, sauvegardesEnPlace, rto, rpo, mtpd, solutionsContournement, incidentsAnterieurs }
+  systemesInformatiques           Json?           // Array d'objets: { nom, typeSysteme, criticite, impactIndisponibilite, activitesAssociees, sauvegardesEnPlace, rto, rpo, mtpd, solutionsContournement, incidentsAnterieurs }
 
   // 5. Infrastructures (N infrastructures avec alternatives)
-  infrastructuresPhysiques Json? // Array d'objets: { nom, categorie, criticite, rto, mtpd, possibiliteTravailDistance, alternativesDisponibles }
+  infrastructuresPhysiques        Json?           // Array d'objets: { nom, categorie, criticite, rto, mtpd, possibiliteTravailDistance, alternativesDisponibles }
 
   // 6. Rôles et Personnel (N rôles avec compétences)
-  rolesPersonnel Json? // Array d'objets: { intituleRole, nombrePersonnes, tachesResponsabilites, competencesRequises, estCritique, delaiDisponibiliteNecessaire, possibiliteRemplacement, personneRemplacante, formationNecessaire, dureeFormation, solutionsContournement }
+  rolesPersonnel                  Json?           // Array d'objets: { intituleRole, nombrePersonnes, tachesResponsabilites, competencesRequises, estCritique, delaiDisponibiliteNecessaire, possibiliteRemplacement, personneRemplacante, formationNecessaire, dureeFormation, solutionsContournement }
 
   // 7. Équipements Industriels (N équipements avec caractéristiques énergétiques)
-  equipementsIndustriels Json? // Array d'objets: { designation, modeleReference, tachesRealise, criticite, rto, mtpd, possibiliteReaffectation, solutionsContournement, tension, typeCourant, puissanceNominale, consommationJournaliere, compatibiliteSecours, alternativesDisponibles }
+  equipementsIndustriels          Json?           // Array d'objets: { designation, modeleReference, tachesRealise, criticite, rto, mtpd, possibiliteReaffectation, solutionsContournement, tension, typeCourant, puissanceNominale, consommationJournaliere, compatibiliteSecours, alternativesDisponibles }
 
   // 8. Équipements Bureautiques (N équipements)
-  equipementsBureautiques Json? // Array d'objets: { type, quantiteActuelle, tachesUtilisation, criticite, rto, mtpd, quantiteRequiseApresIncident, possibiliteReaffectation, fournisseur, solutionsContournement }
+  equipementsBureautiques         Json?           // Array d'objets: { type, quantiteActuelle, tachesUtilisation, criticite, rto, mtpd, quantiteRequiseApresIncident, possibiliteReaffectation, fournisseur, solutionsContournement }
 
   // 9. Documentation (N documents avec emplacements multiples)
-  documentationsCritiques Json? // Array d'objets: { type, format, emplacementPrincipal, emplacementsSecondaires, necessaireApresIncident, rto, criticite, modalitesAcces, possibiliteRemplacement, procedureRecuperation, responsable, notes }
+  documentationsCritiques         Json?           // Array d'objets: { type, format, emplacementPrincipal, emplacementsSecondaires, necessaireApresIncident, rto, criticite, modalitesAcces, possibiliteRemplacement, procedureRecuperation, responsable, notes }
 
   // Factory relation (nouveau)
-  factoryId String?  @db.ObjectId
-  factory   Factory? @relation("FactoryProcesses", fields: [factoryId], references: [id])
+  factoryId                       String?         @db.ObjectId
+  factory                         Factory?        @relation("FactoryProcesses", fields: [factoryId], references: [id])
 
   // Métadonnées
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt                       DateTime        @default(now())
+  updatedAt                       DateTime        @updatedAt
 
   // Relations (conservées pour la rétrocompatibilité)
-  responsibles            Responsible[]
-  activities              ProcessActivity[]
-  impacts                 Impact[]
-  applications            ApplicationIT[]
-  infrastructures         Infrastructure[]
-  industrialEquipmentList EquipmentIndustrial[] @relation("IndustrialEquipment")
-  officeEquipmentList     EquipmentOffice[]     @relation("OfficeEquipment")
-  documentations          DocumentationItem[]
-  personnels              Personnel[]
-  suppliers               Supplier[]
-  legalRequirements       LegalRequirement[]
+  responsibles                    Responsible[]
+  activities                      ProcessActivity[]
+  impacts                         Impact[]
+  applications                    ApplicationIT[]
+  infrastructures                 Infrastructure[]
+  industrialEquipmentList         EquipmentIndustrial[] @relation("IndustrialEquipment")
+  officeEquipmentList             EquipmentOffice[]     @relation("OfficeEquipment")
+  documentations                  DocumentationItem[]
+  personnels                      Personnel[]
+  suppliers                       Supplier[]
+  legalRequirements               LegalRequirement[]
   continuityGaps                  ContinuityGap[]
   continuityStrategies            ContinuityStrategy[]
-  riskAssessments                 RiskAssessment[]
+  riskAssessments                 RiskAssessment[] @relation("ProcessRisks")
+  bcmsDocuments                   BcmsDocument[]
+  nonConformities                 NonConformity[] @relation("ProcessNonConformities")
+  itAssets                        ItAssetProcess[] @relation("ProcessItAssets")
+  aiSystems                       AiSystemProcess[] @relation("ProcessAiSystems")
 
   @@map("processes")
 }
 
 model Responsible {
-  id        String  @id @default(auto()) @map("_id") @db.ObjectId
-  name      String
-  role      String
-  phone     String?
-  email     String?
-  processId String  @db.ObjectId
-  process   Process @relation(fields: [processId], references: [id], onDelete: Cascade)
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  role        String
+  phone       String?
+  email       String?
+  processId   String   @db.ObjectId
+  process     Process  @relation(fields: [processId], references: [id], onDelete: Cascade)
 
   @@map("responsibles")
 }
 
 model ProcessActivity {
-  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
   name        String
   description String?
-  processId   String  @db.ObjectId
-  process     Process @relation(fields: [processId], references: [id], onDelete: Cascade)
+  processId   String   @db.ObjectId
+  process     Process  @relation(fields: [processId], references: [id], onDelete: Cascade)
 
   @@map("process_activities")
 }
 
 model Impact {
-  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
   type        String
   description String
   level       String
-  processId   String  @db.ObjectId
-  process     Process @relation(fields: [processId], references: [id], onDelete: Cascade)
+  processId   String   @db.ObjectId
+  process     Process  @relation(fields: [processId], references: [id], onDelete: Cascade)
 
   @@map("impacts")
 }
 
 model ApplicationIT {
-  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
   name        String
   description String?
-  processId   String  @db.ObjectId
-  process     Process @relation(fields: [processId], references: [id], onDelete: Cascade)
+  processId   String   @db.ObjectId
+  process     Process  @relation(fields: [processId], references: [id], onDelete: Cascade)
 
   @@map("applications_it")
 }
 
 model Infrastructure {
-  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
   name        String
   description String?
-  processId   String  @db.ObjectId
-  process     Process @relation(fields: [processId], references: [id], onDelete: Cascade)
+  processId   String   @db.ObjectId
+  process     Process  @relation(fields: [processId], references: [id], onDelete: Cascade)
 
   @@map("infrastructures")
 }
 
 model EquipmentIndustrial {
-  id          String  @id @default(auto()) @map("_id") @db.ObjectId
-  name        String
-  description String?
-  processId   String  @db.ObjectId
-  process     Process @relation("IndustrialEquipment", fields: [processId], references: [id], onDelete: Cascade)
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  description  String?
+  processId    String   @db.ObjectId
+  process      Process  @relation("IndustrialEquipment", fields: [processId], references: [id], onDelete: Cascade)
 
   @@map("industrial_equipment")
 }
 
 model EquipmentOffice {
-  id          String  @id @default(auto()) @map("_id") @db.ObjectId
-  name        String
-  description String?
-  processId   String  @db.ObjectId
-  process     Process @relation("OfficeEquipment", fields: [processId], references: [id], onDelete: Cascade)
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  description  String?
+  processId    String   @db.ObjectId
+  process      Process  @relation("OfficeEquipment", fields: [processId], references: [id], onDelete: Cascade)
 
   @@map("office_equipment")
 }
 
 model DocumentationItem {
-  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
   name        String
   description String?
   url         String?
-  processId   String  @db.ObjectId
-  process     Process @relation(fields: [processId], references: [id], onDelete: Cascade)
+  processId   String   @db.ObjectId
+  process     Process  @relation(fields: [processId], references: [id], onDelete: Cascade)
 
   @@map("documentation_items")
 }
 
 model Personnel {
-  id         String  @id @default(auto()) @map("_id") @db.ObjectId
-  name       String
-  role       String
-  department String
-  processId  String  @db.ObjectId
-  process    Process @relation(fields: [processId], references: [id], onDelete: Cascade)
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  role        String
+  department  String
+  processId   String   @db.ObjectId
+  process     Process  @relation(fields: [processId], references: [id], onDelete: Cascade)
 
   @@map("personnel")
 }
 
 model Supplier {
-  id        String  @id @default(auto()) @map("_id") @db.ObjectId
-  name      String
-  contact   String?
-  service   String
-  processId String  @db.ObjectId
-  process   Process @relation(fields: [processId], references: [id], onDelete: Cascade)
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  contact     String?
+  service     String
+  processId   String   @db.ObjectId
+  process     Process  @relation(fields: [processId], references: [id], onDelete: Cascade)
 
   @@map("suppliers")
 }
 
 model LegalRequirement {
-  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
   name        String
   description String?
-  processId   String  @db.ObjectId
-  process     Process @relation(fields: [processId], references: [id], onDelete: Cascade)
+  processId   String   @db.ObjectId
+  process     Process  @relation(fields: [processId], references: [id], onDelete: Cascade)
 
   @@map("legal_requirements")
 }
@@ -834,96 +867,56 @@ enum BiaReportStatus {
 }
 
 model BiaReport {
-  id          String          @id @default(auto()) @map("_id") @db.ObjectId
-  name        String
-  description String?
-  format      BiaReportFormat
-  status      BiaReportStatus @default(GENERATED)
+  id                  String           @id @default(auto()) @map("_id") @db.ObjectId
+  name                String
+  description         String?
+  format              BiaReportFormat
+  status              BiaReportStatus  @default(GENERATED)
 
   // Métadonnées du rapport
-  totalProcesses      Int     @default(0)
-  continuityLevel     Int     @default(0) // Score de continuité (0-100)
-  continuityLevelText String? // Niveau textuel (Excellent, Bon, etc.)
-  riskCount           Int     @default(0)
-  recommendationCount Int     @default(0)
+  totalProcesses      Int              @default(0)
+  continuityLevel     Int              @default(0) // Score de continuité (0-100)
+  continuityLevelText String?          // Niveau textuel (Excellent, Bon, etc.)
+  riskCount           Int              @default(0)
+  recommendationCount Int              @default(0)
 
   // Contenu du rapport
-  reportData Json // Données complètes du rapport
-  content    String? // Contenu textuel si applicable
+  reportData          Json             // Données complètes du rapport
+  content             String?          // Contenu textuel si applicable
 
   // Fichier
-  fileName String?
-  filePath String? // Chemin du fichier sur le serveur
-  fileSize Int     @default(0) // Taille en bytes
-  mimeType String?
+  fileName            String?
+  filePath            String?          // Chemin du fichier sur le serveur
+  fileSize            Int              @default(0) // Taille en bytes
+  mimeType            String?
 
   // Paramètres de génération
-  generationParams   Json? // Paramètres utilisés pour générer le rapport
-  includedProcessIds String[] // IDs des processus inclus dans le rapport
+  generationParams    Json?            // Paramètres utilisés pour générer le rapport
+  includedProcessIds  String[]         // IDs des processus inclus dans le rapport
 
   // Partage et permissions
-  isPublic      Boolean   @default(false)
-  shareToken    String?   @unique // Token pour partage public
-  expiresAt     DateTime? // Date d'expiration du partage
-  downloadCount Int       @default(0)
+  isPublic            Boolean          @default(false)
+  shareToken          String?          @unique // Token pour partage public
+  expiresAt           DateTime?        // Date d'expiration du partage
+  downloadCount       Int              @default(0)
 
   // Tags et catégorisation
-  tags     String[] @default([])
-  category String? // Catégorie du rapport (mensuel, audit, etc.) - conservé pour rétrocompatibilité
+  tags                String[]         @default([])
+  category            String?          // Catégorie du rapport (mensuel, audit, etc.) - conservé pour rétrocompatibilité
 
   // Factory relation (nouveau)
-  factoryId String?  @db.ObjectId
-  factory   Factory? @relation("FactoryReports", fields: [factoryId], references: [id])
+  factoryId           String?          @db.ObjectId
+  factory             Factory?         @relation("FactoryReports", fields: [factoryId], references: [id])
 
   // Relations
-  authorId String @db.ObjectId
-  author   User   @relation("AuthoredBiaReports", fields: [authorId], references: [id])
+  authorId            String           @db.ObjectId
+  author              User             @relation("AuthoredBiaReports", fields: [authorId], references: [id])
 
   // Métadonnées
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
 
   @@map("bia_reports")
-}
-
-// =====================================
-// File Upload Management
-// =====================================
-
-model FileUpload {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
-
-  // Identifiant du fichier
-  fileName    String // Nom original du fichier
-  storagePath String // Chemin dans le stockage (bucket/folder/filename)
-  storageUrl  String // URL accessible du fichier
-
-  // Métadonnées du fichier
-  fileSize Int // Taille en bytes
-  mimeType String // Type MIME (application/pdf, etc.)
-
-  // Type d'upload (pour filtrer les fichiers)
-  uploadType String // Type d'upload: "simulation_report", "incident_photo", etc.
-
-  // Fournisseur de stockage
-  storageProvider String @default("azure") // "azure", "supabase", "local", etc.
-
-  // Relations
-  uploadedById String @db.ObjectId
-  uploadedBy   User   @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
-
-  // Contexte de l'upload (optionnel)
-  simulationId String?     @db.ObjectId
-  simulation   Simulation? @relation(fields: [simulationId], references: [id], onDelete: SetNull)
-
-  assignmentId String?               @db.ObjectId
-  assignment   SimulationAssignment? @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
-
-  // Métadonnées
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("file_uploads")
 }
 
 // =====================================
@@ -990,6 +983,14 @@ model ContinuitySettings {
   riskMethodologyLabel  String?
 
   // Matrice de risque configurable (JSON complet)
+  // Structure: {
+  //   axeX: { label: "Vraisemblance", levels: [{value:1,label:"Rare",...}] },
+  //   axeY: { label: "Impact", levels: [{value:1,label:"Négligeable",...}] },
+  //   thirdAxis: { enabled: bool, label: "Vitesse", levels: [...] } | null,
+  //   formula: "X*Y" | "X*Y*Z" | "custom",
+  //   thresholds: [{min:1,max:5,label:"Faible",color:"#16a34a"},{...},...],
+  //   treatmentOptions: [{value:"REDUCE",label:"Réduire",...}]
+  // }
   riskMatrixConfig      Json?
 
   // Standards de conformité applicables
@@ -1088,63 +1089,176 @@ model ContinuityStrategy {
   @@map("continuity_strategies")
 }
 
-// Appréciation du risque orientée continuité — matrice entièrement configurable
+// =====================================
+// RISK — Appréciation du risque
+// ISO 31000 — Formule entièrement configurable
+// =====================================
+
+// Configuration de la méthode de calcul du risque (par organisation/site)
+model RiskMethodConfig {
+  id                    String    @id @default(auto()) @map("_id") @db.ObjectId
+  factoryId             String    @unique @db.ObjectId
+  factory               Factory   @relation("FactoryRiskConfig", fields: [factoryId], references: [id], onDelete: Cascade)
+
+  // Nom de la méthode
+  methodName            String    @default("ISO 31000")
+  methodDescription     String?
+
+  // Matrice P × I (dimensions configurables)
+  // Axe probabilité
+  probabilityLabel      String    @default("Probabilité")
+  probabilityLevels     Json      // [{value:1, label:"Rare", description:"<1%", color:"#22c55e"}, ...]
+  probabilityLevelCount Int       @default(5)
+
+  // Axe impact
+  impactLabel           String    @default("Impact")
+  impactLevels          Json      // [{value:1, label:"Négligeable", description:"...", color:"#22c55e"}, ...]
+  impactLevelCount      Int       @default(5)
+
+  // Axe maîtrise
+  masteryLabel          String    @default("Niveau de maîtrise")
+  masteryLevels         Json
+  // [{label:"Inexistant", value:1.0, description:"Aucun contrôle en place", color:"#ef4444"},
+  //  {label:"Partiel",    value:0.7, description:"Contrôles partiels",        color:"#f59e0b"},
+  //  {label:"Satisfaisant",value:0.4, description:"Contrôles en place",       color:"#3b82f6"},
+  //  {label:"Robuste",   value:0.2, description:"Contrôles solides et testés",color:"#22c55e"}]
+  allowNumericMastery   Boolean   @default(true)  // Autoriser saisie numérique directe
+  masteryMin            Float     @default(0.1)    // Valeur min (risque résiduel minimal)
+  masteryMax            Float     @default(1.0)    // Valeur max (maîtrise nulle)
+
+  // Formule de calcul — expression JavaScript safe évaluée côté serveur
+  // Variables disponibles : P (probabilité), I (impact), M (maîtrise 0.1-1.0)
+  // Ex: "P * I"                          → risque brut simple
+  // Ex: "P * I * M"                      → résiduel si M=0.2 (robuste) → score = P*I*0.2
+  // Ex: "P * I * (1 - (1 - M))"          → équivalent P*I*M
+  // Ex: "Math.sqrt(P * I) * M"           → formule atténuée
+  // Ex: "(P * I) / (1 + (1/M - 1) * 0.5)" → formule complexe
+  grossRiskFormula      String    @default("P * I")
+  residualRiskFormula   String    @default("P * I * M")
+
+  // Seuils de criticité (configurables)
+  // Ex: [{label:"Faible", min:0, max:6, color:"#22c55e", action:"Surveiller"},
+  //       {label:"Modéré", min:7, max:12, color:"#f59e0b", action:"Plan de traitement"},
+  //       {label:"Élevé",  min:13, max:20, color:"#f97316", action:"Action prioritaire"},
+  //       {label:"Critique",min:21, max:25, color:"#ef4444", action:"Escalade immédiate"}]
+  riskThresholds        Json
+
+  // Options d'affichage
+  showGrossOnHeatmap    Boolean   @default(true)
+  showResidualOnHeatmap Boolean   @default(true)
+  showArrowOnHeatmap    Boolean   @default(true)
+  keepHistory           Boolean   @default(true)
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("risk_method_configs")
+}
+
+// Appréciation du risque — modèle complet avec historique
 model RiskAssessment {
-  id                  String      @id @default(auto()) @map("_id") @db.ObjectId
-  title               String
-  description         String
-  scenario            String
-  threatSource        String?
+  id                    String    @id @default(auto()) @map("_id") @db.ObjectId
 
-  // Processus impacté
-  processId           String      @db.ObjectId
-  process             Process     @relation(fields: [processId], references: [id], onDelete: Cascade)
+  // Identification du risque
+  title                 String
+  description           String
+  scenario              String    // Scénario de menace
+  threatSource          String?   // Source (naturelle, technique, humaine...)
+  threatCategory        String?   // Catégorie (cyber, RH, infrastructure...)
 
-  // Site
-  factoryId           String?     @db.ObjectId
-  factory             Factory?    @relation(fields: [factoryId], references: [id])
+  // Périmètre
+  processId             String    @db.ObjectId
+  process               Process   @relation("ProcessRisks", fields: [processId], references: [id], onDelete: Cascade)
+  factoryId             String?   @db.ObjectId
+  factory               Factory?  @relation("FactoryRisks", fields: [factoryId], references: [id])
 
-  // Scores de la matrice — valeurs numériques brutes
-  axeXValue           Int         @default(1)   // ex: vraisemblance (1-N)
-  axeYValue           Int         @default(1)   // ex: impact (1-N)
-  axeZValue           Int?                      // 3ème axe optionnel (ex: vitesse)
+  // ── ÉVALUATION ACTUELLE ──────────────────────────────────────────────────
 
-  // Score calculé
-  riskScore           Int         @default(0)
-  riskLevelLabel      String?     // Label calculé: "Faible", "Moyen", "Élevé", "Critique"
-  riskLevelColor      String?     // Couleur HEX selon config
+  // Risque BRUT (P × I selon formule configured)
+  probabilityValue      Int       // Valeur brute ex: 3
+  probabilityLabel      String?   // Label ex: "Possible"
+  impactValue           Int       // Valeur brute ex: 4
+  impactLabel           String?   // Label ex: "Majeur"
 
-  // Score résiduel (après traitement)
-  residualAxeX        Int?
-  residualAxeY        Int?
-  residualAxeZ        Int?
-  residualScore       Int?
-  residualLevelLabel  String?
-  residualLevelColor  String?
+  grossRiskScore        Float     // Calculé par la formule grossRiskFormula
+  grossRiskLabel        String?   // Label du seuil ex: "Élevé"
+  grossRiskColor        String?   // Couleur HEX
+
+  // Niveau de MAÎTRISE des contrôles existants
+  masteryLevelLabel     String?   // Ex: "Partiel"
+  masteryValue          Float     // Valeur numérique ex: 0.7
+  masteryNotes          String?   // Description des contrôles en place
+
+  // Risque RÉSIDUEL (formule résidualRiskFormula)
+  residualRiskScore     Float     // Calculé
+  residualRiskLabel     String?   // Label du seuil ex: "Modéré"
+  residualRiskColor     String?   // Couleur HEX
 
   // Impact sur la continuité
-  rtoImpactHours      Int?
-  rpoImpactHours      Int?
-  mbcoImpactPercent   Int?
+  rtoImpactHours        Int?
+  rpoImpactHours        Int?
+  mbcoImpactPercent     Int?
 
-  // Statut
-  status              RiskStatus  @default(OPEN)
+  // ── TRAITEMENT ───────────────────────────────────────────────────────────
+  status                String    @default("OPEN")  // OPEN|MITIGATED|ACCEPTED|CLOSED
+  treatmentOption       String?   // REDUCE|TRANSFER|AVOID|ACCEPT
+  treatmentPlan         String?
+  targetMasteryValue    Float?    // Niveau de maîtrise cible après traitement
+  targetResidualScore   Float?    // Score résiduel cible
+  targetReviewDate      DateTime?
 
-  // Traitement
-  treatmentOption     String?
-  treatmentPlan       String?
+  // ── HISTORIQUE ───────────────────────────────────────────────────────────
+  // Chaque évaluation passée stockée ici
+  evaluationHistory     RiskEvaluationHistory[]
+  cyberAssets           ItAssetCyberRisk[]     @relation("RiskItAssets")
 
   // Responsable
-  ownerId             String?     @db.ObjectId
-  owner               User?       @relation("RiskOwner", fields: [ownerId], references: [id])
+  ownerId               String?   @db.ObjectId
+  owner                 User?     @relation("RiskOwner", fields: [ownerId], references: [id])
 
-  aiAnalysis          String?
-  assessedAt          DateTime    @default(now())
-  nextReviewDate      DateTime?
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
+  aiAnalysis            String?
+  assessedAt            DateTime  @default(now())
+  nextReviewDate        DateTime?
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   @@map("risk_assessments")
+}
+
+// Historique d'évaluation — un enregistrement par évaluation dans le temps
+model RiskEvaluationHistory {
+  id                    String         @id @default(auto()) @map("_id") @db.ObjectId
+  riskId                String         @db.ObjectId
+  risk                  RiskAssessment @relation(fields: [riskId], references: [id], onDelete: Cascade)
+
+  // Snapshot de l'évaluation à une date donnée
+  evaluatedAt           DateTime       @default(now())
+  evaluatedBy           String?        // Nom de l'évaluateur
+
+  probabilityValue      Int
+  probabilityLabel      String?
+  impactValue           Int
+  impactLabel           String?
+  grossRiskScore        Float
+  grossRiskLabel        String?
+
+  masteryLevelLabel     String?
+  masteryValue          Float
+  masteryNotes          String?
+
+  residualRiskScore     Float
+  residualRiskLabel     String?
+
+  // Formule utilisée au moment de l'évaluation (snapshot)
+  grossFormula          String?
+  residualFormula       String?
+
+  notes                 String?
+
+  createdAt             DateTime       @default(now())
+
+  @@map("risk_evaluation_history")
 }
 
 
@@ -1188,13 +1302,20 @@ model SimulationCrisisPlan {
   // Contenu extrait
   rawText        String?           // Texte brut extrait (PDF/Word)
   status         CrisisPlanStatus  @default(UPLOADING)
-  
+
   // Structure parsée par IA (JSON)
+  // {
+  //   procedures: [{ id, type_incident, titre, etapes: [{ordre, action, responsable, delai_max_min}], declencheurs }],
+  //   roles: [{ role, responsabilites }],
+  //   escalade: [...],
+  //   communication_externe: [...],
+  //   seuils_activation: [...]
+  // }
   parsedStructure Json?
 
   // Résumé IA du plan
   aiSummary      String?
-  
+
   // Mots-clés extraits pour matching
   keywords       String[]          @default([])
 
@@ -1216,11 +1337,11 @@ model EvaluationCriteria {
   name           String     // Ex: "Délai de réaction", "Conformité au plan"
   description    String?
   category       String     // "timing" | "communication" | "decision" | "conformity" | "leadership"
-  
+
   // Pondération (total doit = 100 sur toute la grille)
   weight         Int        @default(20)  // %
   maxScore       Int        @default(10)  // Score max pour ce critère
-  
+
   // Seuils d'évaluation
   excellentThreshold Int    @default(90)  // % du score max
   goodThreshold     Int     @default(70)
@@ -1228,7 +1349,7 @@ model EvaluationCriteria {
 
   // Applicable à
   appliesTo      String     @default("all") // "all" | "individual" | "team"
-  
+
   isActive       Boolean    @default(true)
   sortOrder      Int        @default(0)
 
@@ -1261,19 +1382,27 @@ model InjectResponse {
   expectedAction   String?            // Ce que le plan prescrit pour cet inject
   expectedActor    String?            // Rôle censé réagir selon le plan
   expectedDelayMin Int?               // Délai max selon le plan (minutes)
-  
+
   // Ce qui s'est passé réellement
   actualAction     String?            // Description de ce qui a été fait
   actualActor      String?            // Qui a réagi en premier
-  
+
   // Évaluation IA
   conformity       ConformityStatus   @default(NOT_APPLICABLE)
   conformityScore  Int?               // 0-100
   conformityNotes  String?            // Explication de l'écart
-  
+
   // Analyse IA complète de la gestion de cet inject
   aiAnalysis       Json?
-  
+  // {
+  //   reaction_quality: { score: 0-100, notes: "..." },
+  //   decision_quality: { score: 0-100, notes: "..." },
+  //   communication_quality: { score: 0-100, notes: "..." },
+  //   plan_conformity: { score: 0-100, gaps: ["..."], notes: "..." },
+  //   key_observations: ["..."],
+  //   improvement_points: ["..."]
+  // }
+
   // Communications liées à cet inject (IDs des messages pertinents)
   linkedCommunicationIds String[]     @default([])
 
@@ -1299,7 +1428,7 @@ model ParticipantScore {
   scoreCommunication Int    @default(0)  // Clarté des communications
   scoreLeadership    Int    @default(0)  // Leadership (pour les leaders)
   scoreTimeliness    Int    @default(0)  // Réactivité / respect des délais
-  
+
   // Score global pondéré
   scoreGlobal    Int        @default(0)  // 0-100
 
@@ -1349,20 +1478,27 @@ model SimulationDebrief {
   avgResolutionTimeMin Int?
   conformantInjects    Int    @default(0)
   nonConformantInjects Int    @default(0)
-  
+
   // Analyse IA collective
   executiveSummary     String?  // Synthèse pour le CODIR
   teamStrengths        String[] @default([])
   teamWeaknesses       String[] @default([])
   criticalGaps         String[] @default([])  // Lacunes critiques identifiées
-  
+
   // Comparaison plan de crise
   planConformityScore  Int?     // Conformité globale au plan (0-100)
   planGaps             Json?    // Écarts identifiés dans le plan lui-même
-  
+  // [{ section, gap, recommendation }]
+
   // Plan d'amélioration IA
   improvementPlan      Json?
-  
+  // {
+  //   individual: [{ participantId, name, actions: ["..."] }],
+  //   team: ["..."],
+  //   plan_updates: ["Recommandation de mise à jour du plan..."],
+  //   next_simulation_focus: ["..."]
+  // }
+
   // Statut
   status         String     @default("draft")  // draft | final
   generatedAt    DateTime   @default(now())
@@ -1371,4 +1507,2081 @@ model SimulationDebrief {
   updatedAt      DateTime   @updatedAt
 
   @@map("simulation_debriefs")
+}
+
+
+// =====================================
+// SMCA — État de la Documentation BCMS
+// ISO 22301 §7.5 Documented Information
+// =====================================
+
+enum BcmsDocStatus {
+  DRAFT         // Brouillon
+  IN_REVIEW     // En cours de révision
+  VALIDATED     // Validé / Approuvé
+  OBSOLETE      // Obsolète
+  NOT_STARTED   // Non démarré
+}
+
+// Type de document SMCA — configurable par organisation
+model BcmsDocumentType {
+  id                    String    @id @default(auto()) @map("_id") @db.ObjectId
+  factoryId             String?   @db.ObjectId
+  factory               Factory?  @relation(fields: [factoryId], references: [id])
+
+  // Identification
+  code                  String    // Ex: "BIA", "PCA", "POL", "SCOPE", "RISK", "PROG"
+  name                  String    // Ex: "Analyse d'Impact sur l'Activité"
+  nameEn                String?   // Ex: "Business Impact Analysis"
+  description           String?
+  isoReference          String?   // Ex: "ISO 22301 §8.2"
+  category              String    // "core" | "plans" | "procedures" | "governance" | "custom"
+  icon                  String?   // Nom de l'icône Lucide
+
+  // Fréquence de revue ISO 22301 (configurable)
+  defaultReviewMonths   Int       @default(12)  // Fréquence revue en mois
+  warningThresholdDays  Int       @default(30)  // Alerte orange X jours avant expiration
+  criticalThresholdDays Int       @default(0)   // Alerte rouge = à/après expiration
+
+  // Applicabilité
+  appliesPerProcess     Boolean   @default(true)  // true = un doc par processus
+  appliesPerFactory     Boolean   @default(false) // true = un doc par site
+  isGlobal              Boolean   @default(false) // true = un seul doc pour toute l'org
+
+  // Ordre d'affichage
+  sortOrder             Int       @default(0)
+  isActive              Boolean   @default(true)
+  isDefault             Boolean   @default(false) // Fourni par défaut (non supprimable)
+
+  documents             BcmsDocument[]
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("bcms_document_types")
+}
+
+// Document SMCA individuel — par processus, par site ou global
+model BcmsDocument {
+  id                    String            @id @default(auto()) @map("_id") @db.ObjectId
+
+  // Type de document
+  typeId                String            @db.ObjectId
+  type                  BcmsDocumentType  @relation(fields: [typeId], references: [id])
+
+  // Titre et description
+  title                 String
+  description           String?
+  version               String?           // Ex: "v2.1"
+  reference             String?           // Référence documentaire interne
+
+  // Périmètre
+  processId             String?           @db.ObjectId
+  process               Process?          @relation(fields: [processId], references: [id])
+  factoryId             String?           @db.ObjectId
+  factory               Factory?          @relation(fields: [factoryId], references: [id])
+  scope                 String?           // Périmètre libre si ni process ni factory
+
+  // Statut
+  status                BcmsDocStatus     @default(NOT_STARTED)
+
+  // Dates clés
+  startedAt             DateTime?         // Date de début de rédaction
+  draftedAt             DateTime?         // Date passage en brouillon
+  reviewedAt            DateTime?         // Date dernière révision
+  validatedAt           DateTime?         // Date de validation
+  nextReviewDate        DateTime?         // Prochaine révision planifiée
+  expiresAt             DateTime?         // Date d'expiration calculée
+
+  // Responsables
+  ownerId               String?           @db.ObjectId
+  owner                 User?             @relation("BcmsDocOwner", fields: [ownerId], references: [id])
+  validatorId           String?           @db.ObjectId
+  validator             User?             @relation("BcmsDocValidator", fields: [validatorId], references: [id])
+
+  // Fichier attaché
+  fileUrl               String?
+  fileName              String?
+  fileSize              Int?
+
+  // Alertes et calcul
+  alertLevel            String            @default("RED")    // "GREEN" | "ORANGE" | "RED"
+  daysUntilExpiry       Int?              // Calculé
+  overdueByDays         Int?              // Calculé (si expiré)
+
+  // Notes
+  notes                 String?
+  revisionHistory       Json?
+  // [{ version, date, author, changes }]
+
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  @@map("bcms_documents")
+}
+
+
+// =====================================
+// PARAMÈTRES PLATEFORME
+// ISO 22301 / ISO 31000 — 2 niveaux
+// Organisation (global) + Site (override)
+// =====================================
+
+// Catalogue des secteurs d'activité (pour pré-remplissage bibliothèques)
+enum OrgSector {
+  MANUFACTURING         // Industrie manufacturière
+  FINANCE_BANKING       // Finance & Banque
+  HEALTHCARE            // Santé
+  IT_TELECOM            // IT & Télécommunications
+  PUBLIC_SECTOR         // Collectivité publique
+  ENERGY_UTILITIES      // Énergie & Utilities
+  LOGISTICS             // Logistique & Transport
+  RETAIL                // Commerce & Distribution
+  EDUCATION             // Éducation
+  CONSTRUCTION          // Construction & BTP
+  OTHER                 // Autre
+}
+
+// Paramètres globaux de l'organisation (1 seul par tenant)
+model OrgSettings {
+  id                     String      @id @default(auto()) @map("_id") @db.ObjectId
+
+  // Identification organisation
+  orgName                String
+  sector                 OrgSector   @default(OTHER)
+  country                String?
+  employeeCount          String?     // "1-50" | "50-250" | "250-1000" | "1000+"
+
+  // ── BIA — Analyse d'impact ──────────────────────────────────────────────
+
+  // Échelle de criticité des processus (configurable)
+  // [{value:"critical", label:"Critique", description:"...", color:"#ef4444", order:1}]
+  processCriticalityScale Json        @default("[]")
+
+  // Types d'impacts BIA + pondération
+  // [{id, label, description, weight, unit, category:"financial|operational|regulatory|reputational|safety"}]
+  biaImpactTypes         Json        @default("[]")
+
+  // Échelles d'évaluation des impacts (pour chaque type)
+  // [{impactTypeId, levels:[{value:1, label:"Négligeable", threshold:"<10k€", color:"#22c55e"},...]}]
+  biaImpactScales        Json        @default("[]")
+
+  // Métriques temporelles — valeurs standards par criticité
+  // [{criticalityValue, defaultRTO_h, defaultRPO_h, defaultMTPD_h, defaultMBCO_pct}]
+  temporalMetricDefaults Json        @default("[]")
+
+  // ── RISQUES ─────────────────────────────────────────────────────────────
+
+  // Catalogue des risques types (bibliothèque)
+  // [{id, code, title, description, category, threatSource, defaultP, defaultI, iso31000Category, sector:[]}]
+  riskCatalog            Json        @default("[]")
+
+  // Catégories de risques
+  // [{id, label, color, icon, description}]
+  riskCategories         Json        @default("[]")
+
+  // Sources de menaces
+  // [{id, label, description, examples:[]}]
+  threatSources          Json        @default("[]")
+
+  // ── STRATÉGIES & SOLUTIONS ───────────────────────────────────────────────
+
+  // Catalogue des stratégies de continuité par catégorie de ressource
+  // [{id, title, resourceCategory, description, cost:"low|medium|high", complexity:"low|medium|high",
+  //   rtoCapability_h, tags:[], references:[], sector:[]}]
+  strategyCatalog        Json        @default("[]")
+
+  // ── TIERS (Fournisseurs / Clients) ───────────────────────────────────────
+
+  // Classification des tiers par criticité vs RTO
+  // [{id, label, description, rtoThreshold_h, color, requiresPCA, requiresSLA, auditFrequency_months}]
+  tierClassification     Json        @default("[]")
+
+  // Types de contrats tiers (SLA, contrat cadre, spot, etc.)
+  // [{id, label, description, requiresContinuityClause}]
+  contractTypes          Json        @default("[]")
+
+  // ── SCÉNARIOS DE CRISE ───────────────────────────────────────────────────
+
+  // Catalogue des scénarios de crise types
+  // [{id, code, title, description, category, impacts:[], defaultLevel, triggers:[]}]
+  crisisScenarioCatalog  Json        @default("[]")
+
+  // Niveaux d'activation de la cellule de crise
+  // [{level:1, label:"Vigilance", color:"#22c55e", description, triggers:[], actions:[]}]
+  crisisActivationLevels Json        @default("[]")
+
+  // ── RESSOURCES ───────────────────────────────────────────────────────────
+
+  // Configuration des 6 catégories de ressources (labels, icônes, champs custom)
+  // [{category:"RH_COMPETENCES", label, icon, customFields:[{key, label, type, required}]}]
+  resourceCategoryConfig Json        @default("[]")
+
+  // Types de sites de repli
+  // [{id, label, description, setupTime_h, capacity:"partial|full"}]
+  backupSiteTypes        Json        @default("[]")
+
+  // ── CHAMPS PERSONNALISÉS LIBRES ──────────────────────────────────────────
+
+  // Familles de paramètres personnalisés créés par l'organisation
+  // [{id, familyName, familyIcon, description, fields:[{key, label, type, options:[], required}]}]
+  customParameterFamilies Json       @default("[]")
+
+  // Valeurs des paramètres personnalisés
+  // [{familyId, fieldKey, value}]
+  customParameterValues   Json       @default("[]")
+
+  // ── AUDIT & CONFORMITÉ ──────────────────────────────────────────────────
+
+  // Référentiels de conformité ciblés
+  // ["ISO 22301:2019", "ISO 31000:2018", "ISO 27001:2022", ...]
+  complianceFrameworks   String[]    @default([])
+
+  // Fréquences de revue par défaut (en mois)
+  defaultReviewFrequencies Json      @default("{}")
+  // {"BIA": 12, "PCA": 6, "RISK": 12, "PROG": 12}
+
+  // Initialisation
+  isInitialized          Boolean     @default(false)
+  initializedAt          DateTime?
+  sectorTemplateApplied  String?     // Nom du template secteur appliqué
+
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+
+  @@map("org_settings")
+}
+
+// Override par site — hérite de OrgSettings, surcharge ce qui est spécifique
+model SiteSettings {
+  id                     String      @id @default(auto()) @map("_id") @db.ObjectId
+  factoryId              String      @unique @db.ObjectId
+  factory                Factory     @relation("SiteSettings", fields: [factoryId], references: [id], onDelete: Cascade)
+
+  // Périmètre du site
+  siteActivity           String?     // Activité principale du site
+  siteCategory           String?     // "production" | "logistics" | "admin" | "hq" | "datacenter"
+
+  // ── Overrides spécifiques au site ──────────────────────────────────────
+
+  // Override échelle criticité (null = hérite de org)
+  processCriticalityScale Json?
+
+  // Override métriques temporelles
+  temporalMetricDefaults Json?
+
+  // Override classification tiers (enrichit le catalogue org)
+  tierClassification     Json?
+
+  // Override niveaux d'activation crise
+  crisisActivationLevels Json?
+
+  // Override ressources (champs spécifiques au site)
+  resourceCategoryConfig Json?
+
+  // Paramètres spécifiques au site (fusion avec org)
+  customParameterValues  Json        @default("[]")
+
+  // RTO/RPO cibles du site (seuils d'alerte BCM)
+  targetRTO_h            Int?        @default(4)
+  targetRPO_h            Int?        @default(2)
+  targetMTPD_h           Int?        @default(72)
+  targetMBCO_pct         Int?        @default(60)
+
+  // Certification/conformité visée par ce site
+  targetCertification    String?
+  certificationDeadline  DateTime?
+
+  // Contacts d'urgence du site
+  emergencyContacts      Json        @default("[]")
+  // [{role, name, phone, email, available24h}]
+
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+
+  @@map("site_settings")
+}
+
+
+// =====================================
+// NON-CONFORMITÉS — ISO 22301 §10.1
+// 3 sources : Audit · Simulation · Opérationnel
+// Workflow complet : 7 étapes + escalade
+// =====================================
+
+enum NcSource {
+  AUDIT_INTERNE       // Audit interne ISO 22301
+  AUDIT_EXTERNE       // Audit de certification externe
+  SIMULATION          // Détectée lors d'un exercice/simulation
+  INCIDENT            // Événement ou incident opérationnel
+  BIA_ECART           // Écart détecté lors de la BIA
+  REVUE_DIRECTION     // Identifiée lors de la revue de direction
+  MONITORING          // Surveillance continue / KPI hors seuil
+  PLAINTE_PARTIE      // Réclamation parties intéressées
+  AUTO_EVALUATION     // Auto-évaluation interne
+}
+
+enum NcSeverity {
+  MAJEURE             // Blocage certification / risque critique
+  MINEURE             // Manquement partiel à une exigence
+  OBSERVATION         // Point d'amélioration (pas d'exigence brisée)
+  SENSIBLE            // À surveiller avant d'escalader
+}
+
+enum NcStatus {
+  DETECTEE            // §10.1a — Identifiée, pas encore analysée
+  EN_ANALYSE          // §10.1b — Analyse de la cause racine en cours
+  ACTION_DEFINIE      // §10.1c — Plan d'action corrective défini
+  EN_MISE_EN_OEUVRE   // §10.1d — Actions en cours d'exécution
+  VERIFICATION        // §10.1e — Vérification de l'efficacité
+  CLOTUREE            // §10.1f — Clôturée et efficace
+  ESCALADEE           // Délai dépassé → escalade hiérarchique
+  ANNULEE             // Non-conformité annulée (faux positif)
+}
+
+enum RootCauseMethod {
+  FIVE_WHYS           // 5 Pourquoi
+  FISHBONE            // Diagramme d'Ishikawa
+  FAULT_TREE          // Arbre des causes
+  BRAINSTORMING       // Brainstorming structuré
+  OTHER               // Autre méthode
+}
+
+// Non-conformité principale
+model NonConformity {
+  id                    String          @id @default(auto()) @map("_id") @db.ObjectId
+
+  // Référence
+  reference             String          // Ex: NC-2025-001
+  title                 String
+  description           String
+
+  // Classification
+  source                NcSource
+  severity              NcSeverity
+  status                NcStatus        @default(DETECTEE)
+
+  // Exigence ISO 22301 concernée
+  isoClause             String?         // Ex: "§8.2", "§9.1", "§10.1"
+  isoClauseLabel        String?         // Ex: "Analyse d'impact sur l'activité"
+
+  // Périmètre
+  factoryId             String?         @db.ObjectId
+  factory               Factory?        @relation("FactoryNonConformities", fields: [factoryId], references: [id])
+  processId             String?         @db.ObjectId
+  process               Process?        @relation("ProcessNonConformities", fields: [processId], references: [id])
+
+  // Lien avec d'autres modules
+  simulationId          String?         @db.ObjectId  // Si source = SIMULATION
+  gapId                 String?         @db.ObjectId  // Si source = BIA_ECART
+  auditRef              String?         // Référence rapport d'audit
+
+  // Détection
+  detectedAt            DateTime        @default(now())
+  detectedById          String?         @db.ObjectId
+  detectedBy            User?           @relation("NcDetectedBy", fields: [detectedById], references: [id])
+
+  // §10.1a — Analyse immédiate
+  immediateAction       String?         // Action immédiate prise
+  immediateActionDoneAt DateTime?
+  containmentActions    String?         // Actions de confinement
+
+  // §10.1b — Cause racine
+  rootCauseMethod       RootCauseMethod?
+  rootCauseAnalysis     String?         // Description analyse cause racine
+  rootCauses            Json?
+  // [{id, cause, level, category:"process|human|system|environment|method", contributionPct}]
+  rootCauseAnalyzedAt   DateTime?
+  rootCauseAnalyzedById String?         @db.ObjectId
+
+  // IA — suggestion actions correctives
+  aiSuggestedActions    Json?
+  // [{action, rationale, priority:"high|medium|low", effort:"low|medium|high", reference}]
+  aiAnalysisDate        DateTime?
+
+  // §10.1c — Plan d'action corrective
+  correctiveActions     CorrectiveAction[]
+
+  // §10.1e — Vérification efficacité
+  effectivenessCheck    String?         // Comment vérifier l'efficacité
+  effectivenessDate     DateTime?       // Date de vérification prévue
+  effectivenessResult   String?         // Résultat de la vérification
+  isEffective           Boolean?        // L'action corrective est-elle efficace ?
+  effectivenessVerifiedById String?     @db.ObjectId
+
+  // Clôture
+  closedAt              DateTime?
+  closedById            String?         @db.ObjectId
+  closureNotes          String?
+
+  // Escalade
+  isEscalated           Boolean         @default(false)
+  escalatedAt           DateTime?
+  escalationReason      String?
+  escalatedToId         String?         @db.ObjectId
+
+  // Délais cibles (calculés selon sévérité)
+  targetAnalysisDate    DateTime?       // Date cible analyse cause racine
+  targetActionDate      DateTime?       // Date cible mise en œuvre actions
+  targetClosureDate     DateTime?       // Date cible clôture
+
+  // Responsables
+  ownerId               String?         @db.ObjectId
+  owner                 User?           @relation("NcOwner", fields: [ownerId], references: [id])
+
+  // Pièces jointes / preuves
+  attachments           Json?
+  // [{fileName, fileUrl, uploadedAt, description}]
+
+  // Historique des changements de statut
+  statusHistory         Json?
+  // [{status, changedAt, changedById, note}]
+
+  // Lien revue de direction
+  includeInManagementReview Boolean     @default(false)
+  managementReviewDate      DateTime?
+
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  @@map("non_conformities")
+}
+
+// Action corrective — une NC peut avoir plusieurs actions
+model CorrectiveAction {
+  id                    String          @id @default(auto()) @map("_id") @db.ObjectId
+  ncId                  String          @db.ObjectId
+  nc                    NonConformity   @relation(fields: [ncId], references: [id], onDelete: Cascade)
+
+  title                 String
+  description           String
+  priority              String          @default("MEDIUM") // HIGH | MEDIUM | LOW
+  effort                String?         // low | medium | high
+
+  // Responsable
+  assignedToId          String?         @db.ObjectId
+  assignedTo            User?           @relation("ActionAssignedTo", fields: [assignedToId], references: [id])
+
+  // Délais
+  dueDate               DateTime
+  startedAt             DateTime?
+  completedAt           DateTime?
+
+  // Statut
+  status                String          @default("PLANNED") // PLANNED | IN_PROGRESS | DONE | CANCELLED | OVERDUE
+
+  // Preuve de réalisation
+  evidenceDescription   String?
+  evidenceFiles         Json?
+
+  // IA — Source de la suggestion
+  isAiSuggested         Boolean         @default(false)
+  aiRationale           String?
+
+  // Vérification efficacité
+  isEffective           Boolean?
+  effectivenessNote     String?
+
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  @@map("corrective_actions")
+}
+
+
+// =====================================
+// RBAC — Role-Based Access Control
+// 2 niveaux : Org + Site override
+// 6 actions × N modules
+// =====================================
+
+enum SystemRole {
+  SUPER_ADMIN     // Accès total plateforme + administration
+  ADMIN           // Accès total organisation
+  BCM_MANAGER     // Gestion complète BCM sauf admin
+  CONTRIBUTOR     // Création/modification dans son périmètre
+  VIEWER          // Lecture seule
+}
+
+enum Permission {
+  CREATE
+  READ
+  UPDATE
+  DELETE
+  VALIDATE
+  EXPORT
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  VIEW
+  EXPORT
+  VALIDATE
+  LOGIN
+  LOGOUT
+  PERMISSION_CHANGE
+  INVITATION_SENT
+  INVITATION_ACCEPTED
+}
+
+// Rôle d'un utilisateur au niveau organisation
+model UserOrgRole {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String     @db.ObjectId
+  user        User       @relation("UserOrgRoles", fields: [userId], references: [id], onDelete: Cascade)
+  role        SystemRole @default(VIEWER)
+
+  // Permissions personnalisées (override du rôle si besoin)
+  // {module: {CREATE: bool, READ: bool, UPDATE: bool, DELETE: bool, VALIDATE: bool, EXPORT: bool}}
+  customPermissions Json?
+
+  isActive    Boolean    @default(true)
+  assignedAt  DateTime   @default(now())
+  assignedById String?   @db.ObjectId
+  expiresAt   DateTime?
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([userId])
+  @@map("user_org_roles")
+}
+
+// Override par site — hérite du rôle org + surcharge locale
+model UserSiteRole {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String     @db.ObjectId
+  user        User       @relation("UserSiteRoles", fields: [userId], references: [id], onDelete: Cascade)
+  factoryId   String     @db.ObjectId
+  factory     Factory    @relation("SiteRoles", fields: [factoryId], references: [id], onDelete: Cascade)
+
+  // null = hérite du rôle org ; défini = override local
+  role        SystemRole?
+
+  // Override de permissions pour ce site spécifique
+  customPermissions Json?
+
+  isActive    Boolean    @default(true)
+  assignedAt  DateTime   @default(now())
+  assignedById String?   @db.ObjectId
+  expiresAt   DateTime?
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([userId, factoryId])
+  @@map("user_site_roles")
+}
+
+// Invitation utilisateur
+model UserInvitation {
+  id           String     @id @default(auto()) @map("_id") @db.ObjectId
+  email        String
+  role         SystemRole @default(VIEWER)
+  factoryId    String?    @db.ObjectId  // null = invitation org globale
+  factory      Factory?   @relation("SiteInvitations", fields: [factoryId], references: [id])
+
+  token        String     @unique
+  message      String?
+  expiresAt    DateTime
+  acceptedAt   DateTime?
+
+  invitedById  String     @db.ObjectId
+  invitedBy    User       @relation("SentInvitations", fields: [invitedById], references: [id])
+  acceptedById String?    @db.ObjectId
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@map("user_invitations")
+}
+
+// Audit log — toutes les actions tracées
+model AuditLog {
+  id           String      @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String?     @db.ObjectId
+  user         User?       @relation("UserAuditLogs", fields: [userId], references: [id])
+  userEmail    String?     // Conservé même si user supprimé
+
+  action       AuditAction
+  module       String      // "BIA" | "RISK" | "NC" | "SIMULATION" | "SMCA" | "SETTINGS" | "AUTH"
+  resourceType String?     // "Process" | "RiskAssessment" | "NonConformity" etc.
+  resourceId   String?     // ID de la ressource concernée
+  resourceName String?     // Nom lisible (ex: "Production - Site Tunis")
+
+  // Changements (pour UPDATE)
+  changes      Json?       // {field: {before, after}}
+
+  // Contexte
+  factoryId    String?     @db.ObjectId
+  ipAddress    String?
+  userAgent    String?
+
+  severity     String      @default("INFO") // INFO | WARNING | CRITICAL
+  description  String?
+
+  createdAt    DateTime    @default(now())
+
+  @@map("audit_logs")
+}
+
+// Notification in-app
+model Notification {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String   @db.ObjectId
+  user         User     @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+
+  type         String   // "ROLE_ASSIGNED" | "PERMISSION_CHANGED" | "NC_ESCALATED" | "INVITATION_SENT" etc.
+  title        String
+  message      String
+  link         String?
+
+  isRead       Boolean  @default(false)
+  readAt       DateTime?
+
+  // Data payload
+  data         Json?
+
+  createdAt    DateTime @default(now())
+
+  @@map("notifications")
+}
+
+
+// =====================================
+// ITRBC — IT Readiness for Business Continuity
+// ISO 27031 + ISO 22301 §8.4
+// =====================================
+
+enum ItAssetCategory {
+  APPLICATION        // ERP, CRM, MES, SaaS...
+  SERVER             // Physical/virtual servers
+  NETWORK            // Routers, switches, firewalls, load balancers
+  STORAGE            // SAN, NAS, backup appliances
+  CLOUD_SERVICE      // IaaS, PaaS, SaaS subscriptions
+  ENDPOINT           // Workstations, laptops, mobile devices
+  IOTSCADA           // Industrial systems, OT/IoT
+  SECURITY           // SIEM, EDR, WAF, IAM
+  COMMUNICATION      // Email, VoIP, collaboration tools
+  DATABASE           // RDBMS, NoSQL, data warehouses
+}
+
+enum ItAssetCriticality {
+  VITAL              // Arrêt immédiat si indisponible
+  CRITICAL           // Impact majeur < 4h
+  IMPORTANT          // Impact significatif < 24h
+  STANDARD           // Impact limité
+  LOW                // Peu d'impact
+}
+
+enum RecoveryTier {
+  HOT_STANDBY        // Basculement < 1h, données synchronisées
+  WARM_STANDBY       // Basculement 1-4h, données quasi-sync
+  COLD_STANDBY       // Basculement > 4h, restauration nécessaire
+  MANUAL_RECOVERY    // Restauration manuelle, procédure dégradée
+  NO_RECOVERY        // Aucune solution de reprise documentée
+}
+
+enum DrpTestStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED_SUCCESS  // RTO atteint
+  COMPLETED_PARTIAL  // RTO partiellement atteint
+  FAILED             // RTO non atteint ou test échoué
+  CANCELLED
+}
+
+enum PlaybookScenario {
+  RANSOMWARE
+  DDOS
+  DATA_BREACH
+  INSIDER_THREAT
+  SUPPLY_CHAIN_COMPROMISE
+  CLOUD_OUTAGE
+  NETWORK_FAILURE
+  PHYSICAL_DISASTER
+  CUSTOM
+}
+
+enum PlaybookStepType {
+  DETECTION          // Étape de détection / qualification
+  CONTAINMENT        // Confinement de l'incident
+  ERADICATION        // Éradication de la menace
+  RECOVERY           // Reprise des systèmes
+  COMMUNICATION      // Communication interne/externe
+  LEGAL              // Obligations légales / RGPD
+  VERIFICATION       // Vérification post-incident
+  LESSONS_LEARNED    // Retour d'expérience
+}
+
+// ─── IT Asset ─────────────────────────────────────────────────────────────────
+model ItAsset {
+  id                    String             @id @default(auto()) @map("_id") @db.ObjectId
+
+  // Identification
+  name                  String
+  code                  String?            // Ex: SRV-PROD-001
+  description           String?
+  category              ItAssetCategory
+  criticality           ItAssetCriticality @default(STANDARD)
+  vendor                String?
+  version               String?
+  hostingType           String?            // "on-premise" | "cloud" | "hybrid" | "saas"
+  cloudProvider         String?            // AWS / Azure / GCP / OVH...
+
+  // Périmètre
+  factoryId             String?            @db.ObjectId
+  factory               Factory?           @relation("FactoryItAssets", fields: [factoryId], references: [id])
+
+  // Liens avec les processus métier (BIA)
+  linkedProcesses       ItAssetProcess[]
+
+  // Métriques ITRBC — capacité IT réelle
+  technicalRTO_h        Float?             // RTO technique réel documenté
+  technicalRPO_h        Float?             // RPO technique réel documenté
+  lastTestedRTO_h       Float?             // RTO effectivement atteint lors du dernier test
+  lastTestedRPO_h       Float?
+  lastTestDate          DateTime?
+
+  // Stratégie de reprise
+  recoveryTier          RecoveryTier       @default(NO_RECOVERY)
+  drSiteLocation        String?
+  failoverProcedureDoc  String?            // URL/chemin vers la procédure
+
+  // Sauvegarde
+  backupEnabled         Boolean            @default(false)
+  backupType            String?            // "full" | "incremental" | "snapshot" | "replication"
+  backupFrequency       String?            // "hourly" | "daily" | "weekly"
+  backupRetentionDays   Int?
+  backupLocation        String?            // "local" | "offsite" | "cloud" | "both"
+  lastBackupTest        DateTime?
+  lastBackupTestResult  String?            // "success" | "partial" | "failed"
+  backupCompliant321    Boolean?           // Règle 3-2-1 respectée ?
+
+  // Redondance
+  hasRedundancy         Boolean            @default(false)
+  redundancyType        String?            // "N+1" | "active-active" | "active-passive" | "geographic"
+  redundancyDescription String?
+
+  // Procédure dégradée / workaround manuel
+  hasManualWorkaround   Boolean            @default(false)
+  manualWorkaroundDesc  String?
+  manualWorkaroundRTO_h Float?
+
+  // Score ITRBC calculé (0-100)
+  itrбcScore            Float?
+  itrбcScoreDetails     Json?
+  // {documentation:25, backup:25, recovery:25, testing:25}
+
+  // Responsable
+  ownerId               String?            @db.ObjectId
+  owner                 User?              @relation("ItAssetOwner", fields: [ownerId], references: [id])
+
+  // Relations
+  drpTests              DrpTest[]
+  cyberRisks            ItAssetCyberRisk[]
+  playbookAssets        PlaybookAsset[]
+
+  // Dates
+  acquiredAt            DateTime?
+  endOfLifeAt           DateTime?
+  lastReviewedAt        DateTime?
+
+  notes                 String?
+  tags                  String[]           @default([])
+
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  @@map("it_assets")
+}
+
+// Liaison IT Asset ↔ Processus métier
+model ItAssetProcess {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  assetId      String   @db.ObjectId
+  asset        ItAsset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  processId    String   @db.ObjectId
+  process      Process  @relation("ProcessItAssets", fields: [processId], references: [id], onDelete: Cascade)
+
+  // Criticité du lien
+  dependency   String   @default("REQUIRED") // "REQUIRED" | "IMPORTANT" | "OPTIONAL"
+  notes        String?
+
+  createdAt    DateTime @default(now())
+
+  @@unique([assetId, processId])
+  @@map("it_asset_processes")
+}
+
+// ─── DRP Test ─────────────────────────────────────────────────────────────────
+model DrpTest {
+  id                    String         @id @default(auto()) @map("_id") @db.ObjectId
+  reference             String         // Ex: DRP-TEST-2025-001
+
+  // Identification
+  title                 String
+  description           String?
+  testType              String         // "tabletop" | "simulation" | "full_dr" | "parallel" | "cutover"
+  scope                 String?        // Périmètre du test
+
+  // Actifs concernés
+  assetId               String?        @db.ObjectId
+  asset                 ItAsset?       @relation(fields: [assetId], references: [id])
+  factoryId             String?        @db.ObjectId
+
+  // Scénario testé
+  scenarioDescription   String?
+  targetRTO_h           Float?         // RTO cible à atteindre
+  targetRPO_h           Float?
+
+  // Planification
+  plannedDate           DateTime
+  plannedDuration_h     Float?
+
+  // Exécution
+  startedAt             DateTime?
+  completedAt           DateTime?
+  status                DrpTestStatus  @default(PLANNED)
+
+  // Résultats
+  actualRTO_h           Float?         // RTO réellement atteint
+  actualRPO_h           Float?
+  rtoAchieved           Boolean?       // RTO cible atteint ?
+  rpoAchieved           Boolean?
+
+  // Étapes d'exécution (scénario complet)
+  steps                 DrpTestStep[]
+
+  // Participants
+  participants          Json?          // [{userId, name, role}]
+
+  // Résumé et conclusions
+  executiveSummary      String?
+  successPoints         String[]       @default([])
+  failurePoints         String[]       @default([])
+  recommendations       String[]       @default([])
+
+  // Lien NC automatique si échec
+  ncCreated             Boolean        @default(false)
+  ncId                  String?        @db.ObjectId
+
+  // Fichiers preuves
+  evidenceFiles         Json?          // [{fileName, fileUrl, description}]
+
+  // Responsable
+  leadId                String?        @db.ObjectId
+  lead                  User?          @relation("DrpTestLead", fields: [leadId], references: [id])
+
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  @@map("drp_tests")
+}
+
+// Étape d'un test DRP (exécution détaillée)
+model DrpTestStep {
+  id               String      @id @default(auto()) @map("_id") @db.ObjectId
+  drpTestId        String      @db.ObjectId
+  drpTest          DrpTest     @relation(fields: [drpTestId], references: [id], onDelete: Cascade)
+
+  order            Int
+  title            String
+  description      String
+  expectedOutcome  String?     // Résultat attendu
+  assignedRole     String?     // Rôle responsable de cette étape
+
+  // Exécution
+  status           String      @default("PENDING") // PENDING | IN_PROGRESS | DONE | SKIPPED | FAILED
+  startedAt        DateTime?
+  completedAt      DateTime?
+  duration_min     Int?
+
+  // Résultat réel
+  actualOutcome    String?
+  success          Boolean?
+  notes            String?
+  evidenceFiles    Json?
+
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@map("drp_test_steps")
+}
+
+// ─── Cyber Risk → IT Asset link ───────────────────────────────────────────────
+model ItAssetCyberRisk {
+  id              String          @id @default(auto()) @map("_id") @db.ObjectId
+  assetId         String          @db.ObjectId
+  asset           ItAsset         @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  riskId          String          @db.ObjectId
+  risk            RiskAssessment  @relation("RiskItAssets", fields: [riskId], references: [id], onDelete: Cascade)
+
+  // Impact spécifique sur cet actif
+  impactDescription String?
+  exposureLevel     String?       // "direct" | "indirect" | "potential"
+
+  createdAt       DateTime        @default(now())
+
+  @@unique([assetId, riskId])
+  @@map("it_asset_cyber_risks")
+}
+
+// ─── Cyber Incident Response Playbook ────────────────────────────────────────
+model CyberPlaybook {
+  id                    String            @id @default(auto()) @map("_id") @db.ObjectId
+  reference             String            // Ex: PLAY-RAN-001
+
+  // Identification
+  title                 String
+  description           String
+  scenario              PlaybookScenario
+  customScenarioName    String?           // Si scenario = CUSTOM
+  version               String            @default("1.0")
+
+  // Périmètre
+  factoryId             String?           @db.ObjectId
+  factory               Factory?          @relation("FactoryPlaybooks", fields: [factoryId], references: [id])
+
+  // Déclencheurs
+  triggerIndicators     String[]          @default([])
+  // Ex: ["Alerte SIEM chiffrement massif", "Ticket helpdesk multi-postes", "EDR alert mass encryption"]
+
+  // Actifs IT concernés
+  affectedAssets        PlaybookAsset[]
+
+  // Étapes du playbook
+  steps                 PlaybookStep[]
+
+  // Rôles et responsabilités RACI
+  roles                 Json?
+  // [{role, name, responsibilities:[], contact}]
+
+  // Communication
+  internalContacts      Json?             // [{name, role, phone, email}]
+  externalContacts      Json?             // ANSSI, CERT, assureur cyber, avocat...
+
+  // Métriques cibles
+  targetContainmentTime_h  Float?         // Délai max de confinement
+  targetRecoveryTime_h     Float?         // RTO global incident cyber
+
+  // Exigences légales et réglementaires
+  regulatoryRequirements Json?
+  // [{requirement, deadline_h, authority, description}]
+  // Ex: [{requirement:"Notification CNIL", deadline_h:72, authority:"CNIL", description:"Article 33 RGPD"}]
+
+  // Statut et gestion
+  status                String            @default("DRAFT") // DRAFT | VALIDATED | ACTIVE | OBSOLETE
+  validatedAt           DateTime?
+  validatedById         String?           @db.ObjectId
+  lastTestedAt          DateTime?
+  nextReviewDate        DateTime?
+
+  // Lien simulation
+  simulationId          String?           @db.ObjectId
+
+  ownerId               String?           @db.ObjectId
+  owner                 User?             @relation("PlaybookOwner", fields: [ownerId], references: [id])
+
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  @@map("cyber_playbooks")
+}
+
+// Actif IT lié à un playbook
+model PlaybookAsset {
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  playbookId  String        @db.ObjectId
+  playbook    CyberPlaybook @relation(fields: [playbookId], references: [id], onDelete: Cascade)
+  assetId     String        @db.ObjectId
+  asset       ItAsset       @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  role        String?       // "primary_target" | "recovery_resource" | "monitoring"
+  notes       String?
+  @@unique([playbookId, assetId])
+  @@map("playbook_assets")
+}
+
+// Étape d'un playbook de réponse
+model PlaybookStep {
+  id               String        @id @default(auto()) @map("_id") @db.ObjectId
+  playbookId       String        @db.ObjectId
+  playbook         CyberPlaybook @relation(fields: [playbookId], references: [id], onDelete: Cascade)
+
+  order            Int
+  phase            PlaybookStepType
+  title            String
+  description      String
+
+  // Responsable
+  assignedRole     String?       // Role (pas userId) pour la généricité
+  estimatedTime_min Int?         // Durée estimée en minutes
+  maxTime_min      Int?          // Délai maximum acceptable
+
+  // Actions concrètes
+  actions          String[]      @default([])
+  // Ex: ["Isoler le segment réseau", "Notifier le RSSI", "Capturer les logs"]
+
+  // Outils et commandes
+  tools            String[]      @default([])
+  commands         String[]      @default([])
+  // Ex: ["netsh interface set interface \"Ethernet\" disable"]
+
+  // Critères de succès / sortie
+  exitCriteria     String?       // Condition pour passer à l'étape suivante
+  decisionPoints   Json?
+  // [{condition, ifTrue:"next_step_id", ifFalse:"alt_step_id"}]
+
+  // Ressources / références
+  references       String[]      @default([])
+  templateMessages Json?
+  // [{type:"email"|"sms"|"press", recipient, subject, body}]
+
+  // Vérifications
+  checkpoints      String[]      @default([])
+
+  isOptional       Boolean       @default(false)
+  parallelGroup    String?       // Étapes du même groupe peuvent être faites en parallèle
+
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@map("playbook_steps")
+}
+
+
+// =====================================
+// ISO 42001 — AI Management System
+// + EU AI Act compliance mapping
+// + Dedicated AI risk framework
+// =====================================
+
+enum AiSystemCategory {
+  GENERATIVE          // LLMs, image/audio/video generation
+  DISCRIMINATIVE      // Classification, regression, scoring
+  REINFORCEMENT       // RL agents, recommendation engines
+  COMPUTER_VISION     // Image/video recognition, surveillance
+  NLP                 // Text analysis, sentiment, translation
+  PREDICTIVE          // Forecasting, anomaly detection
+  ROBOTICS            // Physical AI systems, autonomous systems
+  DECISION_SUPPORT    // Expert systems, clinical decision support
+  BIOMETRIC           // Facial recognition, fingerprint, emotion
+  OTHER
+}
+
+enum EuAiActRiskLevel {
+  UNACCEPTABLE        // Prohibited — Art. 5
+  HIGH                // High-risk — Annex III
+  LIMITED             // Transparency obligations — Art. 50
+  MINIMAL             // General purpose / minimal risk
+  GPAI                // General Purpose AI — Art. 51-56
+}
+
+enum AiLifecycleStage {
+  CONCEPT             // Concept / design phase
+  DEVELOPMENT         // In development / training
+  TESTING             // Validation and testing
+  DEPLOYED            // In production use
+  MONITORING          // Deployed + actively monitored
+  DEPRECATED          // Being phased out
+  DECOMMISSIONED      // Retired
+}
+
+enum AiMaturityLevel {
+  LEVEL_0             // Non-existent / Absent
+  LEVEL_1             // Initial / Ad hoc
+  LEVEL_2             // Developing / Partial
+  LEVEL_3             // Defined / Documented
+  LEVEL_4             // Managed / Measured
+  LEVEL_5             // Optimizing / Leading
+}
+
+// ─── AI System ────────────────────────────────────────────────────────────────
+model AiSystem {
+  id                      String            @id @default(auto()) @map("_id") @db.ObjectId
+
+  // Identification
+  name                    String
+  code                    String?
+  description             String
+  version                 String?
+  provider                String?           // OpenAI, Anthropic, Google, In-house...
+  providerType            String?           // "third_party" | "open_source" | "in_house"
+  modelName               String?           // GPT-4, Claude 3, Llama 3...
+
+  // Classification
+  category                AiSystemCategory
+  lifecycleStage          AiLifecycleStage  @default(DEPLOYED)
+  euAiActRiskLevel        EuAiActRiskLevel  @default(MINIMAL)
+  euAiActJustification    String?
+
+  // EU AI Act specifics
+  isAnnexIII              Boolean           @default(false) // Listed in Annex III high-risk
+  annexIIICategory        String?           // Which Annex III category
+  requiresConformityAssessment Boolean      @default(false)
+  conformityAssessmentDone Boolean          @default(false)
+  conformityAssessmentDate DateTime?
+  ceMarking               Boolean           @default(false)
+  isGPAI                  Boolean           @default(false) // General Purpose AI
+  gpaiSystemicRisk        Boolean           @default(false) // GPAI with systemic risk
+
+  // Use context
+  useCase                 String
+  affectedPopulation      String?           // Who is affected by decisions
+  estimatedUsersCount     Int?
+  geographicScope         String?           // Countries/regions where deployed
+
+  // Autonomy level
+  autonomyLevel           String?           // "human_in_loop" | "human_on_loop" | "fully_autonomous"
+  humanOversightMechanism String?
+
+  // Data
+  trainingDataDescription String?
+  personalDataProcessed   Boolean           @default(false)
+  sensitiveDataProcessed  Boolean           @default(false)
+  dataGovernanceDoc       String?
+
+  // Technical
+  inputTypes              String[]          @default([]) // text, image, audio, video, tabular
+  outputTypes             String[]          @default([])
+  explainabilityLevel     String?           // "black_box" | "interpretable" | "explainable"
+
+  // Périmètre
+  factoryId               String?           @db.ObjectId
+  factory                 Factory?          @relation("FactoryAiSystems", fields: [factoryId], references: [id])
+
+  // Links to other modules
+  linkedProcesses         AiSystemProcess[]
+  linkedItAssetId         String?           @db.ObjectId // Link to ITRBC asset
+  riskAssessments         AiRiskAssessment[]
+  clauseAssessments       AiClauseAssessment[]
+  incidents               AiIncident[]
+  euAiActChecklist        AiEuActChecklist?
+
+  // Responsables
+  ownerId                 String?           @db.ObjectId
+  owner                   User?             @relation("AiSystemOwner", fields: [ownerId], references: [id])
+  aiOfficerId             String?           @db.ObjectId // Responsible AI Officer
+
+  // Overall scores (computed)
+  iso42001Score           Float?            // 0-100 ISO 42001 compliance
+  euAiActScore            Float?            // 0-100 EU AI Act compliance
+  aiRiskScore             Float?            // 0-100 overall AI risk score
+  maturityLevel           AiMaturityLevel   @default(LEVEL_1)
+
+  // Dates
+  deployedAt              DateTime?
+  lastAuditedAt           DateTime?
+  nextReviewDate          DateTime?
+
+  notes                   String?
+  tags                    String[]          @default([])
+
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+
+  @@map("ai_systems")
+}
+
+// Liaison AI System ↔ Processus métier
+model AiSystemProcess {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  aiSystemId  String    @db.ObjectId
+  aiSystem    AiSystem  @relation(fields: [aiSystemId], references: [id], onDelete: Cascade)
+  processId   String    @db.ObjectId
+  process     Process   @relation("ProcessAiSystems", fields: [processId], references: [id], onDelete: Cascade)
+  role        String?   // "decision_maker" | "decision_support" | "automation" | "monitoring"
+  impact      String?   // How the AI affects this process
+  @@unique([aiSystemId, processId])
+  @@map("ai_system_processes")
+}
+
+// ─── ISO 42001 Clause Assessment ──────────────────────────────────────────────
+model AiClauseAssessment {
+  id                String          @id @default(auto()) @map("_id") @db.ObjectId
+  aiSystemId        String          @db.ObjectId
+  aiSystem          AiSystem        @relation(fields: [aiSystemId], references: [id], onDelete: Cascade)
+
+  // Clause
+  clauseCode        String          // Ex: "6.1", "8.2", "9.1"
+  clauseTitle       String
+  clauseSection     String          // "context" | "planning" | "support" | "operation" | "evaluation" | "improvement"
+
+  // Maturity assessment (5 levels)
+  maturityLevel     AiMaturityLevel @default(LEVEL_0)
+  maturityScore     Int             @default(0)  // 0-100
+
+  // Evidence
+  currentState      String?         // Description of current practices
+  evidence          String?         // What evidence exists
+  evidenceFiles     Json?           // [{fileName, fileUrl, uploadedAt}]
+
+  // Gap and action
+  gaps              String?         // Identified gaps
+  actionPlan        String?
+  actionOwner       String?
+  targetDate        DateTime?
+  targetMaturity    AiMaturityLevel @default(LEVEL_3)
+
+  // EU AI Act mapping
+  euAiActArticles   String[]        @default([]) // Related EU AI Act articles
+
+  assessedAt        DateTime        @default(now())
+  assessedById      String?         @db.ObjectId
+
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@unique([aiSystemId, clauseCode])
+  @@map("ai_clause_assessments")
+}
+
+// ─── AI Risk Assessment (dedicated framework) ─────────────────────────────────
+model AiRiskAssessment {
+  id                    String    @id @default(auto()) @map("_id") @db.ObjectId
+  aiSystemId            String    @db.ObjectId
+  aiSystem              AiSystem  @relation(fields: [aiSystemId], references: [id], onDelete: Cascade)
+
+  // Risk identification
+  title                 String
+  description           String
+  riskDimension         String
+  // "bias_fairness" | "safety_reliability" | "privacy_data" |
+  // "transparency_explainability" | "robustness_security" |
+  // "human_oversight" | "environmental" | "societal" | "dependency_supply_chain"
+
+  // Affected stakeholders
+  affectedStakeholders  String[]  @default([])
+  // "end_users" | "affected_population" | "organization" | "third_parties" | "society"
+
+  // Probability and Impact (AI-specific scales)
+  probability           Int       // 1-5
+  probabilityLabel      String?
+  impact                Int       // 1-5
+  impactLabel           String?
+
+  // AI-specific impact dimensions
+  harmType              String?
+  // "physical" | "psychological" | "financial" | "reputational" | "societal" | "rights_violation"
+  reversibility         String?   // "reversible" | "difficult_to_reverse" | "irreversible"
+  scale                 String?   // "individual" | "group" | "societal" | "global"
+
+  // Scores
+  inherentRiskScore     Float     // P × I before controls
+  inherentRiskLabel     String?
+
+  // Controls (ISO 42001 + NIST AI RMF)
+  existingControls      String?
+  controlsEffectiveness Int?      // 0-100%
+  residualRiskScore     Float
+  residualRiskLabel     String?
+
+  // Treatment
+  treatmentOption       String?   // "accept" | "reduce" | "avoid" | "transfer"
+  treatmentPlan         String?
+  targetResidualScore   Float?
+
+  // EU AI Act mapping
+  euAiActArticle        String?   // Relevant article
+  regulatoryObligation  String?
+
+  // References (NIST AI RMF, ISO 42001, EU AI Act)
+  references            String[]  @default([])
+
+  ownerId               String?   @db.ObjectId
+  assessedAt            DateTime  @default(now())
+  nextReviewDate        DateTime?
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("ai_risk_assessments")
+}
+
+// ─── EU AI Act Compliance Checklist ──────────────────────────────────────────
+model AiEuActChecklist {
+  id                        String    @id @default(auto()) @map("_id") @db.ObjectId
+  aiSystemId                String    @unique @db.ObjectId
+  aiSystem                  AiSystem  @relation(fields: [aiSystemId], references: [id], onDelete: Cascade)
+
+  // Art. 9 — Risk management system
+  hasRiskManagementSystem   Boolean   @default(false)
+  riskManagementEvidence    String?
+
+  // Art. 10 — Data governance
+  hasDataGovernance         Boolean   @default(false)
+  dataGovernanceEvidence    String?
+  trainingDataQualityChecked Boolean  @default(false)
+
+  // Art. 11 — Technical documentation
+  hasTechnicalDoc           Boolean   @default(false)
+  technicalDocUrl           String?
+
+  // Art. 12 — Record keeping & Logging
+  hasAutomaticLogging       Boolean   @default(false)
+  loggingDescription        String?
+  logRetentionPeriod        String?
+
+  // Art. 13 — Transparency
+  hasUserInformation        Boolean   @default(false)
+  transparencyMeasures      String?
+
+  // Art. 14 — Human oversight
+  hasHumanOversight         Boolean   @default(false)
+  oversightMechanisms       String?
+  canBeOverridden           Boolean   @default(true)
+
+  // Art. 15 — Accuracy, robustness, cybersecurity
+  accuracyTested            Boolean   @default(false)
+  robustnessTested          Boolean   @default(false)
+  adversarialTestingDone    Boolean   @default(false)
+
+  // Art. 16-21 — Obligations for providers
+  isProvider                Boolean   @default(false) // Are they the provider or deployer?
+  qualityManagementSystem   Boolean   @default(false)
+  postMarketMonitoring      Boolean   @default(false)
+  seriousIncidentReporting  Boolean   @default(false)
+
+  // Art. 26 — Obligations for deployers
+  isDeployer                Boolean   @default(true)
+  deployerDPIA              Boolean   @default(false)
+  deployerHumanOversight    Boolean   @default(false)
+  deployerMonitoring        Boolean   @default(false)
+
+  // Art. 50 — Transparency for limited risk
+  aiDisclosureImplemented   Boolean   @default(false)
+  deepfakeLabeling          Boolean   @default(false)
+  chatbotDisclosure         Boolean   @default(false)
+
+  // GPAI specific (Art. 51-56)
+  gpaiPolicyCopyrightDoc    Boolean   @default(false)
+  gpaiTrainingSummary       Boolean   @default(false)
+  gpaiModelCard             Boolean   @default(false)
+
+  // Compliance score (computed)
+  complianceScore           Float?    // 0-100
+
+  lastAssessedAt            DateTime  @default(now())
+  nextReviewDate            DateTime?
+
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  @@map("ai_eu_act_checklists")
+}
+
+// ─── AI Incident ──────────────────────────────────────────────────────────────
+model AiIncident {
+  id                String    @id @default(auto()) @map("_id") @db.ObjectId
+  aiSystemId        String    @db.ObjectId
+  aiSystem          AiSystem  @relation(fields: [aiSystemId], references: [id], onDelete: Cascade)
+
+  reference         String    // AI-INC-2025-001
+  title             String
+  description       String
+
+  // Incident type
+  incidentType      String
+  // "bias_discrimination" | "false_positive" | "false_negative" | "hallucination" |
+  // "data_breach" | "adversarial_attack" | "model_failure" | "unexpected_behavior" | "other"
+
+  severity          String    @default("MEDIUM") // LOW | MEDIUM | HIGH | CRITICAL
+  harmType          String?   // Type of harm caused
+  affectedCount     Int?      // Number of people affected
+
+  // EU AI Act reporting
+  isSeriousIncident Boolean   @default(false)
+  reportedToAuthority Boolean @default(false)
+  reportedAt        DateTime?
+  authorityReference String?  // Reference from national authority
+
+  // Timeline
+  detectedAt        DateTime
+  resolvedAt        DateTime?
+  status            String    @default("OPEN") // OPEN | INVESTIGATING | RESOLVED | CLOSED
+
+  // Root cause and actions
+  rootCause         String?
+  immediateActions  String?
+  correctiveActions String?
+
+  // Link to NC module
+  ncId              String?   @db.ObjectId
+
+  // Lessons learned
+  lessonsLearned    String?
+  modelUpdated      Boolean   @default(false)
+  dataUpdated       Boolean   @default(false)
+
+  reportedById      String?   @db.ObjectId
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@map("ai_incidents")
+}
+
+
+// =====================================
+// SIMULATION v2 — Immersive & Real-time
+// WebSocket + Unified Communication Hub
+// =====================================
+
+enum SimChannelType {
+  EMAIL
+  SMS
+  CALL
+  WHATSAPP
+  ALERT
+  FLASH_INFO
+  JOURNAL
+  SOCIAL_MEDIA
+  INTERNAL_RADIO
+}
+
+enum SimMessageStatus {
+  PENDING        // Inject créé mais pas encore livré
+  DELIVERED      // Livré au participant
+  READ           // Lu par le participant
+  REPLIED        // Participant a répondu
+  ESCALATED      // Escaladé vers un autre rôle
+  MISSED         // Non traité dans le délai
+  ARCHIVED
+}
+
+enum SimCallStatus {
+  RINGING        // En train de sonner
+  ACTIVE         // Appel en cours
+  COMPLETED      // Terminé
+  MISSED         // Manqué
+  DECLINED       // Décliné
+}
+
+enum InjectPriority {
+  LOW
+  NORMAL
+  HIGH
+  CRITICAL       // Notification push immédiate, son d'alerte
+}
+
+// Session de simulation (étend le SimulationCrisisPlan existant)
+model SimSession {
+  id                  String    @id @default(auto()) @map("_id") @db.ObjectId
+  simulationId        String    @db.ObjectId
+
+  // Config de session
+  title               String
+  scenarioContext     String?   // Contexte narratif de départ
+  briefingText        String?   // Texte lu aux participants au démarrage
+
+  // Timing
+  scheduledAt         DateTime
+  startedAt           DateTime?
+  pausedAt            DateTime?
+  endedAt             DateTime?
+  durationMinutes     Int?
+
+  // Participants
+  participants        SimParticipant[]
+
+  // Messages/Injects
+  messages            SimMessage[]
+
+  // Active calls
+  calls               SimCall[]
+
+  // Timeline events
+  events              SimEvent[]
+
+  // Instructor settings
+  instructorNotes     String?
+  allowParticipantInit Boolean @default(false) // Participants peuvent initier des comm
+  autoScoring         Boolean  @default(true)
+
+  status              String   @default("SETUP") // SETUP|BRIEFING|ACTIVE|PAUSED|DEBRIEF|ENDED
+
+  // WebSocket room ID
+  wsRoomId            String   @unique
+  crisisLog           CrisisLogEntry[]  @relation("SessionCrisisLog")
+  chatChannels        ChatChannel[]      @relation("SessionChatChannels")
+  forms               ExerciseForm[]     @relation("SessionForms")
+
+  createdById         String?  @db.ObjectId
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("sim_sessions")
+}
+
+// Participant dans une session
+model SimParticipant {
+  id              String     @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId       String     @db.ObjectId
+  session         SimSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  // Identity
+  userId          String?    @db.ObjectId
+  user            User?      @relation("SimParticipants", fields: [userId], references: [id])
+  displayName     String     // Name shown during simulation
+  email           String?    // For email inject delivery
+  phone           String?    // For SMS inject delivery
+
+  // Role in simulation
+  role            String     // "Directeur de crise" | "RSSI" | "DRH" | "Communication"...
+  team            String?    // Team/cell name
+  isInstructor    Boolean    @default(false)
+  isObserver      Boolean    @default(false)
+
+  // Simulated contact info (used by other participants to "call/SMS")
+  simEmail        String?    // e.g. "pierre.martin@sim.survive.io"
+  simPhone        String?    // e.g. "+33-SIM-001"
+
+  // Status
+  isConnected     Boolean    @default(false)
+  lastSeenAt      DateTime?
+  joinedAt        DateTime?
+
+  // Performance tracking
+  messagesReceived Int       @default(0)
+  messagesReplied  Int       @default(0)
+  avgResponseTime  Int?      // seconds
+  missedMessages   Int       @default(0)
+
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@unique([sessionId, userId])
+  @@map("sim_participants")
+}
+
+// Message/Inject — couvre Email, SMS, WhatsApp, Alerte...
+model SimMessage {
+  id              String             @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId       String             @db.ObjectId
+  session         SimSession         @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  // Channel
+  channel         SimChannelType
+  priority        InjectPriority     @default(NORMAL)
+
+  // Sender (can be instructor-controlled persona or participant)
+  senderName      String             // "ANSSI", "Directeur Général", "Journaliste RTL"...
+  senderEmail     String?
+  senderPhone     String?
+  senderAvatar    String?            // Initials or icon
+
+  // Recipient(s)
+  recipientIds    String[]           @db.ObjectId // SimParticipant IDs
+  isGroupMessage  Boolean            @default(false)
+  groupName       String?            // "Cellule de crise", "Équipe IT"
+
+  // Content
+  subject         String?            // Email subject
+  body            String             // Main content
+  attachments     Json?              // [{name, type, url, isDecoy}]
+  mediaUrl        String?            // Image, audio for WhatsApp
+
+  // For calls: script for instructor
+  callScript      String?
+  callDuration    Int?               // Expected duration in seconds
+
+  // Inject metadata
+  injectId        String?            // Reference to inject in scenario
+  triggeredAt     DateTime           // When inject was fired
+  deliveredAt     DateTime?
+  expiresAt       DateTime?          // After this: MISSED
+
+  // Status per recipient
+  status          SimMessageStatus   @default(PENDING)
+  readAt          DateTime?
+  readByIds       String[]           @db.ObjectId
+
+  // Replies
+  replies         SimReply[]
+
+  // Scoring
+  expectedActions String[]           @default([])  // What should participant do
+  isScored        Boolean            @default(true)
+  scoringNotes    String?
+
+  // From participant (not instructor)
+  isFromParticipant Boolean          @default(false)
+  fromParticipantId String?          @db.ObjectId
+
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@map("sim_messages")
+}
+
+// Reply to a SimMessage
+model SimReply {
+  id              String     @id @default(auto()) @map("_id") @db.ObjectId
+  messageId       String     @db.ObjectId
+  message         SimMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  sessionId       String     @db.ObjectId
+
+  participantId   String     @db.ObjectId
+  participantName String
+
+  channel         SimChannelType
+  body            String
+  attachments     Json?
+
+  // Scoring
+  responseTimeSeconds Int?
+  qualityScore    Int?       // 0-100 IA scored
+  qualityNotes    String?
+
+  sentAt          DateTime   @default(now())
+
+  @@map("sim_replies")
+}
+
+// Simulated phone call
+model SimCall {
+  id              String        @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId       String        @db.ObjectId
+  session         SimSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  // Parties
+  callerId        String        @db.ObjectId   // SimParticipant or instructor
+  callerName      String
+  callerRole      String?
+  recipientId     String        @db.ObjectId
+  recipientName   String
+
+  // Call details
+  status          SimCallStatus @default(RINGING)
+  startedAt       DateTime?
+  answeredAt      DateTime?
+  endedAt         DateTime?
+  durationSeconds Int?
+
+  // Script for instructor (if instructeur-initiated)
+  script          String?
+  scriptNotes     String?       // Hidden notes for instructor
+
+  // Transcript (typed by instructor during call)
+  transcript      String?
+
+  // Missed call reason
+  missedReason    String?
+
+  // Scoring
+  wasAnswered     Boolean       @default(false)
+  responseTimeSeconds Int?
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@map("sim_calls")
+}
+
+// Timeline event (auto-logged)
+model SimEvent {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId   String     @db.ObjectId
+  session     SimSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  type        String
+  // "inject_sent" | "message_read" | "reply_sent" | "call_started" |
+  // "call_missed" | "participant_joined" | "session_paused" | "inject_expired"
+
+  actorId     String?    @db.ObjectId  // Who triggered this
+  actorName   String?
+  targetId    String?    @db.ObjectId  // What was affected
+  description String
+  metadata    Json?
+
+  occurredAt  DateTime   @default(now())
+
+  @@map("sim_events")
+}
+
+
+// =====================================
+// SIMULATION BUILDER — Wizard + Templates
+// =====================================
+
+enum SimTemplateScenario {
+  RANSOMWARE
+  DATACENTER_OUTAGE
+  COMMUNICATION_CRISIS
+  HR_CRISIS
+  PHYSICAL_DISASTER
+  SUPPLY_CHAIN
+  CYBER_DATA_BREACH
+  CUSTOM
+}
+
+// Inject library — reusable across simulations
+model InjectTemplate {
+  id              String      @id @default(auto()) @map("_id") @db.ObjectId
+  title           String
+  description     String
+  channel         String      // EMAIL | SMS | CALL | ALERT | FLASH_INFO | WHATSAPP
+  priority        String      @default("NORMAL") // LOW | NORMAL | HIGH | CRITICAL
+  senderPersona   String      // "ANSSI", "Direction Générale", "Médias"...
+  subject         String?
+  body            String
+  expectedActions String[]    @default([])
+  tags            String[]    @default([])  // ["ransomware", "communication", "escalade"]
+  phase           String      @default("escalation") // "detection"|"containment"|"escalation"|"recovery"|"comms"
+  suggestedOffset Int?        // Suggested T+N minutes in scenario
+  scenario        SimTemplateScenario @default(CUSTOM)
+  isPublic        Boolean     @default(true)
+  usageCount      Int         @default(0)
+  createdById     String?     @db.ObjectId
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  @@map("inject_templates")
+}
+
+// Full simulation template
+model SimulationTemplate {
+  id              String      @id @default(auto()) @map("_id") @db.ObjectId
+  title           String
+  description     String
+  scenario        SimTemplateScenario
+  duration_min    Int         // Total duration in minutes
+  difficulty      String      @default("MEDIUM") // EASY | MEDIUM | HARD | EXPERT
+  sector          String?     // Target sector
+  objectives      String[]    @default([])
+  briefingText    String?
+  scenarioContext String      // Full narrative description
+  isPublic        Boolean     @default(true)
+  usageCount      Int         @default(0)
+  // Pre-defined inject sequence
+  injectSequence  Json        // [{order, offsetMin, channel, priority, senderPersona, subject, body, expectedActions, phase}]
+  // Pre-defined participant roles
+  roles           Json        // [{role, team, description, isRequired}]
+  // Evaluation weights
+  evaluationConfig Json?      // [{name, weight, category}]
+  tags            String[]    @default([])
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  @@map("simulation_templates")
+}
+
+// Simulation wizard state — persists draft across steps
+model SimulationDraft {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  simulationId    String    @unique @db.ObjectId
+  simulation      Simulation @relation("SimulationDraft", fields: [simulationId], references: [id], onDelete: Cascade)
+  currentStep     Int       @default(1)  // 1-5
+  completedSteps  Int[]     @default([])
+  // Step data cached as JSON
+  step1Data       Json?     // {title, description, type, objectives, sector}
+  step2Data       Json?     // {scenarioContext, briefingText, crisisPlanUploaded, aiScenario}
+  step3Data       Json?     // {participants: [{userId, role, team, phone, email}]}
+  step4Data       Json?     // {injects: [{offsetMin, channel, priority, senderPersona, subject, body, expectedActions}]}
+  step5Data       Json?     // {criteria: [{name, weight, category}]}
+  isComplete      Boolean   @default(false)
+  templateId      String?   @db.ObjectId
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  @@map("simulation_drafts")
+}
+
+
+// =====================================
+// MAIN COURANTE — ISO 22301 §8.4
+// Crisis Log, Decision Records, Actions
+// =====================================
+
+enum CrisisLogEntryType {
+  DECISION        // Décision prise par un membre de la cellule
+  ACTION          // Action réalisée (technique, organisationnelle)
+  ESCALATION      // Escalade vers un niveau supérieur
+  INFORMATION     // Information importante reçue ou transmise
+  OBSERVATION     // Observation de l'instructeur (non visible participants)
+  MILESTONE       // Étape clé du scénario
+}
+
+enum DecisionStatus {
+  DRAFT           // En cours de rédaction
+  CONFIRMED       // Confirmée par le décideur
+  VALIDATED       // Validée par un niveau supérieur
+  OVERRULED       // Annulée / contredite
+  PENDING_REVIEW  // En attente de validation
+}
+
+enum ActionStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  FAILED
+  CANCELLED
+}
+
+// Main entry in the crisis log
+model CrisisLogEntry {
+  id              String           @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId       String           @db.ObjectId
+  session         SimSession       @relation("SessionCrisisLog", fields: [sessionId], references: [id], onDelete: Cascade)
+
+  type            CrisisLogEntryType
+  sequenceNumber  Int              // Auto-incremented per session (MC-001, MC-002...)
+
+  // Author
+  participantId   String?          @db.ObjectId
+  participantName String
+  participantRole String
+
+  // Content
+  title           String
+  content         String           // Main text
+  justification   String?          // Why this decision/action
+  impactScope     String[]         @default([]) // ["Production", "IT", "Communication", "RH"]
+
+  // Decision-specific
+  decisionStatus  DecisionStatus?
+  validatedById   String?          @db.ObjectId
+  validatedByName String?
+  validatedAt     DateTime?
+  alternativesConsidered String?
+
+  // Action-specific
+  actionStatus    ActionStatus?
+  dueAt           DateTime?
+  completedAt     DateTime?
+  assignedToName  String?
+
+  // Escalation-specific
+  escalatedToName  String?
+  escalatedToRole  String?
+  escalationResponse String?
+  escalationResponseAt DateTime?
+
+  // Instructor assessment (hidden from participants)
+  instructorScore  Int?            // 0-10
+  instructorFlag   String?         // "GOOD" | "MISSED" | "CRITICAL_ERROR" | "IMPROVABLE"
+  instructorNote   String?         // Private note
+  isInstructorOnly Boolean         @default(false) // Observations not visible to participants
+
+  // Links
+  linkedMessageId String?          @db.ObjectId  // Linked inject that triggered this
+  linkedInjectId  String?          @db.ObjectId
+
+  // Timestamps
+  occurredAt      DateTime         @default(now())
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@map("crisis_log_entries")
+}
+
+
+// =====================================
+// DOCUMENTATION DE CRISE IN-APP
+// =====================================
+
+enum CrisisDocCategory {
+  PCA               // Plan de Continuité d'Activité
+  DRP               // Disaster Recovery Plan / PRI
+  PROCEDURE         // Procédure opérationnelle
+  ANNUAIRE          // Contacts et annuaire de crise
+  REFERENCE         // Document de référence (ISO, réglementaire)
+  COMMUNICATION     // Modèles de communication de crise
+  FICHE_REFLEXE     // Fiche réflexe / quick reference
+  OT_PROCEDURE      // Procédure OT/SCADA
+}
+
+model CrisisDocument {
+  id              String            @id @default(auto()) @map("_id") @db.ObjectId
+  simulationId    String?           @db.ObjectId  // null = global library
+  simulation      Simulation?       @relation("SimulationDocs", fields: [simulationId], references: [id], onDelete: SetNull)
+
+  // Metadata
+  title           String
+  description     String?
+  category        CrisisDocCategory
+  tags            String[]          @default([])
+  version         String            @default("1.0")
+  isActive        Boolean           @default(true)
+  isPinned        Boolean           @default(false)  // Always visible on top
+  isCritical      Boolean           @default(false)  // Must be consulted during exercise
+
+  // Content — stored as structured sections
+  content         String            // Full text (markdown)
+  sections        Json?             // [{id, title, content, isKeyProcedure}]
+
+  // Contacts (for ANNUAIRE category)
+  contacts        Json?             // [{name, role, phone, email, priority, availability}]
+
+  // Access control
+  visibleToRoles  String[]          @default([])  // Empty = visible to all
+  instructorOnly  Boolean           @default(false)
+
+  // File attachment (optional — PDF uploaded separately)
+  attachmentUrl   String?
+  attachmentName  String?
+
+  // Stats
+  consultationCount Int             @default(0)
+
+  createdById     String?           @db.ObjectId
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  consultations   DocConsultation[]
+
+  @@map("crisis_documents")
+}
+
+model DocConsultation {
+  id              String          @id @default(auto()) @map("_id") @db.ObjectId
+  documentId      String          @db.ObjectId
+  document        CrisisDocument  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  sessionId       String          @db.ObjectId
+  participantId   String          @db.ObjectId
+  participantName String
+  participantRole String
+
+  // What they did
+  openedAt        DateTime        @default(now())
+  closedAt        DateTime?
+  durationSeconds Int?
+  sectionsViewed  String[]        @default([])  // Section IDs viewed
+  searchQuery     String?         // If opened via search
+
+  // Scoring impact
+  wasRelevantToInject Boolean     @default(false)
+  linkedInjectId  String?         @db.ObjectId
+
+  @@map("doc_consultations")
+}
+
+
+// =====================================
+// COMMUNICATION INTER-PARTICIPANTS
+// =====================================
+
+enum ChatChannelType {
+  GENERAL       // Canal général — toute la cellule
+  TEAM          // Canal d'équipe (Cellule cyber, Cellule com...)
+  DIRECT        // Message direct 1-to-1
+  BROADCAST     // Annonce instructeur (read-only participants)
+}
+
+model ChatChannel {
+  id            String          @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId     String          @db.ObjectId
+  session       SimSession      @relation("SessionChatChannels", fields: [sessionId], references: [id], onDelete: Cascade)
+
+  type          ChatChannelType
+  name          String          // "Cellule générale", "Cellule cyber", "Pierre → Sarah"
+  description   String?
+  emoji         String?         // "🛡️" "💻" "📣"
+  color         String?         // Hex color for the channel
+
+  // Members (empty = all participants)
+  memberIds     String[]        @default([]) @db.ObjectId
+
+  isArchived    Boolean         @default(false)
+  createdById   String?         @db.ObjectId
+  createdAt     DateTime        @default(now())
+
+  messages      ChatMessage[]
+
+  @@map("chat_channels")
+}
+
+model ChatMessage {
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  channelId     String        @db.ObjectId
+  channel       ChatChannel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  sessionId     String        @db.ObjectId
+
+  // Sender
+  senderId      String        @db.ObjectId  // SimParticipant ID
+  senderName    String
+  senderRole    String
+  isInstructor  Boolean       @default(false)
+
+  // Content
+  content       String
+  messageType   String        @default("text") // "text" | "alert" | "decision" | "action"
+  attachments   Json?
+
+  // Threading
+  replyToId     String?       @db.ObjectId
+
+  // Status
+  readByIds     String[]      @default([]) @db.ObjectId
+
+  // Scoring
+  isCoordination Boolean      @default(false) // Flagged as coordination message
+
+  sentAt        DateTime      @default(now())
+  editedAt      DateTime?
+
+  @@map("chat_messages")
+}
+
+
+// =====================================
+// FORMULAIRES PRÉ / POST EXERCICE
+// ISO 22301 §9.1 — Surveillance et mesure
+// =====================================
+
+enum FormType {
+  PRE_EXERCISE    // Avant le démarrage
+  POST_EXERCISE   // Après la fin
+}
+
+enum QuestionType {
+  SCALE           // Échelle 1-5 ou 1-10
+  TEXT            // Texte libre
+  MULTIPLE_CHOICE // Choix multiple
+  SINGLE_CHOICE   // Choix unique
+  RATING_GRID     // Grille de notation (critères × niveaux)
+}
+
+model ExerciseForm {
+  id              String       @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId       String       @db.ObjectId
+  session         SimSession   @relation("SessionForms", fields: [sessionId], references: [id], onDelete: Cascade)
+  simulationId    String       @db.ObjectId
+
+  type            FormType
+  title           String
+  description     String?
+  isActive        Boolean      @default(true)   // Open for responses
+  closedAt        DateTime?
+
+  // Questions (ordered)
+  questions       Json         // QuestionDef[]
+
+  // Aggregate results (computed after closing)
+  aggregateResults Json?
+
+  generatedByAI   Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  responses       FormResponse[]
+
+  @@map("exercise_forms")
+}
+
+model FormResponse {
+  id              String        @id @default(auto()) @map("_id") @db.ObjectId
+  formId          String        @db.ObjectId
+  form            ExerciseForm  @relation(fields: [formId], references: [id], onDelete: Cascade)
+  sessionId       String        @db.ObjectId
+
+  participantId   String        @db.ObjectId
+  participantName String
+  participantRole String
+
+  answers         Json          // {questionId: value}
+  completedAt     DateTime      @default(now())
+  durationSeconds Int?
+
+  @@unique([formId, participantId])
+  @@map("form_responses")
 }

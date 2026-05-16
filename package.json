@@ -72,6 +72,8 @@
     "pdf-parse-fork": "^1.2.0",
     "pdfjs-dist": "^3.11.174",
     "puppeteer": "^24.36.1",
+    "pusher": "^5.3.3",
+    "pusher-js": "^8.5.0",
     "react": "^19.1.0",
     "react-day-picker": "8.10.1",
     "react-dom": "^19.1.0",

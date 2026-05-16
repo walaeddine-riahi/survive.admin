@@ -10,7 +10,12 @@ import {
   FileText, Download, Printer, RefreshCw, Brain,
   CheckCircle2, AlertTriangle, XCircle, Star, TrendingUp,
   Users, Clock, Shield, ChevronRight, Target, Zap,
+  Phone, MessageSquare, Eye, Activity,
 } from "lucide-react";
+import { getSessionMetricsForSimulation, bridgeSessionToScoring } from "@/actions/simulation/session-bridge-actions";
+import type { ParticipantV2Metrics } from "@/actions/simulation/session-bridge-actions";
+import { getSimulationAnalysis, runFullAnalysis } from "@/actions/simulation/analysis-actions";
+import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface ReportData {
@@ -143,6 +148,43 @@ export default function SimulationFinalReport({ simulationId }: { simulationId: 
   const [stats, setStats] = useState<Stats | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [v2Data, setV2Data] = useState<{
+    session: { id: string; title: string; startedAt: Date | null; endedAt: Date | null } | null;
+    participantMetrics: ParticipantV2Metrics[];
+    teamMetrics: { avgReadRate: number; avgReplyRate: number; avgReplyTimeSeconds: number | null; totalCalls: number; answeredCalls: number; missedCriticals: number };
+  } | null>(null);
+  const [analysisData, setAnalysisData] = useState<unknown>(null);
+  const [isBridging, setIsBridging] = useState(false);
+
+  // Load v2 metrics + analysis data on mount
+  useEffect(() => {
+    getSessionMetricsForSimulation(simulationId).then(r => {
+      if (r.success && r.data) setV2Data(r.data);
+    });
+    getSimulationAnalysis(simulationId).then(r => {
+      if (r.success) setAnalysisData(r.data);
+    });
+  }, [simulationId]);
+
+  async function handleFullAnalysis() {
+    setIsBridging(true);
+    toast.info("Pipeline d'analyse complet en cours...");
+    if (v2Data?.session?.id) {
+      const br = await bridgeSessionToScoring(v2Data.session.id, simulationId);
+      if (!br.success) { toast.error("Sync échouée: " + br.error); setIsBridging(false); return; }
+      toast.success("Session v2 synchronisée");
+    }
+    const ar = await runFullAnalysis(simulationId);
+    if (ar.success) {
+      toast.success("Scores calculés");
+      const refreshed = await getSimulationAnalysis(simulationId);
+      if (refreshed.success) setAnalysisData(refreshed.data);
+      const v2r = await getSessionMetricsForSimulation(simulationId);
+      if (v2r.success && v2r.data) setV2Data(v2r.data);
+    }
+    setIsBridging(false);
+    generateReport();
+  }
 
   async function generateReport() {
     setIsGenerating(true);
@@ -217,10 +259,18 @@ export default function SimulationFinalReport({ simulationId }: { simulationId: 
                 </span>
               ))}
             </div>
-            <Button onClick={generateReport} disabled={isGenerating} size="lg" className="gap-2">
-              {isGenerating ? <RefreshCw className="h-5 w-5 animate-spin" /> : <Brain className="h-5 w-5" />}
-              {isGenerating ? "Analyse IA en cours (1–2 min)..." : "Générer le rapport complet"}
-            </Button>
+            <div className="flex flex-wrap justify-center gap-3">
+              {v2Data?.session && (
+                <Button onClick={handleFullAnalysis} disabled={isGenerating || isBridging} size="lg" className="gap-2 bg-orange-600 hover:bg-orange-700">
+                  {isBridging || isGenerating ? <RefreshCw className="h-5 w-5 animate-spin" /> : <Zap className="h-5 w-5" />}
+                  {isBridging ? "Synchronisation..." : isGenerating ? "Analyse IA..." : "Pipeline complet (v2 → Scores → Rapport)"}
+                </Button>
+              )}
+              <Button onClick={generateReport} disabled={isGenerating || isBridging} size="lg" variant="outline" className="gap-2">
+                {isGenerating ? <RefreshCw className="h-5 w-5 animate-spin" /> : <Brain className="h-5 w-5" />}
+                {isGenerating ? "Analyse IA en cours (1–2 min)..." : "Rapport depuis données v1"}
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -275,6 +325,9 @@ export default function SimulationFinalReport({ simulationId }: { simulationId: 
             {[
               { label: "Score équipe", value: score != null ? `${score}/100` : "—", color: score != null ? S(score) : "#888" },
               { label: "Conformité plan", value: conformiteRate != null ? `${conformiteRate}%` : "—", color: conformiteRate != null ? S(conformiteRate) : "#888" },
+              { label: "Taux de lecture", value: v2Data ? `${v2Data.teamMetrics.avgReadRate}%` : "—", color: v2Data ? S(v2Data.teamMetrics.avgReadRate) : "#888" },
+              { label: "Taux de réponse", value: v2Data ? `${v2Data.teamMetrics.avgReplyRate}%` : "—", color: v2Data ? S(v2Data.teamMetrics.avgReplyRate) : "#888" },
+              { label: "Délai moy. réponse", value: v2Data?.teamMetrics.avgReplyTimeSeconds ? `${v2Data.teamMetrics.avgReplyTimeSeconds}s` : "—", color: v2Data?.teamMetrics.avgReplyTimeSeconds && v2Data.teamMetrics.avgReplyTimeSeconds <= 120 ? "#0F6E56" : "#854F0B" },
               { label: "Délai moy. réaction", value: stats?.avgReaction != null ? `${stats.avgReaction} min` : "—", color: "#185FA5" },
               { label: "Participants", value: stats?.participants ?? "—", color: "#534AB7" },
             ].map(s => (
@@ -311,6 +364,83 @@ export default function SimulationFinalReport({ simulationId }: { simulationId: 
       <Card className="shadow-sm">
         <CardContent className="p-5">
           <SectionHeader num={3} title="Analyse de la réponse par inject" icon={Zap} />
+          {/* ─── V2 Behavioral Metrics ─────────────────────────────────── */}
+          {v2Data && v2Data.participantMetrics.length > 0 && (
+            <Card className="shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-blue-600" />
+                  Métriques comportementales — données temps réel
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">Délais de réponse réels · Taux de lecture · Appels Twilio</p>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b bg-muted/30">
+                        {["Participant","Rôle","Lecture","Réponses","Délai moy.","Appels","Critiques manqués"].map(h => (
+                          <th key={h} className="text-left p-2 font-semibold text-muted-foreground">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {v2Data.participantMetrics.map((pm: ParticipantV2Metrics) => (
+                        <tr key={pm.participantId} className="border-b hover:bg-muted/20">
+                          <td className="p-2 font-medium">{pm.displayName}</td>
+                          <td className="p-2 text-muted-foreground text-xs">{pm.role}</td>
+                          <td className="p-2">
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-12 bg-gray-100 rounded-full h-1.5 flex-shrink-0">
+                                <div className="h-1.5 rounded-full transition-all" style={{ width: `${pm.readRate}%`, background: S(pm.readRate) }} />
+                              </div>
+                              <span className="font-semibold" style={{ color: S(pm.readRate) }}>{pm.readRate}%</span>
+                            </div>
+                          </td>
+                          <td className="p-2">
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-12 bg-gray-100 rounded-full h-1.5 flex-shrink-0">
+                                <div className="h-1.5 rounded-full" style={{ width: `${pm.replyRate}%`, background: S(pm.replyRate) }} />
+                              </div>
+                              <span className="font-semibold" style={{ color: S(pm.replyRate) }}>{pm.replyRate}%</span>
+                            </div>
+                          </td>
+                          <td className="p-2">
+                            {pm.avgReplyTimeSeconds !== null ? (
+                              <span className="font-medium" style={{ color: pm.avgReplyTimeSeconds <= 120 ? "#0F6E56" : pm.avgReplyTimeSeconds <= 300 ? "#854F0B" : "#A32D2D" }}>
+                                {pm.avgReplyTimeSeconds < 60 ? `${pm.avgReplyTimeSeconds}s` : `${Math.round(pm.avgReplyTimeSeconds/60)}min`}
+                              </span>
+                            ) : <span className="text-muted-foreground">—</span>}
+                          </td>
+                          <td className="p-2">
+                            {pm.totalCalls > 0 ? (
+                              <span className="font-medium" style={{ color: pm.callAnswerRate >= 80 ? "#0F6E56" : "#A32D2D" }}>
+                                {pm.answeredCalls}/{pm.totalCalls}
+                              </span>
+                            ) : <span className="text-muted-foreground">—</span>}
+                          </td>
+                          <td className="p-2 text-center">
+                            {pm.criticalMessagesMissed > 0 ? (
+                              <span className="inline-flex items-center gap-1 text-red-600 font-bold">
+                                <AlertTriangle className="h-3 w-3" />{pm.criticalMessagesMissed}
+                              </span>
+                            ) : <span className="text-green-600">✓</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {v2Data.teamMetrics.missedCriticals > 0 && (
+                  <div className="mt-3 flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                    <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                    <strong>{v2Data.teamMetrics.missedCriticals}</strong> message(s) CRITIQUE(S) non lu(s) pendant la simulation
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {report.analyseReponseParInject.length > 0 ? (
             report.analyseReponseParInject.map((inj, i) => (
               <InjectCard key={i} inj={inj} index={i} />

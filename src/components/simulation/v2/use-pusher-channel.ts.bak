@@ -1,0 +1,168 @@
+"use client";
+
+import { useEffect, useRef, useCallback } from "react";
+
+// Dynamic import of pusher-js to avoid SSR issues
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type PusherInstance = any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ChannelInstance = any;
+
+export const SIM_EVENTS = {
+  NEW_MESSAGE: "new-message",
+  MESSAGE_EXPIRED: "message-expired",
+  SESSION_STATUS: "session-status",
+  INCOMING_CALL: "incoming-call",
+  CALL_UPDATED: "call-updated",
+  FLASH_ALERT: "flash-alert",
+  PARTICIPANT_JOINED: "participant-joined",
+  PARTICIPANT_LEFT: "participant-left",
+  MESSAGE_READ: "message-read",
+  REPLY_SENT: "reply-sent",
+  CALL_ANSWERED: "call-answered",
+  CALL_DECLINED: "call-declined",
+  INJECT_SENT: "inject_sent",
+} as const;
+
+interface UsePusherChannelOptions {
+  sessionId: string;
+  participantId?: string;
+  isInstructor?: boolean;
+  onNewMessage?: (data: unknown) => void;
+  onFlashAlert?: (data: unknown) => void;
+  onSessionStatus?: (data: unknown) => void;
+  onIncomingCall?: (data: unknown) => void;
+  onCallUpdated?: (data: unknown) => void;
+  onMessageRead?: (data: unknown) => void;
+  onReplySent?: (data: unknown) => void;
+  onParticipantJoined?: (data: unknown) => void;
+  onParticipantLeft?: (data: unknown) => void;
+  onInjectSent?: (data: unknown) => void;
+  onFormAvailable?: (data: unknown) => void;
+}
+
+export function usePusherChannel({
+  sessionId,
+  participantId,
+  isInstructor,
+  onNewMessage,
+  onFlashAlert,
+  onSessionStatus,
+  onIncomingCall,
+  onCallUpdated,
+  onMessageRead,
+  onReplySent,
+  onParticipantJoined,
+  onParticipantLeft,
+  onInjectSent,
+  onFormAvailable,
+}: UsePusherChannelOptions) {
+  const pusherRef = useRef<PusherInstance>(null);
+  const channelsRef = useRef<ChannelInstance[]>([]);
+
+  const cleanup = useCallback(() => {
+    channelsRef.current.forEach((ch) => {
+      try {
+        ch.unbind_all();
+      } catch {}
+    });
+    channelsRef.current = [];
+    if (pusherRef.current) {
+      try {
+        pusherRef.current.disconnect();
+      } catch {}
+      pusherRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    // Only run client-side
+    if (typeof window === "undefined") return;
+
+    const key = process.env.NEXT_PUBLIC_PUSHER_KEY;
+    const cluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER || "eu";
+
+    if (!key) {
+      console.warn("NEXT_PUBLIC_PUSHER_KEY not set — using polling fallback");
+      return;
+    }
+
+    // Dynamic import
+    import("pusher-js")
+      .then((PusherModule) => {
+        const Pusher = PusherModule.default;
+
+        const pusher = new Pusher(key, {
+          cluster,
+          authEndpoint: "/api/simulation/pusher/auth",
+        });
+        pusherRef.current = pusher;
+
+        // Subscribe to channels
+        const channelsToSubscribe: string[] = [];
+
+        // Session-wide channel (everyone)
+        channelsToSubscribe.push(`sim-session-${sessionId}`);
+
+        // Participant-specific channel
+        if (participantId && !isInstructor) {
+          channelsToSubscribe.push(
+            `sim-participant-${sessionId}-${participantId}`,
+          );
+        }
+
+        // Instructor channel
+        if (isInstructor) {
+          channelsToSubscribe.push(`sim-instructor-${sessionId}`);
+        }
+
+        channelsToSubscribe.forEach((channelName) => {
+          const channel = pusher.subscribe(channelName);
+          channelsRef.current.push(channel);
+
+          // Bind events
+          if (onNewMessage) {
+            channel.bind(SIM_EVENTS.NEW_MESSAGE, onNewMessage);
+          }
+          if (onFlashAlert) {
+            channel.bind(SIM_EVENTS.FLASH_ALERT, onFlashAlert);
+          }
+          if (onSessionStatus) {
+            channel.bind(SIM_EVENTS.SESSION_STATUS, onSessionStatus);
+          }
+          if (onIncomingCall) {
+            channel.bind(SIM_EVENTS.INCOMING_CALL, onIncomingCall);
+          }
+          if (onCallUpdated) {
+            channel.bind(SIM_EVENTS.CALL_UPDATED, onCallUpdated);
+          }
+          if (onMessageRead) {
+            channel.bind(SIM_EVENTS.MESSAGE_READ, onMessageRead);
+          }
+          if (onReplySent) {
+            channel.bind(SIM_EVENTS.REPLY_SENT, onReplySent);
+          }
+          if (onParticipantJoined) {
+            channel.bind(SIM_EVENTS.PARTICIPANT_JOINED, onParticipantJoined);
+          }
+          if (onParticipantLeft) {
+            channel.bind(SIM_EVENTS.PARTICIPANT_LEFT, onParticipantLeft);
+          }
+          if (onInjectSent) {
+            channel.bind(SIM_EVENTS.INJECT_SENT, onInjectSent);
+          }
+          if (onFormAvailable) {
+            channel.bind("form_available", onFormAvailable);
+          }
+        });
+      })
+      .catch((err) => {
+        console.warn("Pusher load failed:", err);
+      });
+
+    return cleanup;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, participantId, isInstructor]);
+
+  return { cleanup };
+}

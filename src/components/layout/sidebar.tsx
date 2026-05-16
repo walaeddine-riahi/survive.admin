@@ -45,26 +45,54 @@ const routes: Route[] = [
     title: "Simulation",
     icon: PlayCircle,
     children: [
-      { title: "Liste des simulations", href: "/simulation", rolesRequired: ["ADMIN"] },
-      { title: "Créer simulation", href: "/simulation/create", rolesRequired: ["ADMIN"] },
+      {
+        title: "Liste des simulations",
+        href: "/simulation",
+        rolesRequired: ["ADMIN"],
+      },
+      {
+        title: "Créer simulation",
+        href: "/simulation/create",
+        rolesRequired: ["ADMIN"],
+      },
       { title: "Scénarios", href: "/scenario", rolesRequired: ["ADMIN"] },
       { title: "Injections", href: "/injections", rolesRequired: ["ADMIN"] },
-      { title: "Mode Participant", href: "/participant-mode", rolesRequired: ["ADMIN", "USER"] },
-      { title: "Participations", href: "/participations", rolesRequired: ["ADMIN"] },
+      {
+        title: "Mode Participant",
+        href: "/participant-mode",
+        rolesRequired: ["ADMIN", "USER"],
+      },
+      {
+        title: "Participations",
+        href: "/participations",
+        rolesRequired: ["ADMIN"],
+      },
     ],
   },
   {
     title: "Instructeur",
     icon: Presentation,
     children: [
-      { title: "Vue Instructeur", href: "/instructor-simulations", rolesRequired: ["ADMIN"] },
+      {
+        title: "Vue Instructeur",
+        href: "/instructor-simulations",
+        rolesRequired: ["ADMIN"],
+      },
       { title: "Gestion d'équipes", href: "/team", rolesRequired: ["ADMIN"] },
       { title: "Liste des équipes", href: "/teams", rolesRequired: ["ADMIN"] },
-      { title: "Membres d'équipe", href: "/team-members", rolesRequired: ["ADMIN"] },
+      {
+        title: "Membres d'équipe",
+        href: "/team-members",
+        rolesRequired: ["ADMIN"],
+      },
       { title: "Chat d'équipe", href: "/team-chat", rolesRequired: ["ADMIN"] },
       { title: "Gestion des tâches", href: "/task", rolesRequired: ["ADMIN"] },
       { title: "Incidents", href: "/incident", rolesRequired: ["ADMIN"] },
-      { title: "Créer incident", href: "/incident/create", rolesRequired: ["ADMIN"] },
+      {
+        title: "Créer incident",
+        href: "/incident/create",
+        rolesRequired: ["ADMIN"],
+      },
       { title: "Rapports", href: "/report", rolesRequired: ["ADMIN"] },
     ],
   },
@@ -72,12 +100,28 @@ const routes: Route[] = [
     title: "BIA",
     icon: BarChart3,
     children: [
-      { title: "Dashboard BIA", href: "/bia/dashboard", rolesRequired: ["ADMIN"] },
+      {
+        title: "Dashboard BIA",
+        href: "/bia/dashboard",
+        rolesRequired: ["ADMIN"],
+      },
       { title: "Liste des processus", href: "/bia", rolesRequired: ["ADMIN"] },
-      { title: "Nouveau processus", href: "/bia/processes/new", rolesRequired: ["ADMIN"] },
-      { title: "Usines / Factories", href: "/bia/factories", rolesRequired: ["ADMIN"] },
+      {
+        title: "Nouveau processus",
+        href: "/bia/processes/new",
+        rolesRequired: ["ADMIN"],
+      },
+      {
+        title: "Usines / Factories",
+        href: "/bia/factories",
+        rolesRequired: ["ADMIN"],
+      },
       { title: "Rapports BIA", href: "/bia/reports", rolesRequired: ["ADMIN"] },
-      { title: "Résumé de Document", href: "/document-summary", rolesRequired: ["ADMIN"] },
+      {
+        title: "Résumé de Document",
+        href: "/document-summary",
+        rolesRequired: ["ADMIN"],
+      },
       { title: "Conformité", href: "/compliance", rolesRequired: ["ADMIN"] },
       { title: "Gestion des risques", href: "/risk", rolesRequired: ["ADMIN"] },
     ],
@@ -90,16 +134,32 @@ const routes: Route[] = [
       { title: "Formations", href: "/training", rolesRequired: ["ADMIN"] },
       { title: "Plans d'action", href: "/plan", rolesRequired: ["ADMIN"] },
       { title: "Types de plans", href: "/plan-type", rolesRequired: ["ADMIN"] },
-      { title: "Événements", href: "/participations", rolesRequired: ["ADMIN"] },
-      { title: "Notifications", href: "/notifications", rolesRequired: ["ADMIN"] },
+      {
+        title: "Événements",
+        href: "/participations",
+        rolesRequired: ["ADMIN"],
+      },
+      {
+        title: "Notifications",
+        href: "/notifications",
+        rolesRequired: ["ADMIN"],
+      },
     ],
   },
   {
     title: "Profil",
     icon: User,
     children: [
-      { title: "Mon Profil", href: "/profile", rolesRequired: ["ADMIN", "USER"] },
-      { title: "Paramètres", href: "/settings", rolesRequired: ["ADMIN", "USER"] },
+      {
+        title: "Mon Profil",
+        href: "/profile",
+        rolesRequired: ["ADMIN", "USER"],
+      },
+      {
+        title: "Paramètres",
+        href: "/settings",
+        rolesRequired: ["ADMIN", "USER"],
+      },
     ],
   },
   {
@@ -141,7 +201,9 @@ export function Sidebar({
       .filter((route) => canAccessRoute(route.rolesRequired))
       .map((route) => ({
         ...route,
-        children: route.children ? getFilteredChildren(route.children) : undefined,
+        children: route.children
+          ? getFilteredChildren(route.children)
+          : undefined,
       }))
       .filter((route) => !route.children || route.children.length > 0);
   };
@@ -162,13 +224,14 @@ export function Sidebar({
 
   const filteredRoutes = getFilteredRoutes();
 
-  const btnIconStyle = "flex items-center gap-[10px] px-3 py-2 rounded-[8px] text-[14px] transition-[var(--transition)] cursor-pointer w-full text-left";
+  const btnIconStyle =
+    "flex items-center gap-[10px] px-3 py-2 rounded-[8px] text-[14px] transition-[var(--transition)] cursor-pointer w-full text-left";
 
   return (
     <div
       className={cn(
         "fixed inset-y-0 left-0 z-40 w-[220px] transform bg-[var(--bg-secondary)] border-r border-[var(--border)] transition-transform duration-300 ease-in-out md:translate-x-0",
-        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full",
       )}
     >
       <div className="flex h-full flex-col p-[var(--s4)] gap-[var(--s2)]">
@@ -179,8 +242,12 @@ export function Sidebar({
               <Sparkles size={16} color="white" strokeWidth={1.5} />
             </div>
             <div className="flex flex-col">
-              <span className="font-bold text-[13px] tracking-tight text-[#FAFAF9] leading-tight">SURVIVE</span>
-              <span className="text-[10px] uppercase tracking-[0.1em] text-[#78716C]">Resilience</span>
+              <span className="font-bold text-[13px] tracking-tight text-[#FAFAF9] leading-tight">
+                SURVIVE
+              </span>
+              <span className="text-[10px] uppercase tracking-[0.1em] text-[#78716C]">
+                Resilience
+              </span>
             </div>
           </Link>
         </div>
@@ -196,28 +263,33 @@ export function Sidebar({
                       onClick={() => handleMenuClick(route.title)}
                       className={cn(
                         btnIconStyle,
-                        isChildActive(route.children) || openMenuId === route.title
+                        isChildActive(route.children) ||
+                          openMenuId === route.title
                           ? "bg-[var(--bg-hover)] text-[var(--text-primary)] border-l-2 border-[var(--accent)] rounded-l-none pl-[10px]"
-                          : "text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
+                          : "text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]",
                       )}
                     >
                       <div className="flex items-center gap-[10px] flex-1">
-                        <route.icon 
-                          size={16} 
-                          strokeWidth={1.5} 
+                        <route.icon
+                          size={16}
+                          strokeWidth={1.5}
                           className={cn(
                             "shrink-0",
-                            isChildActive(route.children) ? "text-[#D97706]" : "text-[#A8A29E]"
-                          )} 
+                            isChildActive(route.children)
+                              ? "text-[#D97706]"
+                              : "text-[#A8A29E]",
+                          )}
                         />
-                        <span className="truncate">{route.title}</span>
+                        <span className="truncate" suppressHydrationWarning>
+                          {route.title}
+                        </span>
                       </div>
                       <ChevronDown
                         size={14}
                         strokeWidth={1.5}
                         className={cn(
                           "transition-transform duration-300",
-                          openMenuId === route.title && "rotate-180"
+                          openMenuId === route.title && "rotate-180",
                         )}
                       />
                     </button>
@@ -231,37 +303,41 @@ export function Sidebar({
                               "block px-3 py-1.5 text-[13px] rounded-[8px] transition-[var(--transition)]",
                               isActive(child.href)
                                 ? "bg-[var(--bg-hover)] text-[var(--text-primary)] font-medium"
-                                : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]/50 hover:text-[var(--text-primary)]"
+                                : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]/50 hover:text-[var(--text-primary)]",
                             )}
                             onClick={() => setIsMobileMenuOpen(false)}
                           >
-                            {child.title}
+                            <span suppressHydrationWarning>{child.title}</span>
                           </Link>
                         ))}
                       </div>
                     )}
                   </>
                 ) : (
-                    <Link
-                      href={route.href || "#"}
+                  <Link
+                    href={route.href || "#"}
+                    className={cn(
+                      btnIconStyle,
+                      isActive(route.href || "")
+                        ? "bg-[var(--bg-hover)] text-[var(--text-primary)] border-l-2 border-[var(--accent)] rounded-l-none pl-[10px]"
+                        : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]/10 hover:text-[var(--text-primary)]",
+                    )}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <route.icon
+                      size={16}
+                      strokeWidth={1.5}
                       className={cn(
-                        btnIconStyle,
+                        "shrink-0",
                         isActive(route.href || "")
-                          ? "bg-[var(--bg-hover)] text-[var(--text-primary)] border-l-2 border-[var(--accent)] rounded-l-none pl-[10px]"
-                          : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]/10 hover:text-[var(--text-primary)]"
+                          ? "text-[var(--accent)]"
+                          : "text-[var(--text-secondary)]",
                       )}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      <route.icon 
-                        size={16} 
-                        strokeWidth={1.5} 
-                        className={cn(
-                          "shrink-0",
-                          isActive(route.href || "") ? "text-[var(--accent)]" : "text-[var(--text-secondary)]"
-                        )} 
-                      />
-                      <span className="truncate">{route.title}</span>
-                    </Link>
+                    />
+                    <span className="truncate" suppressHydrationWarning>
+                      {route.title}
+                    </span>
+                  </Link>
                 )}
               </div>
             ))}
@@ -275,12 +351,19 @@ export function Sidebar({
               {session?.user?.name?.charAt(0) || "A"}
             </div>
             <div className="flex flex-col truncate">
-              <span className="text-[13px] font-medium text-[var(--text-primary)] truncate leading-tight">{session?.user?.name || "Administrateur"}</span>
-              <span className="text-[11px] text-[var(--text-muted)] truncate">{session?.user?.email}</span>
+              <span className="text-[13px] font-medium text-[var(--text-primary)] truncate leading-tight">
+                {session?.user?.name || "Administrateur"}
+              </span>
+              <span className="text-[11px] text-[var(--text-muted)] truncate">
+                {session?.user?.email}
+              </span>
             </div>
           </div>
           <button
-            className={cn(btnIconStyle, "text-[var(--text-secondary)] hover:bg-red-500/10 hover:text-red-400 mt-1")}
+            className={cn(
+              btnIconStyle,
+              "text-[var(--text-secondary)] hover:bg-red-500/10 hover:text-red-400 mt-1",
+            )}
             onClick={() => {
               // Add logout logic if needed
             }}
