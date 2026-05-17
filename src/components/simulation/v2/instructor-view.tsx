@@ -540,7 +540,7 @@ export default function InstructorView({
               <Eye className="h-4 w-4" /> Briefing
             </Button>
           )}
-          {session.status === "BRIEFING" && (
+          {(session.status === "BRIEFING" || session.status === "ENDED") && (
             <Button size="sm" className="bg-green-700 hover:bg-green-800 gap-1 h-8"
               onClick={() => handleStatus("ACTIVE")}>
               <Play className="h-4 w-4" /> Démarrer
