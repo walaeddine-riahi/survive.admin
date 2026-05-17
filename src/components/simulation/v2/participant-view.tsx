@@ -125,7 +125,7 @@ class SoundEffects {
     }
   }
 
-  // Looping telephone ringtone
+  // Famous Nokia Tune Polyphonic Ringtone Synthesizer
   startPhoneRingtone() {
     try {
       const ctx = this.initCtx();
@@ -135,51 +135,71 @@ class SoundEffects {
 
       const playRing = () => {
         const now = ctx.currentTime;
-        const osc1 = ctx.createOscillator();
-        const osc2 = ctx.createOscillator();
-        const gainNode = ctx.createGain();
-        
-        const lfo = ctx.createOscillator();
-        const lfoGain = ctx.createGain();
-        lfo.frequency.value = 15; 
-        lfoGain.gain.value = 30; 
 
-        osc1.type = "sine";
-        osc1.frequency.value = 453; 
-        
-        osc2.type = "sine";
-        osc2.frequency.value = 440; 
-        
-        lfo.connect(lfoGain);
-        lfoGain.connect(osc1.frequency);
-        lfoGain.connect(osc2.frequency);
+        // Nokia Tune notes sequence (frequency + onset time + duration)
+        const notes = [
+          { time: 0.00, freq: 1318.51, dur: 0.12 }, // E6
+          { time: 0.12, freq: 1174.66, dur: 0.12 }, // D6
+          { time: 0.24, freq: 739.99,  dur: 0.24 }, // F#5
+          { time: 0.48, freq: 830.61,  dur: 0.24 }, // G#5
+          
+          { time: 0.72, freq: 1109.73, dur: 0.12 }, // C#6
+          { time: 0.84, freq: 987.77,  dur: 0.12 }, // B5
+          { time: 0.96, freq: 587.33,  dur: 0.24 }, // D5
+          { time: 1.20, freq: 659.25,  dur: 0.24 }, // E5
+          
+          { time: 1.44, freq: 987.77,  dur: 0.12 }, // B5
+          { time: 1.56, freq: 880.00,  dur: 0.12 }, // A5
+          { time: 1.68, freq: 554.37,  dur: 0.24 }, // C#5
+          { time: 1.92, freq: 659.25,  dur: 0.24 }, // E5
+          { time: 2.16, freq: 880.00,  dur: 0.48 }  // A5
+        ];
 
-        osc1.connect(gainNode);
-        osc2.connect(gainNode);
-        gainNode.connect(ctx.destination);
+        notes.forEach(note => {
+          // Main digital polyphonic tone (Sine wave)
+          const oscNode = ctx.createOscillator();
+          const gainNode = ctx.createGain();
+          
+          oscNode.type = "sine";
+          oscNode.frequency.setValueAtTime(note.freq, now + note.time);
+          
+          // Pure 2nd harmonic for polyphonic fullness (perfect fifth)
+          const oscHarmonic = ctx.createOscillator();
+          const gainHarmonic = ctx.createGain();
+          oscHarmonic.type = "sine";
+          oscHarmonic.frequency.setValueAtTime(note.freq * 1.5, now + note.time);
 
-        gainNode.gain.setValueAtTime(0, now);
-        gainNode.gain.linearRampToValueAtTime(0.12, now + 0.05);
-        gainNode.gain.setValueAtTime(0.12, now + 0.7);
-        gainNode.gain.setValueAtTime(0, now + 0.75);
-        gainNode.gain.linearRampToValueAtTime(0.12, now + 0.8);
-        gainNode.gain.setValueAtTime(0.12, now + 1.5);
-        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 1.6);
+          oscNode.connect(gainNode);
+          gainNode.connect(ctx.destination);
 
-        lfo.start(now);
-        osc1.start(now);
-        osc2.start(now);
+          oscHarmonic.connect(gainHarmonic);
+          gainHarmonic.connect(ctx.destination);
 
-        lfo.stop(now + 1.6);
-        osc1.stop(now + 1.6);
-        osc2.stop(now + 1.6);
+          // Envelope for main tone (sharp attack, linear decay)
+          gainNode.gain.setValueAtTime(0, now + note.time);
+          gainNode.gain.linearRampToValueAtTime(0.12, now + note.time + 0.01);
+          gainNode.gain.exponentialRampToValueAtTime(0.001, now + note.time + note.dur);
+
+          // Envelope for harmonic overtone (subtle, adds depth)
+          gainHarmonic.gain.setValueAtTime(0, now + note.time);
+          gainHarmonic.gain.linearRampToValueAtTime(0.04, now + note.time + 0.015);
+          gainHarmonic.gain.exponentialRampToValueAtTime(0.001, now + note.time + note.dur * 0.8);
+
+          // Start & Stop
+          oscNode.start(now + note.time);
+          oscNode.stop(now + note.time + note.dur + 0.05);
+          
+          oscHarmonic.start(now + note.time);
+          oscHarmonic.stop(now + note.time + note.dur + 0.05);
+        });
       };
 
       playRing();
 
+      // Loop the Nokia Tune every 3.8 seconds
       this.ringtoneInterval = setInterval(() => {
         playRing();
-      }, 3500);
+      }, 3800);
 
     } catch (e) {
       console.warn("Ringtone failed to start:", e);
