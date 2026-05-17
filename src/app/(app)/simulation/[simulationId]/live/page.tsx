@@ -3,6 +3,9 @@ import { getSimSession } from "@/actions/simulation/sim-session-actions";
 import ParticipantView from "@/components/simulation/v2/participant-view";
 import InstructorView from "@/components/simulation/v2/instructor-view";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function LiveSimPage({
   params,
   searchParams,
