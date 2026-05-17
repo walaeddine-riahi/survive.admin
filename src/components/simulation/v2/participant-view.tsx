@@ -9,13 +9,13 @@ import {
   Mail, Phone, MessageSquare, Bell, Zap, FileText,
   Globe, Radio, Send, CheckCircle2,
   Clock, PhoneIncoming, PhoneMissed, Mic, MicOff,
-  Shield, FileStack, ListTodo, MessageSquareText, Users,
+  Shield, FileStack, ListTodo, MessageSquareText, Users, Forward,
 } from "lucide-react";
 import CrisisLogPanel from "./crisis-log-panel";
 import CrisisDocsPanel from "./crisis-docs-panel";
 import ChatPanel from "./chat-panel";
 import ExternalChatPanel from "./external-chat-panel";
-import { replyToMessage, markMessageRead, logSimEvent, markParticipantConnected, updateCall } from "@/actions/simulation/sim-session-actions";
+import { replyToMessage, markMessageRead, logSimEvent, markParticipantConnected, updateCall, forwardSimMessage } from "@/actions/simulation/sim-session-actions";
 import { usePusherChannel } from "./use-pusher-channel";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -362,13 +362,18 @@ function cleanMessageBody(text: string): string {
 }
 
 // ─── Message Thread ───────────────────────────────────────────────────────────
-function MessageThread({ message, participantId, participantName, sessionId, onReplied }: {
+function MessageThread({ message, participantId, participantName, sessionId, onReplied, participants = [] }: {
   message: Msg; participantId: string; participantName: string;
-  sessionId: string; onReplied: () => void;
+  sessionId: string; onReplied: () => void; participants?: any[];
 }) {
   const [replyText, setReplyText] = useState("");
   const [showReply, setShowReply] = useState(false);
+  const [showForward, setShowForward] = useState(false);
+  const [forwardNote, setForwardNote] = useState("");
+  const [selectedForwardIds, setSelectedForwardIds] = useState<string[]>([]);
   const [isSending, setIsSending] = useState(false);
+  const [isForwarding, setIsForwarding] = useState(false);
+
   const cfg = CHANNEL_CONFIG[message.channel as keyof typeof CHANNEL_CONFIG];
   const Icon = cfg?.icon || Mail;
   const isRead = message.readByIds?.includes(participantId);
@@ -396,6 +401,30 @@ function MessageThread({ message, participantId, participantName, sessionId, onR
       toast.error("Erreur envoi réponse");
     }
     setIsSending(false);
+  }
+
+  async function handleForward() {
+    if (selectedForwardIds.length === 0 || isForwarding) return;
+    setIsForwarding(true);
+
+    const r = await forwardSimMessage({
+      messageId: message.id,
+      sessionId,
+      senderParticipantId: participantId,
+      senderParticipantName: participantName,
+      targetParticipantIds: selectedForwardIds,
+      noteText: forwardNote,
+    });
+
+    if (r.success) {
+      toast.success("Message transféré avec succès !");
+      setShowForward(false);
+      setForwardNote("");
+      setSelectedForwardIds([]);
+    } else {
+      toast.error(r.error || "Erreur lors du transfert");
+    }
+    setIsForwarding(false);
   }
 
   return (
@@ -495,7 +524,7 @@ function MessageThread({ message, participantId, participantName, sessionId, onR
             )}
 
             {/* Reply area */}
-            {showReply ? (
+            {showReply && (
               <div className="mt-3 space-y-2">
                 <Textarea
                   className="bg-gray-800 border-gray-700 text-white text-sm resize-none placeholder-gray-500"
@@ -521,15 +550,121 @@ function MessageThread({ message, participantId, participantName, sessionId, onR
                   </Button>
                 </div>
               </div>
-            ) : (
-              !hasReplied && (
+            )}
+
+            {/* Forward/Transfer area */}
+            {showForward && (
+              <div className="mt-4 p-3 bg-gray-950/60 rounded-xl border border-gray-800 space-y-3">
+                <div className="flex items-center justify-between border-b border-gray-800/80 pb-2">
+                  <p className="text-xs font-bold text-gray-200 flex items-center gap-1.5">
+                    <Forward className="h-3.5 w-3.5 text-blue-500" />
+                    Transférer ce message
+                  </p>
+                  {selectedForwardIds.length > 0 && (
+                    <button
+                      onClick={() => setSelectedForwardIds([])}
+                      className="text-[10px] text-blue-400 hover:text-blue-300 font-semibold"
+                    >
+                      Effacer la sélection
+                    </button>
+                  )}
+                </div>
+
+                {/* Participant list checkboxes */}
+                <div className="space-y-1.5">
+                  <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Sélectionner les destinataires</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[140px] overflow-y-auto pr-1">
+                    {participants
+                      .filter((p: any) => p.id !== participantId && !p.isInstructor && !p.isExternal)
+                      .map((p: any) => {
+                        const isChecked = selectedForwardIds.includes(p.id);
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => {
+                              if (isChecked) {
+                                setSelectedForwardIds(prev => prev.filter(id => id !== p.id));
+                              } else {
+                                setSelectedForwardIds(prev => [...prev, p.id]);
+                              }
+                            }}
+                            className={`flex items-center gap-2 p-2 rounded-lg border transition-all text-left ${
+                              isChecked
+                                ? "bg-blue-600/10 border-blue-500/40 text-blue-200"
+                                : "bg-gray-900/40 border-gray-800/60 hover:bg-gray-800 text-gray-400"
+                            }`}
+                          >
+                            <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0 transition-all ${
+                              isChecked ? "bg-blue-600 border-blue-500 text-white" : "border-gray-700 bg-gray-900"
+                            }`}>
+                              {isChecked && <span className="text-[9px] font-bold leading-none">✓</span>}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold truncate text-white">{p.displayName}</p>
+                              <p className="text-[9px] opacity-70 truncate">{p.role}</p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                  </div>
+                </div>
+
+                {/* Optional note */}
+                <div className="space-y-1.5">
+                  <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Note personnelle (optionnelle)</p>
+                  <Textarea
+                    className="bg-gray-800 border-gray-700 text-white text-xs resize-none placeholder-gray-500 min-h-[50px] max-h-[80px]"
+                    placeholder="Ajouter une note d'accompagnement..."
+                    value={forwardNote}
+                    onChange={e => setForwardNote(e.target.value)}
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 text-xs text-gray-400 hover:text-white"
+                    onClick={() => {
+                      setShowForward(false);
+                      setForwardNote("");
+                      setSelectedForwardIds([]);
+                    }}
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="h-8 text-xs text-white font-bold bg-blue-600 hover:bg-blue-700"
+                    disabled={selectedForwardIds.length === 0 || isForwarding}
+                    onClick={handleForward}
+                  >
+                    {isForwarding ? "Transfert..." : `Transférer (${selectedForwardIds.length})`}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Action buttons */}
+            {!showReply && !showForward && (
+              <div className="flex gap-2 mt-2">
+                {!hasReplied && (
+                  <Button size="sm" variant="ghost"
+                    className="h-8 text-xs gap-1.5 text-gray-400 hover:text-white hover:bg-gray-800 px-3"
+                    onClick={() => setShowReply(true)}>
+                    <Send className="h-3.5 w-3.5" />
+                    Répondre
+                  </Button>
+                )}
                 <Button size="sm" variant="ghost"
-                  className="mt-2 h-8 text-xs gap-1.5 text-gray-400 hover:text-white hover:bg-gray-800 px-3"
-                  onClick={() => setShowReply(true)}>
-                  <Send className="h-3.5 w-3.5" />
-                  Répondre
+                  className="h-8 text-xs gap-1.5 text-gray-400 hover:text-white hover:bg-gray-800 px-3"
+                  onClick={() => setShowForward(true)}>
+                  <Forward className="h-3.5 w-3.5 animate-pulse" />
+                  Transférer
                 </Button>
-              )
+              </div>
             )}
           </div>
         </div>
@@ -967,6 +1102,7 @@ export default function ParticipantView({
                     participantName={participant.displayName}
                     sessionId={session.id}
                     onReplied={() => {}}
+                    participants={participants}
                   />
                 </div>
               ))

@@ -488,6 +488,62 @@ export async function replyToMessage(input: {
   }
 }
 
+export async function forwardSimMessage(input: {
+  messageId: string;
+  sessionId: string;
+  senderParticipantId: string;
+  senderParticipantName: string;
+  targetParticipantIds: string[];
+  noteText?: string;
+}) {
+  try {
+    const originalMsg = await prisma.simMessage.findUnique({
+      where: { id: input.messageId },
+    });
+    if (!originalMsg) return { success: false, error: "Message original introuvable" };
+
+    const notePrefix = input.noteText?.trim() 
+      ? `[Transféré par ${input.senderParticipantName}] : ${input.noteText.trim()}\n\n---------- Message transféré ----------\n`
+      : `---------- Message transféré par ${input.senderParticipantName} ----------\n`;
+      
+    const forwardedBody = `${notePrefix}De: ${originalMsg.senderName}\nCanal: ${originalMsg.channel}\n\n${originalMsg.body}`;
+    const forwardedSubject = originalMsg.subject 
+      ? `Tr: ${originalMsg.subject}`
+      : `Tr: Message de ${originalMsg.senderName}`;
+
+    const result = await sendSimMessage({
+      sessionId: input.sessionId,
+      channel: originalMsg.channel,
+      priority: originalMsg.priority,
+      senderName: originalMsg.senderName,
+      senderEmail: originalMsg.senderEmail || undefined,
+      senderPhone: originalMsg.senderPhone || undefined,
+      recipientIds: input.targetParticipantIds,
+      isGroupMessage: false,
+      subject: forwardedSubject,
+      body: forwardedBody,
+      attachments: originalMsg.attachments || undefined,
+      isFromParticipant: true,
+      fromParticipantId: input.senderParticipantId,
+    });
+
+    if (result.success) {
+      await logSimEvent(input.sessionId, {
+        type: "message_forwarded",
+        actorId: input.senderParticipantId,
+        actorName: input.senderParticipantName,
+        targetId: input.messageId,
+        description: `${input.senderParticipantName} a transféré un message de ${originalMsg.senderName} à ${input.targetParticipantIds.length} participant(s)`,
+      });
+    }
+
+    return result;
+  } catch (error) {
+    console.error("forwardSimMessage error:", error);
+    return { success: false, error: "Erreur lors du transfert du message" };
+  }
+}
+
 // ─── Calls (Twilio + in-app) ──────────────────────────────────────────────────
 
 export async function initiateCall(input: {
