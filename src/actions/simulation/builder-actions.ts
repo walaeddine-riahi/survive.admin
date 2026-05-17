@@ -5,27 +5,40 @@ import { prisma } from "@/lib/prisma";
 import { BUILTIN_TEMPLATES, type InjectDef, type SimTemplate } from "@/lib/simulation/templates";
 import type { SimChannel, InjectPriority, InjectPhase } from "@/lib/simulation/templates";
 
+import OpenAI from "openai";
+
 // ─── Azure OpenAI ─────────────────────────────────────────────────────────────
 async function callAI(system: string, user: string, maxTokens = 3000): Promise<string> {
-  const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
-  const apiKey   = process.env.AZURE_OPENAI_API_KEY;
-  const deploy   = process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-4o";
-  const version  = process.env.AZURE_OPENAI_API_VERSION || "2024-02-15-preview";
+  let endpoint = process.env.AZURE_OPENAI_ENDPOINT;
+  let apiKey = process.env.AZURE_OPENAI_API_KEY;
+  const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-4o";
+
+  if (endpoint) endpoint = endpoint.replace(/^["']|["']$/g, "");
+  if (apiKey) apiKey = apiKey.replace(/^["']|["']$/g, "");
+
   if (!endpoint || !apiKey) throw new Error("Azure OpenAI non configuré");
-  const res = await fetch(
-    `${endpoint}openai/deployments/${deploy}/chat/completions?api-version=${version}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "api-key": apiKey },
-      body: JSON.stringify({
-        messages: [{ role: "system", content: system }, { role: "user", content: user }],
-        max_tokens: maxTokens, temperature: 0.4,
-      }),
-    }
-  );
-  if (!res.ok) throw new Error(`AI error ${res.status}`);
-  const d = await res.json();
-  return d.choices?.[0]?.message?.content || "";
+
+  const cleanEndpoint = endpoint.replace(/\/$/, "");
+  const client = new OpenAI({
+    apiKey: apiKey,
+    baseURL: `${cleanEndpoint}/openai/deployments/${deploymentName}`,
+    defaultQuery: {
+      "api-version": process.env.AZURE_OPENAI_API_VERSION || "2024-02-15-preview",
+    },
+    defaultHeaders: { "api-key": apiKey },
+  });
+
+  const response = await client.chat.completions.create({
+    model: deploymentName,
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
+    max_tokens: maxTokens,
+    temperature: 0.4,
+  });
+
+  return response.choices[0]?.message?.content || "";
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -539,7 +552,7 @@ export async function finalizeSimulation(simulationId: string): Promise<{
     // Create a SimSession linked to this simulation
     const simulation = await prisma.simulation.findUnique({
       where: { id: simulationId },
-      select: { title: true, startDate: true, durationMinutes: true, briefingText: true, scenarioContext: true },
+      select: { title: true, startDate: true, estimatedDuration: true, briefingText: true, scenarioContext: true },
     });
 
     const { randomBytes } = await import("crypto");
