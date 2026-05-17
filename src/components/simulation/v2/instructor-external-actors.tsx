@@ -36,7 +36,7 @@ export default function InstructorExternalActorsMonitor({
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [replyBody, setReplyBody] = useState("");
   const [replySubject, setReplySubject] = useState("");
-  const [replyChannel, setReplyChannel] = useState<"EMAIL" | "SMS" | "WHATSAPP">("EMAIL");
+  const [replyChannel, setReplyChannel] = useState<"EMAIL" | "SMS" | "WHATSAPP" | "CALL">("EMAIL");
   const [isReplying, setIsReplying] = useState(false);
 
   // Filter external actors
@@ -198,6 +198,7 @@ export default function InstructorExternalActorsMonitor({
     EMAIL: { label: "E-mail", icon: Mail, color: "#185FA5", bg: "bg-blue-950/40 text-blue-300" },
     SMS: { label: "SMS", icon: MessageSquare, color: "#0F6E56", bg: "bg-emerald-950/40 text-emerald-300" },
     WHATSAPP: { label: "WhatsApp", icon: MessageSquare, color: "#25D366", bg: "bg-green-950/40 text-green-300" },
+    CALL: { label: "Appel", icon: Phone, color: "#EA580C", bg: "bg-orange-950/40 text-orange-300" },
   };
 
   return (
