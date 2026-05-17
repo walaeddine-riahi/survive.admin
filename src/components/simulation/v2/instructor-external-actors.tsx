@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -81,6 +81,21 @@ export default function InstructorExternalActorsMonitor({
         })
         .sort((a, b) => new Date(a.triggeredAt).getTime() - new Date(b.triggeredAt).getTime())
     : [];
+
+  // Automatically update reply channel and subject when a new message is received in the active conversation
+  useEffect(() => {
+    if (conversationMessages.length > 0) {
+      const lastMsg = conversationMessages[conversationMessages.length - 1];
+      // Switch the reply channel to match the last message's channel
+      setReplyChannel(lastMsg.channel as any);
+      if (lastMsg.channel === "EMAIL") {
+        setReplySubject(lastMsg.subject ? (lastMsg.subject.startsWith("Re:") ? lastMsg.subject : `Re: ${lastMsg.subject}`) : "Re: Communication");
+      } else {
+        setReplySubject("");
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationMessages.length]);
 
   // Pre-fill last channel/subject when switching participants
   const handleSelectParticipant = (partId: string) => {
