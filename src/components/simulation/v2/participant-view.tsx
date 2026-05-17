@@ -125,7 +125,7 @@ class SoundEffects {
     }
   }
 
-  // Famous Nokia Tune Polyphonic Ringtone Synthesizer
+  // Modern Corporate Digital Office Ringtone (Teams-like clean chimes)
   startPhoneRingtone() {
     try {
       const ctx = this.initCtx();
@@ -136,70 +136,71 @@ class SoundEffects {
       const playRing = () => {
         const now = ctx.currentTime;
 
-        // Nokia Tune notes sequence (frequency + onset time + duration)
+        // Modern office digital melody notes
         const notes = [
-          { time: 0.00, freq: 1318.51, dur: 0.12 }, // E6
-          { time: 0.12, freq: 1174.66, dur: 0.12 }, // D6
-          { time: 0.24, freq: 739.99,  dur: 0.24 }, // F#5
-          { time: 0.48, freq: 830.61,  dur: 0.24 }, // G#5
-          
-          { time: 0.72, freq: 1109.73, dur: 0.12 }, // C#6
-          { time: 0.84, freq: 987.77,  dur: 0.12 }, // B5
-          { time: 0.96, freq: 587.33,  dur: 0.24 }, // D5
-          { time: 1.20, freq: 659.25,  dur: 0.24 }, // E5
-          
-          { time: 1.44, freq: 987.77,  dur: 0.12 }, // B5
-          { time: 1.56, freq: 880.00,  dur: 0.12 }, // A5
-          { time: 1.68, freq: 554.37,  dur: 0.24 }, // C#5
-          { time: 1.92, freq: 659.25,  dur: 0.24 }, // E5
-          { time: 2.16, freq: 880.00,  dur: 0.48 }  // A5
+          // First triplet bounce
+          { time: 0.00, freq: 932.33, dur: 0.08 },  // Bb5
+          { time: 0.08, freq: 1046.50, dur: 0.08 }, // C6
+          { time: 0.16, freq: 1396.91, dur: 0.15 }, // F6
+
+          { time: 0.35, freq: 932.33, dur: 0.08 },  // Bb5
+          { time: 0.43, freq: 1046.50, dur: 0.08 }, // C6
+          { time: 0.51, freq: 1396.91, dur: 0.25 }, // F6
+
+          // Ascending response
+          { time: 0.85, freq: 1046.50, dur: 0.08 }, // C6
+          { time: 0.93, freq: 1174.66, dur: 0.08 }, // D6
+          { time: 1.01, freq: 1567.98, dur: 0.30 }, // G6
+
+          // Secondary echo
+          { time: 1.50, freq: 1396.91, dur: 0.10 }, // F6
+          { time: 1.60, freq: 1174.66, dur: 0.10 }, // D6
+          { time: 1.70, freq: 1046.50, dur: 0.35 }  // C6
         ];
 
         notes.forEach(note => {
-          // Main digital polyphonic tone (Sine wave)
           const oscNode = ctx.createOscillator();
           const gainNode = ctx.createGain();
           
+          // Pure sine wave for a crystal-clear digital chime
           oscNode.type = "sine";
           oscNode.frequency.setValueAtTime(note.freq, now + note.time);
           
-          // Pure 2nd harmonic for polyphonic fullness (perfect fifth)
-          const oscHarmonic = ctx.createOscillator();
-          const gainHarmonic = ctx.createGain();
-          oscHarmonic.type = "sine";
-          oscHarmonic.frequency.setValueAtTime(note.freq * 1.5, now + note.time);
+          // Add a soft triangle sub-harmonic for fullness
+          const subOsc = ctx.createOscillator();
+          const subGain = ctx.createGain();
+          subOsc.type = "triangle";
+          subOsc.frequency.setValueAtTime(note.freq / 2, now + note.time);
 
           oscNode.connect(gainNode);
           gainNode.connect(ctx.destination);
 
-          oscHarmonic.connect(gainHarmonic);
-          gainHarmonic.connect(ctx.destination);
+          subOsc.connect(subGain);
+          subGain.connect(ctx.destination);
 
-          // Envelope for main tone (sharp attack, linear decay)
+          // Volume envelopes
           gainNode.gain.setValueAtTime(0, now + note.time);
-          gainNode.gain.linearRampToValueAtTime(0.12, now + note.time + 0.01);
+          gainNode.gain.linearRampToValueAtTime(0.12, now + note.time + 0.008);
           gainNode.gain.exponentialRampToValueAtTime(0.001, now + note.time + note.dur);
 
-          // Envelope for harmonic overtone (subtle, adds depth)
-          gainHarmonic.gain.setValueAtTime(0, now + note.time);
-          gainHarmonic.gain.linearRampToValueAtTime(0.04, now + note.time + 0.015);
-          gainHarmonic.gain.exponentialRampToValueAtTime(0.001, now + note.time + note.dur * 0.8);
+          subGain.gain.setValueAtTime(0, now + note.time);
+          subGain.gain.linearRampToValueAtTime(0.03, now + note.time + 0.015);
+          subGain.gain.exponentialRampToValueAtTime(0.001, now + note.time + note.dur);
 
-          // Start & Stop
           oscNode.start(now + note.time);
           oscNode.stop(now + note.time + note.dur + 0.05);
-          
-          oscHarmonic.start(now + note.time);
-          oscHarmonic.stop(now + note.time + note.dur + 0.05);
+
+          subOsc.start(now + note.time);
+          subOsc.stop(now + note.time + note.dur + 0.05);
         });
       };
 
       playRing();
 
-      // Loop the Nokia Tune every 3.8 seconds
+      // Loop every 2.8 seconds
       this.ringtoneInterval = setInterval(() => {
         playRing();
-      }, 3800);
+      }, 2800);
 
     } catch (e) {
       console.warn("Ringtone failed to start:", e);
