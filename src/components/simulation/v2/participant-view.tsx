@@ -33,6 +33,169 @@ const CHANNEL_CONFIG = {
   INTERNAL_RADIO:{ label: "Radio",         icon: Radio,         color: "#3B6D11", bg: "#EAF3DE" },
 } as const;
 
+// ─── Web Audio API Sound Synthesizer ──────────────────────────────────────────
+class SoundEffects {
+  private audioCtx: AudioContext | null = null;
+  private ringtoneInterval: NodeJS.Timeout | null = null;
+
+  private initCtx() {
+    if (!this.audioCtx) {
+      const AudioCtxClass = typeof window !== "undefined" && ((window as any).AudioContext || (window as any).webkitAudioContext);
+      if (AudioCtxClass) {
+        this.audioCtx = new AudioCtxClass();
+      }
+    }
+    if (this.audioCtx && this.audioCtx.state === "suspended") {
+      this.audioCtx.resume();
+    }
+    return this.audioCtx;
+  }
+
+  // Elegant two-tone chime for normal injects
+  playChime() {
+    try {
+      const ctx = this.initCtx();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+
+      // Tone 1
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.type = "sine";
+      osc1.frequency.setValueAtTime(587.33, now); // D5
+      gain1.gain.setValueAtTime(0, now);
+      gain1.gain.linearRampToValueAtTime(0.15, now + 0.05);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+      osc1.start(now);
+      osc1.stop(now + 0.5);
+
+      // Tone 2
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.type = "sine";
+      osc2.frequency.setValueAtTime(880, now + 0.12); // A5
+      gain2.gain.setValueAtTime(0, now + 0.12);
+      gain2.gain.linearRampToValueAtTime(0.15, now + 0.17);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+      osc2.start(now + 0.12);
+      osc2.stop(now + 0.65);
+    } catch (e) {
+      console.warn("Audio synthesis failed:", e);
+    }
+  }
+
+  // Urgent double siren beep for critical alerts
+  playCriticalAlarm() {
+    try {
+      const ctx = this.initCtx();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+
+      // Sound 1
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.type = "triangle";
+      osc1.frequency.setValueAtTime(880, now); // A5
+      gain1.gain.setValueAtTime(0, now);
+      gain1.gain.linearRampToValueAtTime(0.2, now + 0.05);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+      osc1.start(now);
+      osc1.stop(now + 0.35);
+
+      // Sound 2
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.type = "triangle";
+      osc2.frequency.setValueAtTime(880, now + 0.4); // A5
+      gain2.gain.setValueAtTime(0, now + 0.4);
+      gain2.gain.linearRampToValueAtTime(0.2, now + 0.45);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+      osc2.start(now + 0.4);
+      osc2.stop(now + 0.75);
+    } catch (e) {
+      console.warn("Audio synthesis failed:", e);
+    }
+  }
+
+  // Looping telephone ringtone
+  startPhoneRingtone() {
+    try {
+      const ctx = this.initCtx();
+      if (!ctx) return;
+
+      this.stopPhoneRingtone();
+
+      const playRing = () => {
+        const now = ctx.currentTime;
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        
+        const lfo = ctx.createOscillator();
+        const lfoGain = ctx.createGain();
+        lfo.frequency.value = 15; 
+        lfoGain.gain.value = 30; 
+
+        osc1.type = "sine";
+        osc1.frequency.value = 453; 
+        
+        osc2.type = "sine";
+        osc2.frequency.value = 440; 
+        
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc1.frequency);
+        lfoGain.connect(osc2.frequency);
+
+        osc1.connect(gainNode);
+        osc2.connect(gainNode);
+        gainNode.connect(ctx.destination);
+
+        gainNode.gain.setValueAtTime(0, now);
+        gainNode.gain.linearRampToValueAtTime(0.12, now + 0.05);
+        gainNode.gain.setValueAtTime(0.12, now + 0.7);
+        gainNode.gain.setValueAtTime(0, now + 0.75);
+        gainNode.gain.linearRampToValueAtTime(0.12, now + 0.8);
+        gainNode.gain.setValueAtTime(0.12, now + 1.5);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 1.6);
+
+        lfo.start(now);
+        osc1.start(now);
+        osc2.start(now);
+
+        lfo.stop(now + 1.6);
+        osc1.stop(now + 1.6);
+        osc2.stop(now + 1.6);
+      };
+
+      playRing();
+
+      this.ringtoneInterval = setInterval(() => {
+        playRing();
+      }, 3500);
+
+    } catch (e) {
+      console.warn("Ringtone failed to start:", e);
+    }
+  }
+
+  stopPhoneRingtone() {
+    if (this.ringtoneInterval) {
+      clearInterval(this.ringtoneInterval);
+      this.ringtoneInterval = null;
+    }
+  }
+}
+
+const sounds = new SoundEffects();
+
 function formatTime(d: string | Date) {
   return new Date(d).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 }
@@ -704,6 +867,7 @@ export default function ParticipantView({
     setIsConnected(true);
     return () => {
       markParticipantConnected(participant.id, false, session.id);
+      sounds.stopPhoneRingtone();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -746,6 +910,14 @@ export default function ParticipantView({
     }, []),
     onNewMessage: useCallback((data: unknown) => {
       const msg = data as Msg;
+      
+      // Play sound
+      if (msg.priority === "CRITICAL" || msg.priority === "HIGH") {
+        sounds.playCriticalAlarm();
+      } else {
+        sounds.playChime();
+      }
+
       setMessages(prev => {
         if (prev.some(m => m.id === msg.id)) return prev;
         // Toast notification
@@ -767,6 +939,7 @@ export default function ParticipantView({
     }, []),
     onFlashAlert: useCallback((data: unknown) => {
       const msg = data as Msg;
+      sounds.playCriticalAlarm();
       toast.error(`🚨 ALERTE CRITIQUE — ${msg.senderName}: ${msg.body}`, {
         duration: 30000,
       });
@@ -782,10 +955,14 @@ export default function ParticipantView({
     onIncomingCall: useCallback((data: unknown) => {
       const call = data as Call;
       setIncomingCall(call);
+      sounds.startPhoneRingtone();
     }, []),
     onCallUpdated: useCallback((data: unknown) => {
       const d = data as { callId: string; status: string };
-      if (d.status === "MISSED") setIncomingCall(null);
+      if (d.status === "MISSED") {
+        setIncomingCall(null);
+        sounds.stopPhoneRingtone();
+      }
     }, []),
   });
 
@@ -812,6 +989,9 @@ export default function ParticipantView({
             const newOnes = data.newMessages.filter((m: Msg) => !ids.has(m.id));
             if (newOnes.length > 0) {
               newOnes.forEach((m: Msg) => {
+                if (m.priority === "CRITICAL" || m.priority === "HIGH") sounds.playCriticalAlarm();
+                else sounds.playChime();
+
                 if (m.priority === "CRITICAL") toast.error(`🔴 URGENT — ${m.senderName}`, { duration: 12000 });
                 else if (m.priority === "HIGH") toast.warning(`⚠️ ${m.senderName}`, { duration: 7000 });
                 else toast.info(`📬 ${m.senderName}`);
@@ -831,7 +1011,10 @@ export default function ParticipantView({
         }
         if (data.newCalls?.length > 0) {
           data.newCalls.forEach((c: Call) => {
-            if (c.recipientId === participant.id && c.status === "RINGING") setIncomingCall(c);
+            if (c.recipientId === participant.id && c.status === "RINGING" && !incomingCall) {
+              setIncomingCall(c);
+              sounds.startPhoneRingtone();
+            }
           });
         }
         if (data.session?.status) setSessionStatus(data.session.status);
@@ -844,6 +1027,7 @@ export default function ParticipantView({
   }, [hasPusher]);
 
   async function handleAnswerCall(call: Call) {
+    sounds.stopPhoneRingtone();
     setIncomingCall(null);
     setActiveCall(call);
     
@@ -859,6 +1043,7 @@ export default function ParticipantView({
   }
 
   async function handleDeclineCall(call: Call) {
+    sounds.stopPhoneRingtone();
     setIncomingCall(null);
     await logSimEvent(session.id, {
       type: "call_declined",
