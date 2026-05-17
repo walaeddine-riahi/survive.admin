@@ -347,6 +347,7 @@ export default function ParticipantView({
 }) {
   const [messages, setMessages] = useState<Msg[]>(initialMessages);
   const [calls, setCalls] = useState<Call[]>(initialCalls);
+  const [participants, setParticipants] = useState<any[]>(session.participants || []);
   const [incomingCall, setIncomingCall] = useState<Call | null>(null);
   const [activeCall, setActiveCall] = useState<Call | null>(null);
   const [activeChannel, setActiveChannel] = useState<string>("ALL");
@@ -381,6 +382,28 @@ export default function ParticipantView({
     sessionId: session.id,
     participantId: participant.id,
     isInstructor: false,
+    onParticipantJoined: useCallback((data: unknown) => {
+      const d = data as { participantId: string; displayName: string; role: string; isExternal?: boolean; simEmail?: string; simPhone?: string; isConnected?: boolean };
+      if (d.isExternal) {
+        toast.info(`👤 Nouvel acteur externe disponible : ${d.displayName}`);
+      }
+      setParticipants(prev => {
+        const exists = prev.some(p => p.id === d.participantId);
+        if (exists) {
+          return prev.map(p => p.id === d.participantId ? { ...p, isConnected: true } : p);
+        }
+        const newP = {
+          id: d.participantId,
+          displayName: d.displayName,
+          role: d.role,
+          isExternal: d.isExternal || false,
+          simEmail: d.simEmail,
+          simPhone: d.simPhone,
+          isConnected: d.isConnected ?? true,
+        };
+        return [...prev, newP];
+      });
+    }, []),
     onNewMessage: useCallback((data: unknown) => {
       const msg = data as Msg;
       setMessages(prev => {
@@ -700,9 +723,9 @@ export default function ParticipantView({
           {/* Messages feed */}
           <div className={`flex-1 overflow-y-auto p-4 space-y-3 ${activeCall ? "pb-52" : ""} ${activeChannel === "CHAT" ? "p-0" : ""}`}>
             {activeChannel === "CHAT" ? (
-              <ChatPanel sessionId={session.id} participant={participant} allParticipants={session.participants || []} />
+              <ChatPanel sessionId={session.id} participant={participant} allParticipants={participants} />
             ) : activeChannel === "EXTERNAL_CHAT" ? (
-              <ExternalChatPanel sessionId={session.id} participant={participant} participants={session.participants || []} initialMessages={messages} />
+              <ExternalChatPanel sessionId={session.id} participant={participant} participants={participants} initialMessages={messages} />
             ) : activeChannel === "CRISIS_LOG" ? (
               <CrisisLogPanel sessionId={session.id} participant={participant} initialEntries={session.crisisLog || []} />
             ) : activeChannel === "CRISIS_DOCS" ? (

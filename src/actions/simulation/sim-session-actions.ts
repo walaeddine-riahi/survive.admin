@@ -163,6 +163,18 @@ export async function addExternalActor(sessionId: string, input: {
         simPhone,
       },
     });
+
+    // Notify everyone (participants + instructors) in real-time about the new actor
+    await pushToSession(sessionId, SIM_EVENTS.PARTICIPANT_JOINED, {
+      participantId: participant.id,
+      displayName: participant.displayName,
+      role: participant.role,
+      isExternal: true,
+      simEmail,
+      simPhone,
+      isConnected: true,
+    });
+
     revalidatePath("/simulation");
     return { success: true, data: participant };
   } catch (error) {

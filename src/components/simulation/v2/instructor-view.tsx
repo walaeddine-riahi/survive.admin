@@ -463,9 +463,24 @@ export default function InstructorView({
       setMessages(prev => prev.map((msg: Message) => msg.id !== d.messageId ? msg : { ...msg, status: msg.status === "REPLIED" ? "REPLIED" : "READ" }));
     }, []),
     onParticipantJoined: useCallback((data: unknown) => {
-      const d = data as { participantId: string; displayName: string; role: string };
-      toast.success(`👤 ${d.displayName} a rejoint la simulation`);
-      setParticipants(prev => prev.map(p => p.id === d.participantId ? { ...p, isConnected: true } : p));
+      const d = data as { participantId: string; displayName: string; role: string; isExternal?: boolean; simEmail?: string; simPhone?: string; isConnected?: boolean };
+      toast.success(`👤 ${d.displayName} ${d.isExternal ? "créé (externe)" : "a rejoint la simulation"}`);
+      setParticipants(prev => {
+        const exists = prev.some(p => p.id === d.participantId);
+        if (exists) {
+          return prev.map(p => p.id === d.participantId ? { ...p, isConnected: true } : p);
+        }
+        const newP = {
+          id: d.participantId,
+          displayName: d.displayName,
+          role: d.role,
+          isExternal: d.isExternal || false,
+          simEmail: d.simEmail,
+          simPhone: d.simPhone,
+          isConnected: d.isConnected ?? true,
+        };
+        return [...prev, newP];
+      });
     }, []),
     onParticipantLeft: useCallback((data: unknown) => {
       const d = data as { participantId: string; displayName: string };
