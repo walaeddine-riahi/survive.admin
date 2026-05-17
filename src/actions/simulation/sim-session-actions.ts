@@ -72,10 +72,32 @@ export async function updateSessionStatus(
   extra?: { startedAt?: boolean; endedAt?: boolean; pausedAt?: boolean }
 ) {
   try {
+    const currentSession = await prisma.simSession.findUnique({
+      where: { id: sessionId },
+      select: { status: true, startedAt: true, pausedAt: true, endedAt: true },
+    });
+
     const data: Record<string, unknown> = { status };
-    if (extra?.startedAt) data.startedAt = new Date();
-    if (extra?.endedAt) data.endedAt = new Date();
-    if (extra?.pausedAt) data.pausedAt = new Date();
+
+    if (status === "ACTIVE") {
+      if (currentSession?.status === "PAUSED" && currentSession.pausedAt && currentSession.startedAt) {
+        const pauseDuration = Date.now() - new Date(currentSession.pausedAt).getTime();
+        data.startedAt = new Date(new Date(currentSession.startedAt).getTime() + pauseDuration);
+        data.pausedAt = null;
+      } else if (currentSession?.status === "DEBRIEF" && currentSession.endedAt && currentSession.startedAt) {
+        const debriefDuration = Date.now() - new Date(currentSession.endedAt).getTime();
+        data.startedAt = new Date(new Date(currentSession.startedAt).getTime() + debriefDuration);
+        data.endedAt = null;
+      } else if (!currentSession?.startedAt || currentSession.status === "SETUP" || currentSession.status === "BRIEFING" || currentSession.status === "DEBRIEF") {
+        data.startedAt = new Date();
+        data.pausedAt = null;
+        data.endedAt = null;
+      }
+    } else if (status === "PAUSED") {
+      data.pausedAt = new Date();
+    } else if (status === "DEBRIEF" || status === "ENDED") {
+      data.endedAt = new Date();
+    }
 
     const session = await prisma.simSession.update({ where: { id: sessionId }, data });
 
@@ -83,7 +105,29 @@ export async function updateSessionStatus(
     await pushToSession(sessionId, SIM_EVENTS.SESSION_STATUS, {
       status,
       startedAt: session.startedAt,
+      pausedAt: session.pausedAt,
     });
+
+    if (status === "DEBRIEF") {
+      // Trigger background V2 bridging and AI scoring evaluation pipeline
+      (async () => {
+        try {
+          const { bridgeSessionToScoring } = await import("./session-bridge-actions");
+          const { createPostForm } = await import("./form-actions");
+
+          // 1. Create post-exercise questionnaire
+          await createPostForm(sessionId, session.simulationId);
+
+          // 2. Run bridging & AI scoring pipeline
+          await bridgeSessionToScoring(sessionId, session.simulationId);
+
+          // 3. Notify participants that score is fully computed and ready!
+          await pushToSession(sessionId, "score_ready", { ready: true });
+        } catch (e) {
+          console.error("[Debrief Background Pipeline] Error:", e);
+        }
+      })();
+    }
 
     await logSimEvent(sessionId, {
       type: `session_${status.toLowerCase()}`,
@@ -93,6 +137,7 @@ export async function updateSessionStatus(
     revalidatePath("/simulation");
     return { success: true, data: session };
   } catch (error) {
+    console.error("updateSessionStatus error:", error);
     return { success: false, error: "Erreur mise à jour statut" };
   }
 }

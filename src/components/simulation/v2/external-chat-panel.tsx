@@ -405,7 +405,7 @@ export default function ExternalChatPanel({
                           Objet : {msg.subject}
                         </p>
                       )}
-                      <p className="text-xs leading-relaxed whitespace-pre-wrap">
+                      <p className="text-xs leading-relaxed whitespace-pre-wrap break-all break-words">
                         {cleanMessageBody(msg.body)}
                       </p>
                       <MessageEmbeds text={msg.body} />

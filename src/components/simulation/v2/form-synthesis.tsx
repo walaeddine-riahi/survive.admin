@@ -3,18 +3,17 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import {
   ClipboardCheck, Download, Users, Sparkles,
-  BarChart3, ChevronDown, ChevronRight, CheckCircle2,
-  AlertTriangle, TrendingUp,
+  ChevronDown, ChevronRight, CheckCircle2,
+  AlertTriangle,
 } from "lucide-react";
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis,
-  PolarRadiusAxis, ResponsiveContainer, BarChart, Bar,
-  XAxis, YAxis, Tooltip, Cell,
+  PolarRadiusAxis, ResponsiveContainer,
 } from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import {
   getSessionForms, getFormWithResponses,
   closeForm, exportFormSynthesis,
@@ -29,25 +28,25 @@ function ScaleResult({ label, avg, distribution, max = 5 }: {
   label: string; avg?: number; distribution?: Record<string, number>; max?: number;
 }) {
   const pct = avg ? (avg / max) * 100 : 0;
-  const color = pct >= 80 ? "#0F6E56" : pct >= 60 ? "#185FA5" : pct >= 40 ? "#854F0B" : "#A32D2D";
+  const color = pct >= 80 ? "#10b981" : pct >= 60 ? "#3b82f6" : pct >= 40 ? "#f59e0b" : "#ef4444";
 
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground flex-1 mr-2">{label}</span>
+        <span className="text-gray-400 flex-1 mr-2">{label}</span>
         {avg !== undefined && (
-          <span className="font-bold" style={{ color }}>{avg}/{max}</span>
+          <span className="font-bold font-mono" style={{ color }}>{avg}/{max}</span>
         )}
       </div>
-      <div className="flex gap-0.5 h-5">
+      <div className="flex gap-1 h-5 bg-slate-950/40 p-0.5 rounded-xl border border-slate-900">
         {distribution && Object.entries(distribution).sort((a, b) => Number(a[0]) - Number(b[0])).map(([k, v]) => {
           const total = Object.values(distribution).reduce((s, n) => s + n, 0);
           const w = total > 0 ? (v / total) * 100 : 0;
           const level = Number(k) / max;
-          const c = level >= 0.8 ? "#0F6E56" : level >= 0.6 ? "#185FA5" : level >= 0.4 ? "#854F0B" : "#A32D2D";
+          const c = level >= 0.8 ? "#10b981" : level >= 0.6 ? "#3b82f6" : level >= 0.4 ? "#f59e0b" : "#ef4444";
           return (
-            <div key={k} className="rounded-sm" title={`${k}: ${v} réponse(s)`}
-              style={{ width: `${w}%`, background: c, minWidth: w > 0 ? "4px" : "0" }} />
+            <div key={k} className="rounded-lg transition-transform hover:scale-105" title={`${k}: ${v} réponse(s)`}
+              style={{ width: `${w}%`, background: c, minWidth: w > 0 ? "6px" : "0" }} />
           );
         })}
       </div>
@@ -63,33 +62,33 @@ function AggregateSection({ questions, agg, totalResponses }: {
   totalResponses: number;
 }) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {questions.map(q => {
         const a = agg[q.id];
         if (!a) return null;
 
         return (
-          <div key={q.id} className="border rounded-xl p-4">
-            <p className="text-sm font-medium mb-3">{q.label}</p>
+          <div key={q.id} className="bg-[#0e1726]/40 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4.5">
+            <p className="text-xs font-semibold text-gray-300 mb-3">{q.label}</p>
 
             {q.type === "SCALE" && a.avg !== undefined && (
               <ScaleResult label="" avg={a.avg} distribution={a.distribution} max={q.max || 5} />
             )}
 
             {(q.type === "SINGLE_CHOICE" || q.type === "MULTIPLE_CHOICE") && a.distribution && (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {Object.entries(a.distribution as Record<string, number>)
                   .sort((x, y) => (y[1] as number) - (x[1] as number))
                   .map(([opt, count]) => {
                     const pct = totalResponses > 0 ? Math.round(((count as number) / totalResponses) * 100) : 0;
                     return (
                       <div key={opt} className="flex items-center gap-3">
-                        <span className="text-xs flex-1 truncate">{opt}</span>
-                        <div className="w-24 bg-muted rounded-full h-1.5">
-                          <div className="h-1.5 rounded-full bg-blue-500"
+                        <span className="text-xs text-gray-400 flex-1 truncate">{opt}</span>
+                        <div className="w-24 bg-slate-950/60 rounded-full h-2 border border-slate-900 overflow-hidden flex-shrink-0">
+                          <div className="h-full rounded-full bg-gradient-to-r from-blue-600 to-cyan-500"
                             style={{ width: `${pct}%` }} />
                         </div>
-                        <span className="text-xs text-muted-foreground w-12 text-right">
+                        <span className="text-xs text-gray-500 w-16 text-right font-mono font-medium">
                           {count as number} ({pct}%)
                         </span>
                       </div>
@@ -101,20 +100,20 @@ function AggregateSection({ questions, agg, totalResponses }: {
             {q.type === "TEXT" && a.textResponses?.length > 0 && (
               <div className="space-y-2">
                 {(a.textResponses as string[]).slice(0, 4).map((t: string, i: number) => (
-                  <div key={i} className="text-xs text-muted-foreground bg-muted/40 rounded-lg p-2.5 italic">
+                  <div key={i} className="text-xs text-gray-300 bg-slate-950/30 border border-slate-900 rounded-xl p-3 italic">
                     "{t}"
                   </div>
                 ))}
                 {(a.textResponses as string[]).length > 4 && (
-                  <p className="text-xs text-muted-foreground">
-                    + {(a.textResponses as string[]).length - 4} autres réponses
+                  <p className="text-[11px] text-gray-500 font-medium pl-1">
+                    + {(a.textResponses as string[]).length - 4} autres réponses reçues
                   </p>
                 )}
               </div>
             )}
 
             {q.type === "RATING_GRID" && a.gridAvg && (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {Object.entries(a.gridAvg as Record<string, number>).map(([row, avg]) => (
                   <ScaleResult key={row} label={row} avg={avg} max={5} />
                 ))}
@@ -127,9 +126,19 @@ function AggregateSection({ questions, agg, totalResponses }: {
   );
 }
 
+const comparisonConfig = {
+  autoEval: {
+    label: "Auto-évaluation",
+    color: "#3b82f6",
+  },
+  aiScore: {
+    label: "Score IA",
+    color: "#10b981",
+  },
+} satisfies ChartConfig;
+
 // ─── Radar chart — auto-eval vs instructor score ───────────────────────────────
 function ComparisonRadar({ postAgg, participantScores }: { postAgg: AggResult; participantScores?: Record<string, number> }) {
-  // Extract self-assessment from post-05 (rating grid)
   const selfGrid = postAgg?.["post-05"]?.gridAvg as Record<string, number> | undefined;
   if (!selfGrid) return null;
 
@@ -149,28 +158,43 @@ function ComparisonRadar({ postAgg, participantScores }: { postAgg: AggResult; p
   }));
 
   return (
-    <div className="border rounded-xl p-4">
-      <p className="text-sm font-semibold mb-1">Auto-évaluation vs Score IA</p>
-      <p className="text-xs text-muted-foreground mb-3">
-        Comparaison entre la perception des participants et le scoring analytique
+    <div className="bg-[#0e1726]/40 backdrop-blur-md border border-slate-800/80 rounded-2xl p-5 shadow-md">
+      <p className="text-sm font-semibold text-gray-200 mb-1">Auto-évaluation de la cellule vs Score IA</p>
+      <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+        Comparaison radar entre la perception de l'équipe de crise et le scoring analytique automatisé
       </p>
-      <ResponsiveContainer width="100%" height={280}>
+      <ChartContainer config={comparisonConfig} className="mx-auto aspect-square max-h-[300px] w-full">
         <RadarChart data={data}>
+          <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
           <PolarGrid />
           <PolarAngleAxis dataKey="dimension" tick={{ fontSize: 10 }} />
           <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} />
-          <Radar name="Auto-évaluation" dataKey="autoEval" stroke="#185FA5" fill="#185FA5" fillOpacity={0.25} />
-          <Radar name="Score IA" dataKey="aiScore" stroke="#0F6E56" fill="#0F6E56" fillOpacity={0.25} />
+          <Radar
+            name="Auto-évaluation"
+            dataKey="autoEval"
+            stroke="var(--color-autoEval)"
+            fill="var(--color-autoEval)"
+            fillOpacity={0.2}
+            dot={{ r: 3, fillOpacity: 1 }}
+          />
+          <Radar
+            name="Score IA"
+            dataKey="aiScore"
+            stroke="var(--color-aiScore)"
+            fill="var(--color-aiScore)"
+            fillOpacity={0.2}
+            dot={{ r: 3, fillOpacity: 1 }}
+          />
         </RadarChart>
-      </ResponsiveContainer>
-      <div className="flex gap-4 justify-center text-xs">
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-blue-600" />
-          <span>Auto-évaluation (moy. équipe)</span>
+      </ChartContainer>
+      <div className="flex gap-6 justify-center text-xs pt-2">
+        <div className="flex items-center gap-2">
+          <div className="w-3.5 h-3.5 rounded-lg bg-blue-600 shadow-md shadow-blue-900/30" />
+          <span className="text-gray-300 font-semibold">Auto-évaluation (moy. équipe)</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-green-600" />
-          <span>Score IA</span>
+        <div className="flex items-center gap-2">
+          <div className="w-3.5 h-3.5 rounded-lg bg-emerald-600 shadow-md shadow-emerald-900/30" />
+          <span className="text-gray-300 font-semibold">Score Analytique IA</span>
         </div>
       </div>
     </div>
@@ -212,7 +236,6 @@ export default function FormSynthesisView({
     if (r.success) {
       toast.success("Formulaire fermé — résultats finalisés");
       getSessionForms(sessionId).then(r => { if (r.success && r.data) setForms(r.data as Form[]); });
-      // Reload details
       const r2 = await getFormWithResponses(formId);
       if (r2.success && r2.data) setFormDetails(prev => ({ ...prev, [formId]: r2.data }));
     }
@@ -237,112 +260,118 @@ export default function FormSynthesisView({
 
   if (forms.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground px-4">
-        <ClipboardCheck className="h-10 w-10 mb-3 opacity-20" />
-        <p className="text-sm">Aucun formulaire pour cette session</p>
-        <p className="text-xs mt-1">Les formulaires pré/post sont générés automatiquement</p>
+      <div className="flex flex-col items-center justify-center py-20 bg-slate-900/10 rounded-2xl border border-slate-850 border-dashed text-gray-500 px-4">
+        <ClipboardCheck className="h-10 w-10 mb-3 text-slate-700" />
+        <p className="text-gray-400 text-sm font-semibold">Aucun questionnaire généré</p>
+        <p className="text-gray-650 text-xs mt-1">Les questionnaires pré/post exercice s'afficheront ici automatiquement.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-4 max-w-4xl">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between pb-3 border-b border-slate-800/60 flex-shrink-0">
         <div>
-          <p className="text-sm font-semibold">Formulaires pré/post exercice</p>
-          <p className="text-xs text-muted-foreground">ISO 22301 §9.1 — Surveillance et mesure</p>
+          <p className="text-sm font-semibold text-gray-200">Questionnaires Pré/Post Exercice</p>
+          <p className="text-xs text-gray-500">ISO 22301 §9.1 — Surveillance, mesure, analyse et évaluation</p>
         </div>
-        <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5"
+        <Button size="sm" className="h-9 text-xs bg-slate-950 border border-slate-800 hover:border-slate-700 text-white rounded-xl gap-2 shadow-md shadow-black/20 transition-transform active:scale-95"
           onClick={handleExport} disabled={isExporting}>
           <Download className="h-3.5 w-3.5" />
-          {isExporting ? "Export..." : "Exporter synthèse"}
+          {isExporting ? "Exportation..." : "Exporter la synthèse"}
         </Button>
       </div>
 
       {/* Form cards */}
-      {forms.map(form => {
-        const isOpen = openFormId === form.id;
-        const detail = formDetails[form.id];
-        const responseCount = form._count?.responses || 0;
-        const agg = detail?.aggregateResults as AggResult | null;
-        const questions: QuestionDef[] = detail?.questions || form.questions || [];
+      <div className="space-y-3.5">
+        {forms.map(form => {
+          const isOpen = openFormId === form.id;
+          const detail = formDetails[form.id];
+          const responseCount = form._count?.responses || 0;
+          const agg = detail?.aggregateResults as AggResult | null;
+          const questions: QuestionDef[] = detail?.questions || form.questions || [];
 
-        return (
-          <div key={form.id} className="border rounded-xl overflow-hidden">
-            {/* Form header */}
-            <button
-              onClick={() => openForm(form.id)}
-              className="w-full flex items-center gap-3 p-4 text-left hover:bg-muted/20">
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                form.type === "PRE_EXERCISE" ? "bg-blue-100" : "bg-purple-100"
-              }`}>
-                {form.type === "PRE_EXERCISE"
-                  ? <ClipboardCheck className="h-5 w-5 text-blue-600" />
-                  : <Sparkles className="h-5 w-5 text-purple-600" />}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">{form.title}</p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <Badge className="text-xs" variant={form.isActive ? "default" : "outline"}>
-                    {form.isActive ? "🟢 Ouvert" : "⚫ Fermé"}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Users className="h-3 w-3" /> {responseCount} réponse(s)
-                  </span>
-                  {form.generatedByAI && (
-                    <Badge className="text-xs bg-purple-100 text-purple-700">IA</Badge>
-                  )}
+          return (
+            <div key={form.id} className="bg-[#0e1726]/40 backdrop-blur-md border border-slate-800/80 rounded-2xl overflow-hidden shadow-sm transition-all duration-300">
+              
+              {/* Form header button */}
+              <button
+                onClick={() => openForm(form.id)}
+                className="w-full flex items-center gap-3.5 p-4.5 text-left hover:bg-slate-900/40 transition-colors">
+                <div className={`w-9.5 h-9.5 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                  form.type === "PRE_EXERCISE" ? "bg-blue-600/10 border border-blue-500/20 text-blue-400" : "bg-purple-600/10 border border-purple-500/20 text-purple-400"
+                }`}>
+                  {form.type === "PRE_EXERCISE"
+                    ? <ClipboardCheck className="h-5 w-5" />
+                    : <Sparkles className="h-5 w-5" />}
                 </div>
-              </div>
-              {isOpen ? <ChevronDown className="h-4 w-4 flex-shrink-0" /> : <ChevronRight className="h-4 w-4 flex-shrink-0" />}
-            </button>
-
-            {/* Form detail */}
-            {isOpen && (
-              <div className="border-t">
-                {responseCount === 0 ? (
-                  <div className="p-6 text-center text-muted-foreground text-sm">
-                    Aucune réponse reçue pour le moment
-                  </div>
-                ) : (
-                  <div className="p-4 space-y-5">
-                    {/* Radar if post */}
-                    {form.type === "POST_EXERCISE" && agg && (
-                      <ComparisonRadar postAgg={agg} />
+                
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-200">{form.title}</p>
+                  <div className="flex items-center gap-2.5 mt-1">
+                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-lg border ${
+                      form.isActive ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400 animate-pulse" : "bg-slate-800 border-slate-700 text-slate-400"
+                    }`}>
+                      {form.isActive ? "🟢 Ouvert" : "⚫ Fermé"}
+                    </span>
+                    <span className="text-xs text-gray-400 flex items-center gap-1">
+                      <Users className="h-3.5 w-3.5 text-slate-500" /> {responseCount} réponse(s) reçue(s)
+                    </span>
+                    {form.generatedByAI && (
+                      <span className="text-[10px] font-bold bg-purple-600/10 border border-purple-500/20 text-purple-400 px-2 py-0.5 rounded-lg uppercase tracking-wider">IA</span>
                     )}
+                  </div>
+                </div>
+                {isOpen ? <ChevronDown className="h-4.5 w-4.5 text-gray-500 flex-shrink-0" /> : <ChevronRight className="h-4.5 w-4.5 text-gray-500 flex-shrink-0" />}
+              </button>
 
-                    {/* Aggregate results by section */}
-                    {agg && (() => {
-                      const { groupQuestions } = require("@/lib/simulation/form-templates") as typeof import("@/lib/simulation/form-templates");
-                      const groups = groupQuestions(questions);
-                      return Array.from(groups.entries()).map(([groupName, groupQs]) => (
-                        <div key={groupName}>
-                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-                            {groupName}
-                          </p>
-                          <AggregateSection questions={groupQs} agg={agg} totalResponses={responseCount} />
-                        </div>
-                      ));
-                    })()}
+              {/* Form detail dropdown */}
+              {isOpen && (
+                <div className="border-t border-slate-800/60 bg-slate-950/20 p-5 space-y-6">
+                  {responseCount === 0 ? (
+                    <div className="text-center py-10 bg-slate-900/10 rounded-2xl border border-slate-850 border-dashed text-gray-500 text-xs">
+                      Aucune réponse reçue pour ce questionnaire pour le moment.
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Radar comparison chart if post-exercise */}
+                      {form.type === "POST_EXERCISE" && agg && (
+                        <ComparisonRadar postAgg={agg} />
+                      )}
 
-                    {/* Actions */}
-                    <div className="flex gap-2 pt-2 border-t">
+                      {/* Aggregate sections */}
+                      {agg && (() => {
+                        const { groupQuestions } = require("@/lib/simulation/form-templates") as typeof import("@/lib/simulation/form-templates");
+                        const groups = groupQuestions(questions);
+                        return Array.from(groups.entries()).map(([groupName, groupQs]) => (
+                          <div key={groupName} className="space-y-3.5">
+                            <p className="text-[11px] font-bold text-orange-500 uppercase tracking-widest pl-1">
+                              📁 {groupName}
+                            </p>
+                            <AggregateSection questions={groupQs} agg={agg} totalResponses={responseCount} />
+                          </div>
+                        ));
+                      })()}
+
+                      {/* Actions */}
                       {form.isActive && (
-                        <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5"
-                          onClick={() => handleClose(form.id)}
-                          disabled={isClosing === form.id}>
-                          {isClosing === form.id ? "Fermeture..." : "Fermer le formulaire"}
-                        </Button>
+                        <div className="pt-4 border-t border-slate-800/60 flex justify-end">
+                          <Button size="sm" className="h-8.5 text-xs bg-slate-900 hover:bg-slate-850 text-white border border-slate-800 hover:border-slate-700 rounded-xl gap-1.5 shadow-sm active:scale-95 transition-transform"
+                            onClick={() => handleClose(form.id)}
+                            disabled={isClosing === form.id}>
+                            {isClosing === form.id ? "Fermeture..." : "Fermer le questionnaire"}
+                          </Button>
+                        </div>
                       )}
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        );
-      })}
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

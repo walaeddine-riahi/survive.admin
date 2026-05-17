@@ -31,12 +31,15 @@ function AppContent({ children }: { children: React.ReactNode }) {
     }
   }, [searchParams]);
 
+  const isFullScreenLive = pathname.includes("/live");
   const isParticipantMode =
-    pathname === "/participant-mode" || pathname.includes("/participant-view");
+    pathname === "/participant-mode" || pathname.includes("/participant-view") || isFullScreenLive;
 
   return (
     <div
-      className="min-h-screen bg-[var(--bg-primary)] font-sans antialiased transition-colors duration-300"
+      className={`min-h-screen font-sans antialiased transition-colors duration-300 ${
+        isFullScreenLive ? "bg-[#050914]" : "bg-[var(--bg-primary)]"
+      }`}
       style={{
         display: "grid",
         gridTemplateColumns: isParticipantMode || !isSidebarOpen ? "1fr" : "220px 1fr",
@@ -65,7 +68,11 @@ function AppContent({ children }: { children: React.ReactNode }) {
             padding: isParticipantMode ? "0" : "0 var(--s6)",
           }}
         >
-          <div className="py-8 flex-1">{children}</div>
+          {isFullScreenLive ? (
+            children
+          ) : (
+            <div className="py-8 flex-1">{children}</div>
+          )}
         </main>
       </div>
     </div>

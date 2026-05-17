@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import {
   BookOpen, CheckCircle2, Zap, ArrowUpRight, Info,
   ThumbsUp, ThumbsDown, AlertTriangle, ChevronRight,
-  Clock, Download, Star,
+  Clock, Download, Star, Sparkles, Award, ShieldAlert,
 } from "lucide-react";
 import {
   scoreLogEntry, getCrisisLogDelta, exportCrisisLog,
@@ -19,19 +19,19 @@ import {
 type LogEntry = any;
 
 const ENTRY_TYPE_CONFIG = {
-  DECISION:    { label: "Décision",   icon: CheckCircle2, color: "#185FA5", bg: "#E6F1FB" },
-  ACTION:      { label: "Action",     icon: Zap,          color: "#0F6E56", bg: "#E1F5EE" },
-  ESCALATION:  { label: "Escalade",   icon: ArrowUpRight, color: "#854F0B", bg: "#FAEEDA" },
-  INFORMATION: { label: "Info",       icon: Info,         color: "#534AB7", bg: "#EEEDFE" },
-  OBSERVATION: { label: "Obs.",       icon: Star,         color: "#5F5E5A", bg: "#F1EFE8" },
-  MILESTONE:   { label: "Étape",      icon: Star,         color: "#993556", bg: "#FBEAF0" },
+  DECISION:    { label: "Décision",   icon: CheckCircle2, color: "#3b82f6", bg: "#3b82f615" },
+  ACTION:      { label: "Action",     icon: Zap,          color: "#10b981", bg: "#10b98115" },
+  ESCALATION:  { label: "Escalade",   icon: ArrowUpRight, color: "#f59e0b", bg: "#f59e0b15" },
+  INFORMATION: { label: "Info",       icon: Info,         color: "#8b5cf6", bg: "#8b5cf615" },
+  OBSERVATION: { label: "Obs.",       icon: Star,         color: "#6b7280", bg: "#6b728015" },
+  MILESTONE:   { label: "Étape",      icon: Star,         color: "#ec4899", bg: "#ec489915" },
 };
 
 const FLAG_CONFIG: Record<InstructorFlag, { label: string; icon: React.ElementType; color: string; bg: string }> = {
-  GOOD:           { label: "Bonne décision",    icon: ThumbsUp,     color: "#0F6E56", bg: "#E1F5EE" },
-  IMPROVABLE:     { label: "Améliorable",       icon: ChevronRight, color: "#854F0B", bg: "#FAEEDA" },
-  MISSED:         { label: "Décision manquée",  icon: AlertTriangle,color: "#A32D2D", bg: "#FCEBEB" },
-  CRITICAL_ERROR: { label: "Erreur critique",   icon: ThumbsDown,   color: "#A32D2D", bg: "#FCEBEB" },
+  GOOD:           { label: "Bonne décision",    icon: ThumbsUp,     color: "#10b981", bg: "#10b98115" },
+  IMPROVABLE:     { label: "Améliorable",       icon: ChevronRight, color: "#f59e0b", bg: "#f59e0b15" },
+  MISSED:         { label: "Décision manquée",  icon: AlertTriangle,color: "#ef4444", bg: "#ef444415" },
+  CRITICAL_ERROR: { label: "Erreur critique",   icon: ThumbsDown,   color: "#f43f5e", bg: "#f43f5e15" },
 };
 
 // ─── Score inline widget ──────────────────────────────────────────────────────
@@ -51,64 +51,78 @@ function InlineScorer({ entry, onScored }: { entry: LogEntry; onScored: () => vo
   }
 
   return (
-    <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-3">
-      <p className="text-xs font-semibold text-gray-700">Évaluation instructeur</p>
+    <div className="mt-4 p-4 bg-slate-950/50 border border-slate-800/80 rounded-2xl space-y-4 shadow-inner">
+      <div className="flex items-center gap-1.5 pb-2 border-b border-slate-900/60">
+        <Award className="h-4 w-4 text-orange-500" />
+        <p className="text-xs font-bold text-gray-300 uppercase tracking-wider">Évaluation instructeur</p>
+      </div>
 
       {/* Score 0-10 */}
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-gray-500 w-12">Score</span>
-        <div className="flex gap-1">
-          {[0, 2, 4, 6, 7, 8, 9, 10].map(v => (
-            <button key={v}
-              onClick={() => setScore(v)}
-              className={`w-7 h-7 rounded-lg text-xs font-semibold transition-all ${
-                score === v ? "text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-              style={score === v ? {
-                background: v >= 8 ? "#0F6E56" : v >= 6 ? "#185FA5" : v >= 4 ? "#854F0B" : "#A32D2D"
-              } : {}}>
-              {v}
-            </button>
-          ))}
+      <div className="flex items-center gap-3">
+        <span className="text-xs text-gray-400 font-medium w-12">Score</span>
+        <div className="flex flex-wrap gap-1.5 flex-1">
+          {[0, 2, 4, 6, 7, 8, 9, 10].map(v => {
+            const isSelected = score === v;
+            const scoreColor = v >= 8 ? "#10b981" : v >= 6 ? "#3b82f6" : v >= 4 ? "#f59e0b" : "#ef4444";
+            return (
+              <button key={v}
+                onClick={() => setScore(v)}
+                className={`w-8 h-8 rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center ${
+                  isSelected ? "text-white shadow-lg" : "bg-slate-900 text-gray-400 hover:bg-slate-850 hover:text-gray-200 border border-slate-800/50"
+                }`}
+                style={isSelected ? {
+                  backgroundColor: scoreColor,
+                  boxShadow: `0 0 10px ${scoreColor}25`
+                } : {}}>
+                {v}
+              </button>
+            );
+          })}
         </div>
-        <span className="text-sm font-bold w-6 text-center" style={{
-          color: score >= 8 ? "#0F6E56" : score >= 6 ? "#185FA5" : score >= 4 ? "#854F0B" : "#A32D2D"
-        }}>{score}</span>
+        <div className="w-12 h-12 rounded-xl bg-slate-900 flex items-center justify-center border border-slate-800">
+          <span className="text-base font-black" style={{
+            color: score >= 8 ? "#10b981" : score >= 6 ? "#3b82f6" : score >= 4 ? "#f59e0b" : "#ef4444"
+          }}>{score}</span>
+        </div>
       </div>
 
       {/* Flag */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-gray-500 w-12">Flag</span>
-        {(Object.entries(FLAG_CONFIG) as [InstructorFlag, typeof FLAG_CONFIG[InstructorFlag]][]).map(([k, v]) => {
-          const Icon = v.icon;
-          return (
-            <button key={k}
-              onClick={() => setFlag(k)}
-              className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition-all ${
-                flag === k ? "font-semibold border-2" : "border-gray-200"
-              }`}
-              style={flag === k ? { borderColor: v.color, background: v.bg, color: v.color } : {}}>
-              <Icon className="h-3 w-3" />
-              {v.label}
-            </button>
-          );
-        })}
+      <div className="flex items-center gap-3 flex-wrap">
+        <span className="text-xs text-gray-400 font-medium w-12">Flag</span>
+        <div className="flex flex-wrap gap-2">
+          {(Object.entries(FLAG_CONFIG) as [InstructorFlag, typeof FLAG_CONFIG[InstructorFlag]][]).map(([k, v]) => {
+            const Icon = v.icon;
+            const isSelected = flag === k;
+            return (
+              <button key={k}
+                onClick={() => setFlag(k)}
+                className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl border transition-all duration-300 ${
+                  isSelected ? "font-semibold border" : "bg-slate-900 border-slate-800/60 text-gray-400 hover:text-gray-300"
+                }`}
+                style={isSelected ? { borderColor: v.color, backgroundColor: v.bg, color: v.color } : {}}>
+                <Icon className="h-3.5 w-3.5" />
+                {v.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Note */}
-      <div>
-        <button className="text-xs text-blue-600 hover:underline" onClick={() => setShowNote(!showNote)}>
-          {showNote ? "Masquer la note" : "Ajouter une note (visible dans le debrief)"}
+      <div className="space-y-2">
+        <button className="text-xs text-orange-400 hover:text-orange-300 font-semibold transition-colors flex items-center gap-1" onClick={() => setShowNote(!showNote)}>
+          <Sparkles className="h-3 w-3" />
+          {showNote ? "Masquer la note de debrief" : "Ajouter une note de debriefing (visible dans le bilan)"}
         </button>
         {showNote && (
-          <Textarea className="mt-1 text-xs h-16 resize-none" value={note}
+          <Textarea className="text-xs h-20 resize-none bg-slate-900 border-slate-800 text-white rounded-xl placeholder-gray-600 focus-visible:ring-orange-500" value={note}
             onChange={e => setNote(e.target.value)}
-            placeholder="Note pour le debrief (privée, non visible des participants)..." />
+            placeholder="Note pour le debrief (privée, visible uniquement sur le rapport final instructeur)..." />
         )}
       </div>
 
-      <Button size="sm" onClick={handleSave} disabled={isSaving} className="h-7 text-xs w-full">
-        {isSaving ? "Enregistrement..." : "Enregistrer l'évaluation"}
+      <Button size="sm" onClick={handleSave} disabled={isSaving} className="h-9 text-xs w-full rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-semibold shadow-md shadow-orange-950/20 transition-transform active:scale-95 duration-200">
+        {isSaving ? "Enregistrement..." : "Valider l'évaluation"}
       </Button>
     </div>
   );
@@ -122,80 +136,90 @@ function InstructorEntryRow({ entry, onReload }: { entry: LogEntry; onReload: ()
   const flagCfg = entry.instructorFlag ? FLAG_CONFIG[entry.instructorFlag as InstructorFlag] : null;
 
   return (
-    <div className={`border rounded-xl overflow-hidden ${
-      entry.type === "DECISION" && !entry.instructorScore ? "border-amber-200 bg-amber-50/30" : "border-border"
+    <div className={`bg-[#0e1726]/40 backdrop-blur-md border rounded-2xl overflow-hidden transition-all duration-300 hover:bg-[#0e1726]/60 ${
+      entry.type === "DECISION" && !entry.instructorScore ? "border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.03)]" : "border-slate-800/80"
     }`} style={{ borderLeftWidth: 3, borderLeftColor: cfg.color }}>
-      <div className="flex items-start gap-3 p-3 cursor-pointer hover:bg-muted/20"
-        onClick={() => setExpanded(!expanded)}>
+      
+      <div className="flex items-start gap-3.5 p-4 cursor-pointer" onClick={() => setExpanded(!expanded)}>
         {/* Sequence + icon */}
         <div className="flex-shrink-0 text-center">
-          <div className="text-xs font-mono text-muted-foreground">
+          <div className="text-[10px] font-mono font-bold text-gray-500 uppercase tracking-wide">
             MC-{String(entry.sequenceNumber).padStart(3, "0")}
           </div>
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center mt-0.5"
-            style={{ background: cfg.bg }}>
-            <Icon className="h-3.5 w-3.5" style={{ color: cfg.color }} />
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center mt-1"
+            style={{ backgroundColor: cfg.bg }}>
+            <Icon className="h-4 w-4" style={{ color: cfg.color }} />
           </div>
         </div>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-0.5">
-            <Badge className="text-xs" style={{ background: cfg.bg, color: cfg.color }}>{cfg.label}</Badge>
-            <span className="text-sm font-medium truncate">{entry.title}</span>
+        <div className="flex-1 min-w-0 space-y-1">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg uppercase tracking-wider" style={{ backgroundColor: cfg.bg, color: cfg.color }}>
+              {cfg.label}
+            </span>
+            <span className="text-sm font-semibold text-gray-200 truncate">{entry.title}</span>
+            
             {entry.instructorScore !== null && entry.instructorScore !== undefined && (
-              <div className="flex items-center gap-1 ml-auto flex-shrink-0">
+              <div className="flex items-center gap-2 ml-auto flex-shrink-0">
                 {flagCfg && (
-                  <Badge className="text-xs" style={{ background: flagCfg.bg, color: flagCfg.color }}>
+                  <Badge className="text-[10px] uppercase font-bold rounded-lg" style={{ backgroundColor: flagCfg.bg, color: flagCfg.color }}>
                     {flagCfg.label}
                   </Badge>
                 )}
-                <span className="text-sm font-bold" style={{
-                  color: entry.instructorScore >= 8 ? "#0F6E56" : entry.instructorScore >= 6 ? "#185FA5" : entry.instructorScore >= 4 ? "#854F0B" : "#A32D2D"
+                <span className="text-xs font-bold px-2 py-0.5 rounded bg-slate-900 border border-slate-800" style={{
+                  color: entry.instructorScore >= 8 ? "#10b981" : entry.instructorScore >= 6 ? "#3b82f6" : entry.instructorScore >= 4 ? "#f59e0b" : "#ef4444"
                 }}>
                   {entry.instructorScore}/10
                 </span>
               </div>
             )}
+            
             {entry.type === "DECISION" && !entry.instructorScore && (
-              <span className="ml-auto text-xs text-amber-600 font-medium flex items-center gap-1">
+              <span className="ml-auto text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-lg font-bold uppercase tracking-wider flex items-center gap-1 animate-pulse">
                 <AlertTriangle className="h-3 w-3" /> À évaluer
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>{entry.participantName}</span>
-            <span>·</span>
-            <span>{entry.participantRole}</span>
-            <span>·</span>
-            <Clock className="h-3 w-3" />
-            <span>{new Date(entry.occurredAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
+          
+          <div className="flex items-center gap-2 text-xs text-gray-400">
+            <span className="font-semibold text-gray-300">{entry.participantName}</span>
+            <span className="text-slate-700">•</span>
+            <span className="text-orange-500 font-bold uppercase tracking-wider text-[9px]">{entry.participantRole}</span>
+            <span className="text-slate-700">•</span>
+            <Clock className="h-3 w-3 text-gray-500" />
+            <span className="font-mono">{new Date(entry.occurredAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{entry.content}</p>
+          
+          {!expanded && <p className="text-xs text-gray-400 mt-1 line-clamp-1">{entry.content}</p>}
         </div>
       </div>
 
       {expanded && (
-        <div className="px-4 pb-4 border-t space-y-3">
-          <p className="text-sm leading-relaxed pt-3">{entry.content}</p>
+        <div className="px-5 pb-5 border-t border-slate-800/40 space-y-4">
+          <p className="text-xs text-gray-300 leading-relaxed pt-3.5 whitespace-pre-wrap">{entry.content}</p>
+          
           {entry.justification && (
-            <div className="bg-muted/30 rounded p-2.5">
-              <p className="text-xs font-semibold text-muted-foreground mb-1">Justification</p>
-              <p className="text-xs">{entry.justification}</p>
+            <div className="bg-slate-950/30 border border-slate-850 rounded-xl p-3.5">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Justification stratégique</p>
+              <p className="text-xs text-gray-300 leading-relaxed">{entry.justification}</p>
             </div>
           )}
+          
           {entry.alternativesConsidered && (
-            <div className="bg-muted/30 rounded p-2.5">
-              <p className="text-xs font-semibold text-muted-foreground mb-1">Alternatives considérées</p>
-              <p className="text-xs">{entry.alternativesConsidered}</p>
+            <div className="bg-slate-950/30 border border-slate-850 rounded-xl p-3.5">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Alternatives considérées</p>
+              <p className="text-xs text-gray-300 leading-relaxed">{entry.alternativesConsidered}</p>
             </div>
           )}
+          
           {entry.impactScope?.length > 0 && (
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1.5">
               {entry.impactScope.map((s: string) => (
-                <span key={s} className="text-xs bg-muted px-2 py-0.5 rounded-full">{s}</span>
+                <span key={s} className="text-[10px] font-semibold bg-slate-900 border border-slate-800 text-gray-400 px-2 py-0.5 rounded-lg uppercase">{s}</span>
               ))}
             </div>
           )}
+          
           {/* Scoring widget — show for all entries */}
           <InlineScorer entry={entry} onScored={onReload} />
         </div>
@@ -253,7 +277,6 @@ export default function InstructorCrisisLogMonitor({
     setIsExporting(true);
     const r = await exportCrisisLog(sessionId);
     if (r.success && r.data) {
-      // Generate text export
       const lines = [
         `MAIN COURANTE — ${r.data.session.title}`,
         `Date: ${r.data.session.startedAt ? new Date(r.data.session.startedAt).toLocaleDateString("fr-FR") : "—"}`,
@@ -287,7 +310,7 @@ export default function InstructorCrisisLogMonitor({
       a.download = `main-courante-${sessionId.slice(-6)}.txt`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success("Export téléchargé");
+      toast.success("Export ISO téléchargé avec succès !");
     }
     setIsExporting(false);
   }
@@ -303,54 +326,65 @@ export default function InstructorCrisisLogMonitor({
     : entries.filter(e => e.type === filterType && !e.isInstructorOnly);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-[#080d19]/40 rounded-2xl overflow-hidden border border-slate-800/80">
+      
       {/* Header */}
-      <div className="flex items-center gap-3 p-3 border-b flex-shrink-0">
-        <BookOpen className="h-4 w-4 text-blue-600" />
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold">Main courante — Vue instructeur</p>
-          <p className="text-xs text-muted-foreground">
-            {entries.length} entrée(s)
-            {unscored > 0 && <span className="text-amber-600 ml-1">· {unscored} à évaluer</span>}
-            {avgScore !== null && <span className="text-green-600 ml-1">· moy. {avgScore}/100</span>}
-          </p>
+      <div className="flex items-center justify-between p-4 border-b border-slate-800/60 bg-slate-900/60 backdrop-blur-xl flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-blue-600/10 border border-blue-500/20 text-blue-400">
+            <BookOpen className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-gray-200">Main courante — Supervision</p>
+            <p className="text-xs text-gray-400">
+              {entries.length} entrée(s) enregistrée(s) 
+              {unscored > 0 && <span className="text-amber-400 font-bold ml-1.5">· {unscored} à évaluer</span>}
+              {avgScore !== null && <span className="text-emerald-400 font-bold ml-1.5">· Moyenne {avgScore}/100</span>}
+            </p>
+          </div>
         </div>
-        <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5"
+        <Button size="sm" className="h-9 text-xs bg-slate-950 border border-slate-800 hover:border-slate-700 text-white rounded-xl gap-2 shadow-md shadow-black/20 transition-transform active:scale-95"
           onClick={handleExport} disabled={isExporting}>
           <Download className="h-3.5 w-3.5" />
-          {isExporting ? "Export..." : "Export ISO"}
+          {isExporting ? "Génération..." : "Exporter au format ISO"}
         </Button>
       </div>
 
-      {/* Alert: unscored decisions */}
+      {/* Alert Banner: unscored decisions */}
       {unscored > 0 && (
-        <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border-b border-amber-100 text-xs text-amber-700 flex-shrink-0">
-          <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
-          <span><strong>{unscored}</strong> décision(s) non évaluée(s) — cliquez sur chacune pour noter</span>
+        <div className="flex items-center gap-2.5 px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 text-xs text-amber-300 flex-shrink-0 animate-pulse">
+          <ShieldAlert className="h-4 w-4 flex-shrink-0" />
+          <span><strong>{unscored}</strong> décision(s) en attente de notation — Ouvrez-les pour attribuer une note.</span>
         </div>
       )}
 
-      {/* Filter */}
-      <div className="flex gap-1 px-3 py-2 border-b overflow-x-auto flex-shrink-0">
-        {["ALL", "DECISION", "ACTION", "ESCALATION", "INFORMATION"].map(f => (
-          <button key={f}
-            onClick={() => setFilterType(f)}
-            className={`flex-shrink-0 text-xs px-2.5 py-1 rounded-full transition-all ${
-              filterType === f ? "bg-gray-800 text-white font-medium" : "text-muted-foreground hover:bg-muted"
-            }`}>
-            {f === "ALL"
-              ? `Tout (${entries.filter(e => !e.isInstructorOnly).length})`
-              : `${f === "DECISION" ? "Décisions" : f === "ACTION" ? "Actions" : f === "ESCALATION" ? "Escalades" : "Infos"} (${entries.filter(e => e.type === f && !e.isInstructorOnly).length})`}
-          </button>
-        ))}
+      {/* Segmented Filter Pills */}
+      <div className="flex gap-2 p-3.5 border-b border-slate-800/60 overflow-x-auto flex-shrink-0 bg-slate-950/20">
+        {["ALL", "DECISION", "ACTION", "ESCALATION", "INFORMATION"].map(f => {
+          const isActive = filterType === f;
+          return (
+            <button key={f}
+              onClick={() => setFilterType(f)}
+              className={`flex-shrink-0 text-xs px-3.5 py-1.5 rounded-xl transition-all duration-300 font-medium ${
+                isActive 
+                  ? "bg-slate-900 border border-slate-800 text-white shadow-md" 
+                  : "text-gray-400 hover:text-gray-200 hover:bg-slate-900/40"
+              }`}>
+              {f === "ALL"
+                ? `Toutes les entrées (${entries.filter(e => !e.isInstructorOnly).length})`
+                : `${f === "DECISION" ? "Décisions" : f === "ACTION" ? "Actions" : f === "ESCALATION" ? "Escalades" : "Infos"} (${entries.filter(e => e.type === f && !e.isInstructorOnly).length})`}
+            </button>
+          );
+        })}
       </div>
 
-      {/* List */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
+      {/* Scrollable Main Courante Entries Feed */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3.5 no-scrollbar">
         {filtered.length === 0 ? (
-          <div className="text-center py-10 text-muted-foreground text-sm">
-            <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-20" />
-            Aucune entrée — les participants alimenteront la main courante en temps réel
+          <div className="text-center py-20 bg-slate-900/10 rounded-2xl border border-slate-850 border-dashed">
+            <BookOpen className="h-10 w-10 mx-auto mb-3 text-slate-700" />
+            <p className="text-gray-400 text-sm font-semibold">Aucun événement enregistré</p>
+            <p className="text-gray-600 text-xs mt-1">La main courante sera alimentée en temps réel par les décisions et actions des participants.</p>
           </div>
         ) : (
           filtered.map(entry => (

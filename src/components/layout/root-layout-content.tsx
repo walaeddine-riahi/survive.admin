@@ -8,6 +8,7 @@ import { Menu, X } from "lucide-react";
 import { Session } from "next-auth";
 import { SessionProvider } from "next-auth/react";
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "../ui/theme-provider";
 
@@ -50,6 +51,30 @@ export function RootLayoutContent({
 
     return () => clearTimeout(timeoutId);
   }, []);
+
+  const pathname = usePathname() || "";
+  const isFullScreenLive = pathname.includes("/live");
+
+  if (isFullScreenLive) {
+    return (
+      <SessionProvider session={session}>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <div className="min-h-screen w-full bg-[#050914] overflow-hidden">
+              {children}
+            </div>
+            <Toaster />
+            <SonnerToaster position="top-right" />
+          </ThemeProvider>
+        </QueryClientProvider>
+      </SessionProvider>
+    );
+  }
 
   return (
     <SessionProvider session={session}>

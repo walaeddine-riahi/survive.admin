@@ -38,43 +38,43 @@ function MessageBubble({ msg, isMine, isInstructor }: {
 
   if (isAnnouncement) {
     return (
-      <div className="flex justify-center my-2">
+      <div className="flex justify-center my-2.5">
         <div className="max-w-[90%] text-center">
-          <div className="inline-flex items-center gap-1.5 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2">
-            <Megaphone className="h-3.5 w-3.5 text-orange-500 flex-shrink-0" />
+          <div className="inline-flex items-center gap-2 bg-orange-950/20 border border-orange-900/40 rounded-2xl px-4 py-2.5 shadow-lg shadow-black/20">
+            <Megaphone className="h-4 w-4 text-orange-400 flex-shrink-0 animate-bounce" />
             <div className="text-left">
-              <p className="text-xs font-semibold text-orange-700">Instructeur</p>
-              <p className="text-sm text-orange-800">{msg.content}</p>
+              <p className="text-xs font-bold text-orange-400 uppercase tracking-wider">Instructeur</p>
+              <p className="text-sm text-gray-200 mt-0.5 leading-relaxed break-all break-words">{msg.content}</p>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">{formatTime(msg.sentAt)}</p>
+          <p className="text-[10px] text-slate-500 mt-1 font-mono">{formatTime(msg.sentAt)}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`flex ${isMine ? "justify-end" : "justify-start"} mb-1.5`}>
+    <div className={`flex ${isMine ? "justify-end" : "justify-start"} mb-3`}>
       <div className={`max-w-[78%] ${isMine ? "items-end" : "items-start"} flex flex-col`}>
         {!isMine && (
           <div className="flex items-center gap-1.5 mb-1 px-1">
-            <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xs font-semibold flex-shrink-0">
+            <div className="w-5.5 h-5.5 rounded-full bg-slate-800 border border-slate-700/60 flex items-center justify-center text-slate-300 text-[10px] font-bold flex-shrink-0">
               {msg.senderName[0]}
             </div>
-            <span className="text-xs font-medium text-foreground">{msg.senderName}</span>
-            <span className="text-xs text-muted-foreground">· {msg.senderRole}</span>
+            <span className="text-xs font-semibold text-slate-300">{msg.senderName}</span>
+            <span className="text-[10px] text-slate-500 font-medium">· {msg.senderRole}</span>
           </div>
         )}
-        <div className={`px-3 py-2 rounded-2xl text-sm leading-relaxed ${
+        <div className={`px-3.5 py-2 rounded-2xl text-sm leading-relaxed shadow-sm break-all break-words ${
           isMine
-            ? "bg-blue-600 text-white rounded-tr-sm"
+            ? "bg-blue-600/80 border border-blue-500/20 text-white rounded-tr-sm"
             : isAlert
-            ? "bg-red-50 border border-red-200 text-red-800 rounded-tl-sm"
-            : "bg-muted text-foreground rounded-tl-sm"
+            ? "bg-rose-950/30 border border-rose-900/40 text-rose-300 rounded-tl-sm"
+            : "bg-slate-900/80 border border-slate-800/60 text-slate-200 rounded-tl-sm"
         }`}>
           {msg.content}
         </div>
-        <p className="text-xs text-muted-foreground mt-0.5 px-1">{formatTime(msg.sentAt)}</p>
+        <p className="text-[9px] text-slate-500 font-mono mt-1 px-1">{formatTime(msg.sentAt)}</p>
       </div>
     </div>
   );
@@ -91,38 +91,38 @@ function ChannelItem({ channel, isActive, unread, onSelect }: {
   return (
     <button
       onClick={onSelect}
-      className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left transition-all ${
+      className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left transition-all border ${
         isActive
-          ? "bg-blue-50 border border-blue-200"
-          : "hover:bg-muted/50"
+          ? "bg-orange-600/10 border-orange-500/30 text-orange-400 font-bold shadow-md shadow-orange-950/5"
+          : "bg-transparent border-transparent hover:bg-slate-900/40 text-slate-450 hover:text-slate-200"
       }`}>
       {/* Channel icon or emoji */}
-      <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 text-base"
-        style={{ background: (channel.color || cfg.color) + "20" }}>
-        {channel.emoji || <Icon className="h-4 w-4" style={{ color: channel.color || cfg.color }} />}
+      <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 text-base transition-all duration-300"
+        style={{ background: isActive ? "rgba(249, 115, 22, 0.15)" : (channel.color || cfg.color) + "12" }}>
+        {channel.emoji || <Icon className="h-4 w-4" style={{ color: isActive ? "#f97316" : channel.color || cfg.color }} />}
       </div>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-1">
-          <span className={`text-sm font-medium truncate ${isActive ? "text-blue-700" : ""}`}>
+          <span className={`text-xs font-semibold truncate uppercase tracking-wider ${isActive ? "text-orange-400" : "text-slate-350"}`}>
             {channel.name}
           </span>
           {lastMsg && (
-            <span className="text-xs text-muted-foreground flex-shrink-0">
+            <span className="text-[10px] text-slate-500 font-mono flex-shrink-0">
               {formatTime(lastMsg.sentAt)}
             </span>
           )}
         </div>
         {lastMsg && (
-          <p className="text-xs text-muted-foreground truncate">
-            {lastMsg.senderName}: {lastMsg.content}
+          <p className="text-[11px] text-slate-500 truncate mt-0.5 font-medium leading-none">
+            <span className="text-slate-400">{lastMsg.senderName}:</span> {lastMsg.content}
           </p>
         )}
       </div>
 
       {unread > 0 && (
-        <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
-          <span className="text-xs text-white font-bold">{unread > 9 ? "9+" : unread}</span>
+        <div className="w-4.5 h-4.5 rounded-full bg-rose-600 flex items-center justify-center flex-shrink-0 animate-pulse">
+          <span className="text-[9px] text-white font-bold leading-none">{unread > 9 ? "9+" : unread}</span>
         </div>
       )}
     </button>
@@ -320,22 +320,22 @@ export default function ChatPanel({
   );
 
   return (
-    <div className="flex h-full bg-background">
+    <div className="flex h-full bg-transparent text-white">
       {/* Sidebar — channel list */}
-      <div className={`${showChannelList ? "flex" : "hidden"} md:flex flex-col w-52 border-r flex-shrink-0 bg-background`}>
+      <div className={`${showChannelList ? "flex" : "hidden"} md:flex flex-col w-52 border-r border-slate-800/80 flex-shrink-0 bg-[#060a13]/85`}>
         {/* Header */}
-        <div className="flex items-center gap-2 px-3 py-3 border-b">
-          <MessageSquare className="h-4 w-4 text-blue-600" />
-          <p className="text-sm font-semibold flex-1">Chat interne</p>
+        <div className="flex items-center gap-2 px-4 py-3.5 border-b border-slate-800/80">
+          <MessageSquare className="h-4 w-4 text-orange-500" />
+          <p className="text-xs font-bold text-gray-300 uppercase tracking-widest flex-1">Chat interne</p>
           {totalUnread > 0 && (
-            <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center">
-              <span className="text-xs text-white font-bold">{totalUnread}</span>
+            <div className="w-5 h-5 rounded-full bg-rose-600 flex items-center justify-center animate-pulse">
+              <span className="text-xs text-white font-bold leading-none">{totalUnread}</span>
             </div>
           )}
         </div>
 
         {/* Channel sections */}
-        <div className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
+        <div className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5 no-scrollbar">
           {/* General */}
           {channels.filter(c => c.type === "GENERAL" || c.type === "BROADCAST").map(ch => (
             <ChannelItem key={ch.id} channel={ch}
@@ -347,7 +347,7 @@ export default function ChatPanel({
           {/* Teams */}
           {channels.filter(c => c.type === "TEAM").length > 0 && (
             <>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide px-2 pt-3 pb-1 font-medium">
+              <p className="text-[10px] text-slate-500 uppercase tracking-wider px-3 pt-3 pb-1 font-bold">
                 Équipes
               </p>
               {channels.filter(c => c.type === "TEAM").map(ch => (
@@ -362,7 +362,7 @@ export default function ChatPanel({
           {/* Direct messages */}
           {channels.filter(c => c.type === "DIRECT").length > 0 && (
             <>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide px-2 pt-3 pb-1 font-medium">
+              <p className="text-[10px] text-slate-500 uppercase tracking-wider px-3 pt-3 pb-1 font-bold">
                 Messages directs
               </p>
               {channels.filter(c => c.type === "DIRECT").map(ch => (
@@ -377,22 +377,22 @@ export default function ChatPanel({
 
         {/* New DM button */}
         {otherParticipants.length > 0 && (
-          <div className="border-t px-2 py-2">
+          <div className="border-t border-slate-800/60 px-2 py-2.5">
             {showDMPicker ? (
-              <div className="space-y-2 p-1 bg-gray-950/40 rounded-lg border border-gray-800/40">
+              <div className="space-y-2 p-1 bg-slate-950/60 rounded-xl border border-slate-800/60">
                 <div className="flex items-center justify-between px-2 pt-1 pb-1">
-                  <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Destinataires</p>
+                  <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Destinataires</p>
                   {selectedTargetIds.length > 0 && (
                     <button
                       onClick={() => setSelectedTargetIds([])}
-                      className="text-[9px] text-blue-400 hover:text-blue-300 font-semibold"
+                      className="text-[9px] text-orange-400 hover:text-orange-350 font-semibold"
                     >
                       Effacer
                     </button>
                   )}
                 </div>
                 
-                <div className="max-h-[160px] overflow-y-auto space-y-1 pr-1">
+                <div className="max-h-[160px] overflow-y-auto space-y-1 pr-1 no-scrollbar">
                   {otherParticipants.map(p => {
                     const isSelected = selectedTargetIds.includes(p.id);
                     return (
@@ -407,29 +407,29 @@ export default function ChatPanel({
                         }}
                         className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg border transition-all text-left ${
                           isSelected
-                            ? "bg-blue-600/10 border-blue-500/30 text-blue-200"
-                            : "bg-transparent border-transparent hover:bg-muted text-gray-400"
+                            ? "bg-orange-600/10 border-orange-500/30 text-orange-200"
+                            : "bg-transparent border-transparent hover:bg-slate-900/40 text-slate-400"
                         }`}
                       >
                         <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0 transition-all ${
-                          isSelected ? "bg-blue-600 border-blue-500 text-white" : "border-gray-700 bg-gray-900"
+                          isSelected ? "bg-orange-600 border-orange-500 text-white" : "border-slate-800 bg-slate-950"
                         }`}>
                           {isSelected && <span className="text-[9px] font-bold leading-none">✓</span>}
                         </div>
                         <div className="min-w-0">
                           <p className="text-xs font-semibold truncate text-white">{p.displayName}</p>
-                          <p className="text-[9px] opacity-70 truncate">{p.role}</p>
+                          <p className="text-[9px] opacity-70 truncate text-slate-550">{p.role}</p>
                         </div>
                       </button>
                     );
                   })}
                 </div>
 
-                <div className="flex gap-1.5 pt-1.5 border-t border-gray-800/50">
+                <div className="flex gap-1.5 pt-1.5 border-t border-slate-800/50">
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-7 text-[10px] flex-1 font-semibold text-gray-400"
+                    className="h-7 text-[10px] flex-1 font-semibold text-slate-400 hover:bg-slate-900/50"
                     onClick={() => {
                       setShowDMPicker(false);
                       setSelectedTargetIds([]);
@@ -439,7 +439,7 @@ export default function ChatPanel({
                   </Button>
                   <Button
                     size="sm"
-                    className="h-7 text-[10px] flex-1 font-bold bg-blue-600 hover:bg-blue-700 text-white"
+                    className="h-7 text-[10px] flex-1 font-bold bg-orange-600 hover:bg-orange-700 text-white shadow-md shadow-orange-950/20"
                     disabled={selectedTargetIds.length === 0}
                     onClick={() => {
                       const targets = otherParticipants.filter(p => selectedTargetIds.includes(p.id));
@@ -451,7 +451,7 @@ export default function ChatPanel({
                 </div>
               </div>
             ) : (
-              <Button size="sm" variant="ghost" className="h-7 text-xs w-full gap-1.5 text-muted-foreground"
+              <Button size="sm" variant="ghost" className="h-7 text-xs w-full gap-1.5 text-slate-400 hover:bg-slate-900/40 hover:text-slate-200 rounded-lg"
                 onClick={() => setShowDMPicker(true)}>
                 <Plus className="h-3.5 w-3.5" /> Nouveau message direct
               </Button>
@@ -465,31 +465,31 @@ export default function ChatPanel({
         {activeChannel ? (
           <>
             {/* Channel header */}
-            <div className="flex items-center gap-2 px-4 py-3 border-b flex-shrink-0">
-              <button className="md:hidden mr-1" onClick={() => setShowChannelList(true)}>
+            <div className="flex items-center gap-2 px-5 py-3.5 bg-[#0b0f19]/60 backdrop-blur-md border-b border-slate-800/80 flex-shrink-0">
+              <button className="md:hidden mr-1 text-slate-400 hover:text-slate-250" onClick={() => setShowChannelList(true)}>
                 <ChevronLeft className="h-5 w-5" />
               </button>
               <span className="text-lg">{activeChannel.emoji || "#"}</span>
               <div>
-                <p className="text-sm font-semibold">{activeChannel.name}</p>
+                <p className="text-sm font-semibold text-slate-100 uppercase tracking-wider">{activeChannel.name}</p>
                 {activeChannel.description && (
-                  <p className="text-xs text-muted-foreground">{activeChannel.description}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{activeChannel.description}</p>
                 )}
               </div>
-              <Badge className="ml-auto text-xs" variant="outline">
+              <Badge className="ml-auto text-xs border-slate-800 bg-slate-900/60 text-slate-300" variant="outline">
                 {CH_TYPE_CONFIG[activeChannel.type as keyof typeof CH_TYPE_CONFIG]?.label}
               </Badge>
               {activeChannel.type === "BROADCAST" && (
-                <span className="text-xs text-orange-500 font-medium">Lecture seule</span>
+                <span className="text-xs text-orange-500 font-semibold uppercase tracking-wide bg-orange-950/20 px-2 py-0.5 rounded border border-orange-900/40">Lecture seule</span>
               )}
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 py-3">
+            <div className="flex-1 overflow-y-auto px-5 py-4 no-scrollbar">
               {activeMessages.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
+                <div className="text-center py-20 text-slate-500">
                   <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                  <p className="text-sm">Aucun message dans ce canal</p>
+                  <p className="text-sm font-semibold">Aucun message dans ce canal</p>
                   <p className="text-xs mt-1">Soyez le premier à écrire</p>
                 </div>
               ) : (
@@ -509,11 +509,11 @@ export default function ChatPanel({
 
             {/* Input */}
             {activeChannel.type !== "BROADCAST" && (
-              <div className="flex items-center gap-2 px-4 py-3 border-t flex-shrink-0">
+              <div className="flex items-center gap-2 px-5 py-4 bg-[#090e1a]/80 border-t border-slate-800/80 flex-shrink-0">
                 <Input
                   ref={inputRef}
-                  className="flex-1 h-9"
-                  placeholder={`Message dans ${activeChannel.name}...`}
+                  className="flex-1 h-9.5 bg-slate-950/60 border-slate-800 text-slate-100 placeholder-slate-500 focus-visible:ring-slate-700 rounded-lg text-xs"
+                  placeholder={`Écrire dans ${activeChannel.name}...`}
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={e => {
@@ -527,7 +527,7 @@ export default function ChatPanel({
                 />
                 <Button
                   size="sm"
-                  className="h-9 w-9 p-0 bg-blue-600 hover:bg-blue-700"
+                  className="h-9.5 w-9.5 p-0 bg-orange-600 hover:bg-orange-700 text-white rounded-lg shadow-md shadow-orange-950/20 transition-all duration-300"
                   onClick={handleSend}
                   disabled={!input.trim() || isSending}>
                   <Send className="h-4 w-4" />
@@ -536,10 +536,10 @@ export default function ChatPanel({
             )}
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground">
+          <div className="flex-1 flex items-center justify-center text-slate-500">
             <div className="text-center">
-              <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-20" />
-              <p className="text-sm">Sélectionnez un canal</p>
+              <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-20 animate-pulse" />
+              <p className="text-sm font-semibold tracking-wide">Sélectionnez un canal de discussion</p>
             </div>
           </div>
         )}

@@ -23,6 +23,7 @@ import type { ParticipantV2Metrics } from "@/actions/simulation/session-bridge-a
 
 import { uploadCrisisPlan } from "@/actions/simulation/crisis-plan-actions";
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 
 type AnalysisData = Awaited<ReturnType<typeof getSimulationAnalysis>>["data"];
 
@@ -40,24 +41,39 @@ const CONFORMITY_CONFIG = {
   NOT_APPLICABLE: { label: "N/A", color: "#888", bg: "#F1EFE8", icon: Shield },
 };
 
+const radarConfig = {
+  score: {
+    label: "Score",
+    color: "#185FA5",
+  },
+} satisfies ChartConfig;
+
 // ─── Score Radar ──────────────────────────────────────────────────────────────
 function ScoreRadar({ scores, name }: { scores: Record<string, number>; name: string }) {
   const data = [
-    { subject: "Tonalité", value: scores.scoreTonality || 0 },
-    { subject: "Décision", value: scores.scoreDecision || 0 },
-    { subject: "Conformité", value: scores.scoreConformity || 0 },
-    { subject: "Communication", value: scores.scoreCommunication || 0 },
-    { subject: "Réactivité", value: scores.scoreTimeliness || 0 },
-    { subject: "Leadership", value: scores.scoreLeadership || 0 },
+    { subject: "Tonalité", score: scores.scoreTonality || 0 },
+    { subject: "Décision", score: scores.scoreDecision || 0 },
+    { subject: "Conformité", score: scores.scoreConformity || 0 },
+    { subject: "Communication", score: scores.scoreCommunication || 0 },
+    { subject: "Réactivité", score: scores.scoreTimeliness || 0 },
+    { subject: "Leadership", score: scores.scoreLeadership || 0 },
   ];
   return (
-    <ResponsiveContainer width="100%" height={200}>
+    <ChartContainer config={radarConfig} className="mx-auto aspect-square max-h-[220px]">
       <RadarChart data={data}>
+        <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
         <PolarGrid />
         <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10 }} />
-        <Radar name={name} dataKey="value" stroke="#185FA5" fill="#185FA5" fillOpacity={0.25} />
+        <Radar
+          name={name}
+          dataKey="score"
+          stroke="var(--color-score)"
+          fill="var(--color-score)"
+          fillOpacity={0.2}
+          dot={{ r: 3, fillOpacity: 1 }}
+        />
       </RadarChart>
-    </ResponsiveContainer>
+    </ChartContainer>
   );
 }
 

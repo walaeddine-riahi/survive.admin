@@ -30,61 +30,61 @@ const ENTRY_TYPE_CONFIG: Record<EntryType, {
   DECISION: {
     label: "Décision",
     icon: CheckCircle2,
-    color: "#185FA5",
-    bg: "#E6F1FB",
+    color: "#3b82f6",
+    bg: "rgba(59, 130, 246, 0.1)",
     description: "Une décision prise qui engage la cellule de crise",
   },
   ACTION: {
     label: "Action",
     icon: Zap,
-    color: "#0F6E56",
-    bg: "#E1F5EE",
+    color: "#10b981",
+    bg: "rgba(16, 185, 129, 0.1)",
     description: "Une action technique ou organisationnelle réalisée",
   },
   ESCALATION: {
     label: "Escalade",
     icon: ArrowUpRight,
-    color: "#854F0B",
-    bg: "#FAEEDA",
+    color: "#f59e0b",
+    bg: "rgba(245, 158, 11, 0.1)",
     description: "Une remontée vers un niveau hiérarchique supérieur",
   },
   INFORMATION: {
     label: "Information",
     icon: Info,
-    color: "#534AB7",
-    bg: "#EEEDFE",
+    color: "#8b5cf6",
+    bg: "rgba(139, 92, 246, 0.1)",
     description: "Une information importante reçue ou transmise",
   },
   OBSERVATION: {
     label: "Observation",
     icon: Flag,
-    color: "#5F5E5A",
-    bg: "#F1EFE8",
+    color: "#94a3b8",
+    bg: "rgba(148, 163, 184, 0.1)",
     description: "Une observation sur le déroulement",
   },
   MILESTONE: {
     label: "Étape clé",
     icon: Flag,
-    color: "#993556",
-    bg: "#FBEAF0",
+    color: "#ec4899",
+    bg: "rgba(236, 72, 153, 0.1)",
     description: "Franchissement d'une étape clé du scénario",
   },
 };
 
 const DECISION_STATUS_CONFIG: Record<DecisionStatus, { label: string; color: string }> = {
-  DRAFT:          { label: "Brouillon",          color: "#5F5E5A" },
-  CONFIRMED:      { label: "Confirmée",           color: "#185FA5" },
-  VALIDATED:      { label: "Validée",             color: "#0F6E56" },
-  OVERRULED:      { label: "Annulée",             color: "#A32D2D" },
-  PENDING_REVIEW: { label: "En attente validation", color: "#854F0B" },
+  DRAFT:          { label: "Brouillon",          color: "#94a3b8" },
+  CONFIRMED:      { label: "Confirmée",           color: "#3b82f6" },
+  VALIDATED:      { label: "Validée",             color: "#10b981" },
+  OVERRULED:      { label: "Annulée",             color: "#ef4444" },
+  PENDING_REVIEW: { label: "En attente validation", color: "#f59e0b" },
 };
 
 const ACTION_STATUS_CONFIG: Record<ActionStatus, { label: string; color: string }> = {
-  TODO:        { label: "À faire",    color: "#5F5E5A" },
-  IN_PROGRESS: { label: "En cours",  color: "#185FA5" },
-  DONE:        { label: "Terminée",  color: "#0F6E56" },
-  FAILED:      { label: "Échouée",   color: "#A32D2D" },
-  CANCELLED:   { label: "Annulée",   color: "#854F0B" },
+  TODO:        { label: "À faire",    color: "#94a3b8" },
+  IN_PROGRESS: { label: "En cours",  color: "#3b82f6" },
+  DONE:        { label: "Terminée",  color: "#10b981" },
+  FAILED:      { label: "Échouée",   color: "#ef4444" },
+  CANCELLED:   { label: "Annulée",   color: "#f59e0b" },
 };
 
 const IMPACT_SCOPES = [
@@ -126,12 +126,12 @@ function EntryCard({ entry, participantId, onUpdate }: {
     : null;
 
   return (
-    <div className={`border rounded-xl overflow-hidden transition-all ${
-      isOwn ? "border-blue-200" : "border-border"
+    <div className={`border rounded-xl overflow-hidden transition-all bg-[#0e1726]/10 ${
+      isOwn ? "border-blue-900/60 bg-[#0c162b]/25" : "border-slate-800/80"
     }`} style={{ borderLeftWidth: 4, borderLeftColor: cfg.color }}>
       {/* Header */}
       <div
-        className="flex items-start gap-3 p-3 cursor-pointer hover:bg-muted/30"
+        className="flex items-start gap-3 p-3 cursor-pointer hover:bg-slate-900/40"
         onClick={() => setExpanded(!expanded)}>
         <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
           style={{ background: cfg.bg }}>
@@ -139,68 +139,68 @@ function EntryCard({ entry, participantId, onUpdate }: {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-0.5">
-            <span className="text-xs font-mono text-muted-foreground">
+            <span className="text-xs font-mono text-slate-500">
               MC-{String(entry.sequenceNumber).padStart(3, "0")}
             </span>
-            <Badge className="text-xs" style={{ background: cfg.bg, color: cfg.color }}>
+            <Badge className="text-xs font-semibold px-2 py-0.5 rounded-full border-none" style={{ background: cfg.bg, color: cfg.color }}>
               {cfg.label}
             </Badge>
             {statusCfg && (
-              <Badge className="text-xs" style={{ background: statusCfg.color + "15", color: statusCfg.color }}>
+              <Badge className="text-xs font-medium border-none" style={{ background: statusCfg.color + "15", color: statusCfg.color }}>
                 {statusCfg.label}
               </Badge>
             )}
             {isOwn && (
-              <Badge variant="outline" className="text-xs text-blue-600 border-blue-200">Moi</Badge>
+              <Badge variant="outline" className="text-xs text-blue-400 border-blue-900/60 bg-blue-950/20">Moi</Badge>
             )}
-            <span className="text-xs text-muted-foreground ml-auto flex items-center gap-1">
+            <span className="text-xs text-slate-400 ml-auto flex items-center gap-1 font-mono">
               <Clock className="h-3 w-3" />
               {new Date(entry.occurredAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
             </span>
           </div>
-          <p className="text-sm font-medium leading-tight">{entry.title}</p>
-          <p className="text-xs text-muted-foreground">{entry.participantName} · {entry.participantRole}</p>
+          <p className="text-sm font-medium leading-tight text-white">{entry.title}</p>
+          <p className="text-xs text-slate-450">{entry.participantName} · {entry.participantRole}</p>
         </div>
-        {expanded ? <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
+        {expanded ? <ChevronDown className="h-4 w-4 text-slate-400 flex-shrink-0" /> : <ChevronRight className="h-4 w-4 text-slate-400 flex-shrink-0" />}
       </div>
 
       {/* Expanded */}
       {expanded && (
-        <div className="px-4 pb-4 space-y-3 border-t">
-          <p className="text-sm leading-relaxed pt-3">{entry.content}</p>
+        <div className="px-4 pb-4 space-y-3 border-t border-slate-800/80 bg-slate-900/20">
+          <p className="text-sm leading-relaxed pt-3 text-slate-200">{entry.content}</p>
 
           {entry.justification && (
-            <div className="bg-muted/40 rounded-lg p-2.5">
-              <p className="text-xs font-semibold text-muted-foreground mb-1">Justification</p>
-              <p className="text-xs leading-relaxed">{entry.justification}</p>
+            <div className="bg-[#0e1726]/40 border border-slate-850 rounded-lg p-2.5">
+              <p className="text-xs font-semibold text-slate-400 mb-1">Justification</p>
+              <p className="text-xs leading-relaxed text-slate-300">{entry.justification}</p>
             </div>
           )}
 
           {entry.impactScope?.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              <span className="text-xs text-muted-foreground">Impact :</span>
+            <div className="flex flex-wrap gap-1.5 items-center">
+              <span className="text-xs text-slate-400">Impact :</span>
               {entry.impactScope.map((s: string) => (
-                <span key={s} className="text-xs bg-muted px-2 py-0.5 rounded-full">{s}</span>
+                <span key={s} className="text-xs bg-slate-850 text-slate-300 px-2 py-0.5 rounded-full">{s}</span>
               ))}
             </div>
           )}
 
           {entry.alternativesConsidered && (
-            <div className="bg-muted/40 rounded-lg p-2.5">
-              <p className="text-xs font-semibold text-muted-foreground mb-1">Alternatives considérées</p>
-              <p className="text-xs">{entry.alternativesConsidered}</p>
+            <div className="bg-[#0e1726]/40 border border-slate-850 rounded-lg p-2.5">
+              <p className="text-xs font-semibold text-slate-400 mb-1">Alternatives considérées</p>
+              <p className="text-xs text-slate-305">{entry.alternativesConsidered}</p>
             </div>
           )}
 
           {/* Escalation response */}
           {entry.escalatedToName && (
-            <div className="bg-amber-50 border border-amber-100 rounded-lg p-2.5">
-              <p className="text-xs font-semibold text-amber-800">
+            <div className="bg-amber-950/20 border border-amber-900/40 rounded-lg p-2.5">
+              <p className="text-xs font-semibold text-amber-300">
                 Escalade vers {entry.escalatedToName} ({entry.escalatedToRole})
               </p>
               {entry.escalationResponse
-                ? <p className="text-xs text-amber-700 mt-1">Réponse : {entry.escalationResponse}</p>
-                : <p className="text-xs text-amber-600 mt-1 italic">En attente de réponse...</p>}
+                ? <p className="text-xs text-amber-200 mt-1">Réponse : {entry.escalationResponse}</p>
+                : <p className="text-xs text-amber-400 mt-1 italic">En attente de réponse...</p>}
             </div>
           )}
 
@@ -208,7 +208,7 @@ function EntryCard({ entry, participantId, onUpdate }: {
           {isOwn && (
             <div className="flex flex-wrap gap-2 pt-1">
               {entry.type === "DECISION" && entry.decisionStatus === "DRAFT" && (
-                <Button size="sm" className="h-7 text-xs gap-1 bg-blue-600 hover:bg-blue-700"
+                <Button size="sm" className="h-7 text-xs gap-1 bg-blue-600 hover:bg-blue-700 text-white"
                   disabled={isUpdating}
                   onClick={() => handleStatusChange("decisionStatus", "CONFIRMED")}>
                   <CheckCircle2 className="h-3.5 w-3.5" /> Confirmer la décision
@@ -217,13 +217,13 @@ function EntryCard({ entry, participantId, onUpdate }: {
               {entry.type === "ACTION" && entry.actionStatus !== "DONE" && (
                 <>
                   {entry.actionStatus === "TODO" && (
-                    <Button size="sm" variant="outline" className="h-7 text-xs"
+                    <Button size="sm" variant="outline" className="h-7 text-xs border-slate-700 hover:bg-slate-800 text-slate-200"
                       disabled={isUpdating}
                       onClick={() => handleStatusChange("actionStatus", "IN_PROGRESS")}>
                       Démarrer
                     </Button>
                   )}
-                  <Button size="sm" className="h-7 text-xs gap-1 bg-green-600 hover:bg-green-700"
+                  <Button size="sm" className="h-7 text-xs gap-1 bg-green-650 hover:bg-green-700 text-white"
                     disabled={isUpdating}
                     onClick={handleMarkDone}>
                     <CheckCircle2 className="h-3.5 w-3.5" /> Terminée
@@ -506,18 +506,18 @@ export default function CrisisLogPanel({
   const pendingActions = actions.filter(e => e.actionStatus !== "DONE" && e.actionStatus !== "CANCELLED");
 
   return (
-    <div className={`flex flex-col ${compact ? "h-full" : "min-h-0"}`}>
+    <div className={`flex flex-col ${compact ? "h-full" : "min-h-0"} bg-transparent`}>
       {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b flex-shrink-0">
-        <BookOpen className="h-4 w-4 text-blue-600" />
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-800/80 flex-shrink-0">
+        <BookOpen className="h-4 w-4 text-blue-500" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold">Main courante</p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm font-semibold text-white">Main courante</p>
+          <p className="text-xs text-slate-400 font-mono">
             {entries.length} entrée(s) · ISO 22301 §8.4
           </p>
         </div>
         <Button size="sm" onClick={() => setShowForm(true)}
-          className="gap-1.5 h-8 text-xs bg-blue-600 hover:bg-blue-700">
+          className="gap-1.5 h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white font-medium">
           <Plus className="h-3.5 w-3.5" />
           Enregistrer
         </Button>
@@ -525,35 +525,35 @@ export default function CrisisLogPanel({
 
       {/* Quick stats */}
       {entries.length > 0 && (
-        <div className="flex gap-3 px-4 py-2 border-b bg-muted/20 flex-shrink-0">
+        <div className="flex gap-3 px-4 py-2 border-b border-slate-800/80 bg-slate-950/20 flex-shrink-0">
           <div className="flex items-center gap-1.5 text-xs">
-            <CheckCircle2 className="h-3.5 w-3.5 text-blue-500" />
-            <span className="text-muted-foreground">{decisions.length} décision(s)</span>
+            <CheckCircle2 className="h-3.5 w-3.5 text-blue-400" />
+            <span className="text-slate-400">{decisions.length} décision(s)</span>
           </div>
           <div className="flex items-center gap-1.5 text-xs">
-            <Zap className="h-3.5 w-3.5 text-green-500" />
-            <span className="text-muted-foreground">{actions.length} action(s)</span>
+            <Zap className="h-3.5 w-3.5 text-green-400" />
+            <span className="text-slate-400">{actions.length} action(s)</span>
           </div>
           {pendingActions.length > 0 && (
             <div className="flex items-center gap-1.5 text-xs ml-auto">
-              <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-              <span className="text-amber-600 font-medium">{pendingActions.length} action(s) en attente</span>
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-400 animate-pulse" />
+              <span className="text-amber-400 font-medium">{pendingActions.length} en attente</span>
             </div>
           )}
         </div>
       )}
 
       {/* Filter tabs */}
-      <div className="flex gap-1 px-4 py-2 border-b overflow-x-auto flex-shrink-0">
+      <div className="flex gap-1 px-4 py-2 border-b border-slate-800/80 overflow-x-auto flex-shrink-0">
         {(["ALL", "DECISION", "ACTION", "ESCALATION", "INFORMATION"] as const).map(f => (
           <button key={f}
             onClick={() => setFilter(f)}
             className={`flex-shrink-0 text-xs px-2.5 py-1 rounded-full transition-all ${
-              filter === f ? "font-semibold" : "text-muted-foreground hover:bg-muted"
+              filter === f ? "font-semibold" : "text-slate-400 hover:bg-slate-900/60"
             }`}
             style={filter === f && f !== "ALL"
               ? { background: ENTRY_TYPE_CONFIG[f as EntryType].bg, color: ENTRY_TYPE_CONFIG[f as EntryType].color }
-              : filter === f ? { background: "#f1f5f9", color: "#0f172a" }
+              : filter === f ? { background: "rgba(255, 255, 255, 0.08)", color: "#ffffff" }
               : {}}>
             {f === "ALL" ? `Tout (${entries.length})` : `${ENTRY_TYPE_CONFIG[f as EntryType].label} (${entries.filter(e => e.type === f).length})`}
           </button>
@@ -563,13 +563,13 @@ export default function CrisisLogPanel({
       {/* Entries list */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
         {filtered.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <BookOpen className="h-10 w-10 mx-auto mb-3 opacity-20" />
-            <p className="text-sm font-medium">Main courante vide</p>
-            <p className="text-xs mt-1 mb-4">
+          <div className="text-center py-12 text-slate-500">
+            <BookOpen className="h-10 w-10 mx-auto mb-3 opacity-20 text-slate-400" />
+            <p className="text-sm font-medium text-slate-400">Main courante vide</p>
+            <p className="text-xs mt-1 mb-4 text-slate-500">
               Enregistrez vos décisions, actions et escalades en temps réel
             </p>
-            <Button size="sm" onClick={() => setShowForm(true)} className="gap-1.5">
+            <Button size="sm" onClick={() => setShowForm(true)} className="gap-1.5 bg-blue-600 hover:bg-blue-700 text-white">
               <Plus className="h-4 w-4" /> Première entrée
             </Button>
           </div>

@@ -38,6 +38,8 @@ interface UsePusherChannelOptions {
   onParticipantJoined?: (data: unknown) => void;
   onParticipantLeft?: (data: unknown) => void;
   onInjectSent?: (data: unknown) => void;
+  onScoreReady?: (data: unknown) => void;
+  onFormAvailable?: (data: unknown) => void;
 }
 
 export function usePusherChannel({
@@ -54,6 +56,8 @@ export function usePusherChannel({
   onParticipantJoined,
   onParticipantLeft,
   onInjectSent,
+  onScoreReady,
+  onFormAvailable,
 }: UsePusherChannelOptions) {
   const pusherRef = useRef<PusherInstance>(null);
   const channelsRef = useRef<ChannelInstance[]>([]);
@@ -139,6 +143,12 @@ export function usePusherChannel({
         }
         if (onInjectSent) {
           channel.bind(SIM_EVENTS.INJECT_SENT, onInjectSent);
+        }
+        if (onScoreReady) {
+          channel.bind("score_ready", onScoreReady);
+        }
+        if (onFormAvailable) {
+          channel.bind("form_available", onFormAvailable);
         }
       });
     }).catch(err => {

@@ -724,3 +724,37 @@ export async function runFullAnalysis(simulationId: string) {
     return { success: false, error: "Erreur lors de l'analyse complète" };
   }
 }
+
+export async function getParticipantScoreForSimulation(simulationId: string, participantId: string) {
+  try {
+    const score = await prisma.participantScore.findFirst({
+      where: {
+        simulationId,
+        assignmentId: participantId,
+      },
+    });
+
+    const injectResponses = await prisma.injectResponse.findMany({
+      where: {
+        simulationId,
+        assignmentId: participantId,
+      },
+      select: {
+        id: true,
+        injectionId: true,
+        reactionDelayMin: true,
+        conformityScore: true,
+        conformity: true,
+        actualAction: true,
+      }
+    });
+
+    return {
+      success: true,
+      data: { score, injectResponses },
+    };
+  } catch (error) {
+    console.error("getParticipantScoreForSimulation error:", error);
+    return { success: false, error: "Erreur récupération score participant" };
+  }
+}

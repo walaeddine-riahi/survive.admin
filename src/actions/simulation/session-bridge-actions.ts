@@ -365,9 +365,17 @@ export async function bridgeSessionToScoring(
     await generateDebrief(simulationId);
 
     // ── 9. Store session→simulation link ──────────────────────────────────────
+    const currentSession = await prisma.simSession.findUnique({
+      where: { id: sessionId },
+      select: { status: true },
+    });
+
     await prisma.simSession.update({
       where: { id: sessionId },
-      data: { status: "ENDED", endedAt: new Date() },
+      data: {
+        status: currentSession?.status === "DEBRIEF" ? "DEBRIEF" : "ENDED",
+        endedAt: new Date(),
+      },
     });
 
     const result: BridgeResult = {

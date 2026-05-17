@@ -15,6 +15,7 @@ import {
   Shield, Play, Star, Mail, Award, CheckSquare, Plus, Check, ChevronRight
 } from "lucide-react";
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer } from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import Link from "next/link";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -82,6 +83,13 @@ const DEFAULT_ASSIGNMENTS = [
   { id: "as-5", role: "Juridique / RGPD", user: { firstName: "Leila", lastName: "Chaabane" }, score: 51, reactedToLastInject: false, badge: "Conf. plan -", status: "inactive", color: "bg-rose-700" },
   { id: "as-6", role: "RH / Logistique", user: { firstName: "Hedi", lastName: "Belkhadher" }, score: null, reactedToLastInject: false, badge: "Pas encore évalué", status: "pending", color: "bg-slate-400" },
 ];
+
+const dashboardRadarConfig = {
+  value: {
+    label: "Score collectif",
+    color: "#0F6E56",
+  },
+} satisfies ChartConfig;
 
 export default function SimulationDashboard({
   simulationId,
@@ -602,7 +610,7 @@ export default function SimulationDashboard({
             <CardContent className="p-4 flex flex-col md:flex-row items-center gap-4">
               {/* Radar chart */}
               <div className="w-full md:w-1/2 h-[220px] flex items-center justify-center shrink-0">
-                <ResponsiveContainer width="100%" height="100%">
+                <ChartContainer config={dashboardRadarConfig} className="mx-auto aspect-square max-h-[220px] w-full">
                   <RadarChart data={[
                     { subject: "Conformité", value: 71 },
                     { subject: "Décision", value: 74 },
@@ -611,11 +619,19 @@ export default function SimulationDashboard({
                     { subject: "Leadership", value: 78 },
                     { subject: "Stress", value: 66 },
                   ]}>
-                    <PolarGrid stroke="#E7E5E4" />
-                    <PolarAngleAxis dataKey="subject" tick={{ fontSize: 9, fontWeight: 700, fill: "#78716C" }} />
-                    <Radar name="Équipe" dataKey="value" stroke="#0F6E56" fill="#0F6E56" fillOpacity={0.25} />
+                    <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+                    <PolarGrid />
+                    <PolarAngleAxis dataKey="subject" tick={{ fontSize: 9, fontWeight: 700 }} />
+                    <Radar
+                      name="Équipe"
+                      dataKey="value"
+                      stroke="var(--color-value)"
+                      fill="var(--color-value)"
+                      fillOpacity={0.2}
+                      dot={{ r: 3, fillOpacity: 1 }}
+                    />
                   </RadarChart>
-                </ResponsiveContainer>
+                </ChartContainer>
               </div>
 
               {/* Side Bars metrics list */}

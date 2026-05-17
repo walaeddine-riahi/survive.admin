@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,12 +10,19 @@ import {
   Globe, Radio, Send, CheckCircle2,
   Clock, PhoneIncoming, PhoneMissed, Mic, MicOff,
   Shield, FileStack, ListTodo, MessageSquareText, Users, Forward,
+  Award, Sparkles, TrendingUp, ThumbsUp, ChevronDown, ChevronRight, Pause
 } from "lucide-react";
+import {
+  RadarChart, Radar, PolarGrid, PolarAngleAxis,
+  PolarRadiusAxis, ResponsiveContainer,
+} from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import CrisisLogPanel from "./crisis-log-panel";
 import CrisisDocsPanel from "./crisis-docs-panel";
 import ChatPanel from "./chat-panel";
 import ExternalChatPanel from "./external-chat-panel";
 import { replyToMessage, markMessageRead, logSimEvent, markParticipantConnected, updateCall, forwardSimMessage } from "@/actions/simulation/sim-session-actions";
+import { getParticipantScoreForSimulation } from "@/actions/simulation/analysis-actions";
 import { usePusherChannel } from "./use-pusher-channel";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -674,7 +681,7 @@ function MessageThread({ message, participantId, participantName, sessionId, onR
             )}
 
             {/* Body */}
-            <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{cleanMessageBody(message.body)}</p>
+            <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap break-all break-words">{cleanMessageBody(message.body)}</p>
             <MessageEmbeds text={message.body} />
 
             {/* Expiry */}
@@ -857,6 +864,243 @@ function MessageThread({ message, participantId, participantName, sessionId, onR
   );
 }
 
+// ─── Bilan de Performance Individuel ──────────────────────────────────────────
+function BilanPerformance({ scoreData, loading, onRefresh }: { scoreData: any; loading: boolean; onRefresh: () => void }) {
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+        <div className="relative">
+          <div className="w-12 h-12 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin" />
+          <Sparkles className="absolute inset-0 m-auto h-5 w-5 text-amber-400 animate-pulse" />
+        </div>
+        <div>
+          <h3 className="text-base font-semibold text-white">Génération de votre bilan en cours</h3>
+          <p className="text-xs text-slate-400 mt-1 max-w-sm">
+            Notre IA analyse vos décisions, la tonalité de vos messages et votre réactivité pour dresser votre profil de gestion de crise...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const score = scoreData?.score;
+  const injectResponses = scoreData?.injectResponses || [];
+
+  if (!score) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+        <Award className="h-12 w-12 text-slate-500 opacity-45 animate-pulse" />
+        <div>
+          <h3 className="text-base font-semibold text-slate-350">Aucun bilan disponible pour le moment</h3>
+          <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto leading-relaxed">
+            L'analyse automatisée de votre performance sera disponible dès que l'instructeur aura déclenché le debrief.
+          </p>
+        </div>
+        <Button onClick={onRefresh} className="h-8 text-xs bg-slate-800 hover:bg-slate-750 text-white font-medium border border-slate-700/80">
+          Actualiser mon bilan
+        </Button>
+      </div>
+    );
+  }
+
+  const chartData = [
+    { subject: "Conformité Plan", score: score.scoreConformity || 0 },
+    { subject: "Réactivité", score: score.scoreTimeliness || 0 },
+    { subject: "Décisions", score: score.scoreDecision || 0 },
+    { subject: "Communication", score: score.scoreCommunication || 0 },
+    { subject: "Gestion Stress", score: score.scoreTonality || 0 },
+    { subject: "Leadership", score: score.scoreLeadership || 0 },
+  ];
+
+  // Level config matching the colors
+  const levels = {
+    EXCELLENT: { label: "Excellent", color: "text-green-400 border-green-900/40 bg-green-950/20" },
+    GOOD: { label: "Bon", color: "text-blue-400 border-blue-900/40 bg-blue-950/20" },
+    ACCEPTABLE: { label: "Acceptable", color: "text-amber-400 border-amber-900/40 bg-amber-950/20" },
+    INSUFFICIENT: { label: "Insuffisant", color: "text-orange-400 border-orange-900/40 bg-orange-950/20" },
+    CRITICAL: { label: "Critique", color: "text-red-400 border-red-900/40 bg-red-950/20" },
+  };
+  const lvl = levels[score.level as keyof typeof levels] || levels.ACCEPTABLE;
+
+  return (
+    <div className="space-y-6 max-w-4xl mx-auto p-2 md:p-4 pb-20">
+      {/* Executive banner */}
+      <div className="relative overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-900/20 p-5 md:p-6 shadow-[0_4px_25px_rgba(0,0,0,0.45)]">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl" />
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 z-10 relative">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Award className="h-5 w-5 text-amber-500" />
+              <span className="text-xs font-mono tracking-wider uppercase text-amber-500 font-semibold">Bilan Individuel</span>
+            </div>
+            <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight">Votre Diagnostic de Gestion de Crise</h2>
+            <p className="text-xs text-slate-400 font-medium">Analyse et évaluation comportementale sous stress opérationnel</p>
+          </div>
+
+          <div className="flex items-center gap-3 bg-slate-900/40 border border-slate-800/80 p-3 rounded-2xl self-start md:self-auto shadow-sm">
+            <div className="text-right">
+              <p className="text-[10px] uppercase font-mono tracking-wider text-slate-500 font-medium">Score Global</p>
+              <div className="flex items-baseline justify-end gap-1">
+                <span className="text-3xl font-extrabold font-mono text-white tracking-tighter">{score.scoreGlobal}</span>
+                <span className="text-sm text-slate-500">/100</span>
+              </div>
+            </div>
+            <div className="h-8 w-px bg-slate-800" />
+            <Badge className={`text-xs px-2.5 py-1 rounded-xl font-semibold border ${lvl.color}`}>
+              {lvl.label}
+            </Badge>
+          </div>
+        </div>
+
+        {score.aiNarrative && (
+          <div className="mt-4 pt-4 border-t border-slate-800/80 text-sm italic text-slate-300 leading-relaxed font-sans pl-3 border-l-2 border-l-amber-500/65">
+            "{score.aiNarrative}"
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Radar Performance */}
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/10 p-4 md:p-5 flex flex-col justify-between shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+          <div>
+            <h3 className="text-sm font-semibold text-white mb-0.5">Radar des Compétences</h3>
+            <p className="text-xs text-slate-500 mb-4">Aperçu dimensionnel de vos aptitudes clés</p>
+          </div>
+
+          <div className="w-full h-[280px] sm:h-[320px] flex items-center justify-center overflow-visible">
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart cx="50%" cy="50%" outerRadius="75%" data={chartData}>
+                <PolarGrid stroke="#1e293b" />
+                <PolarAngleAxis dataKey="subject" tick={{ fill: "#94a3b8", fontSize: 10, fontWeight: 500 }} />
+                <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: "#64748b", fontSize: 8 }} />
+                <Radar
+                  name="Mon Score"
+                  dataKey="score"
+                  stroke="#DA7757"
+                  fill="#DA7757"
+                  fillOpacity={0.25}
+                />
+              </RadarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Detailed Competency list with bars */}
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/10 p-4 md:p-5 flex flex-col justify-between shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+          <div>
+            <h3 className="text-sm font-semibold text-white mb-0.5">Détail des Aptitudes</h3>
+            <p className="text-xs text-slate-500 mb-4">Scores individuels par composante évaluée</p>
+          </div>
+
+          <div className="space-y-3.5 flex-1 justify-center flex flex-col">
+            {chartData.map((d) => {
+              const val = d.score;
+              const color = val >= 80 ? "bg-green-500" : val >= 60 ? "bg-blue-500" : val >= 45 ? "bg-amber-500" : "bg-red-500";
+              const text = val >= 80 ? "text-green-400" : val >= 60 ? "text-blue-400" : val >= 45 ? "text-amber-400" : "text-red-400";
+              return (
+                <div key={d.subject} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-300 font-medium">{d.subject}</span>
+                    <span className={`font-mono font-bold ${text}`}>{val}%</span>
+                  </div>
+                  <div className="h-2 bg-slate-950/80 border border-slate-900 rounded-full overflow-hidden p-0.5">
+                    <div className={`h-full rounded-full transition-all duration-500 ${color}`} style={{ width: `${val}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Strengths */}
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/10 p-5 shadow-sm space-y-3">
+          <div className="flex items-center gap-2 text-green-400">
+            <ThumbsUp className="h-4.5 w-4.5" />
+            <h3 className="text-sm font-semibold text-white">Points Forts</h3>
+          </div>
+          {score.strengths?.length > 0 ? (
+            <ul className="space-y-2">
+              {score.strengths.map((str: string, i: number) => (
+                <li key={i} className="text-xs text-slate-350 flex items-start gap-2 leading-relaxed">
+                  <span className="text-green-500 mt-0.5 flex-shrink-0">✓</span>
+                  <span>{str}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs text-slate-500 italic">Aucun point fort spécifique consigné.</p>
+          )}
+        </div>
+
+        {/* Weaknesses */}
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/10 p-5 shadow-sm space-y-3">
+          <div className="flex items-center gap-2 text-amber-500">
+            <TrendingUp className="h-4.5 w-4.5" />
+            <h3 className="text-sm font-semibold text-white">Axes d'Amélioration</h3>
+          </div>
+          {score.weaknesses?.length > 0 ? (
+            <ul className="space-y-2">
+              {score.weaknesses.map((weak: string, i: number) => (
+                <li key={i} className="text-xs text-slate-350 flex items-start gap-2 leading-relaxed">
+                  <span className="text-amber-500 mt-0.5 flex-shrink-0">→</span>
+                  <span>{weak}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs text-slate-500 italic">Aucun axe d'amélioration spécifique consigné.</p>
+          )}
+        </div>
+      </div>
+
+      {/* Injects logs timeline summary */}
+      {injectResponses.length > 0 && (
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/10 p-5 shadow-[0_4px_20px_rgba(0,0,0,0.3)] space-y-3">
+          <div>
+            <h3 className="text-sm font-semibold text-white mb-0.5">Historique des Injectes Évalués</h3>
+            <p className="text-xs text-slate-500">Conformité et réactivité sur vos décisions directes</p>
+          </div>
+
+          <div className="space-y-2">
+            {injectResponses.map((r: any) => {
+              const confColors = {
+                CONFORMANT: "text-green-400 bg-green-950/20 border-green-900/40",
+                PARTIAL: "text-amber-400 bg-amber-950/20 border-amber-900/40",
+                NON_CONFORMANT: "text-red-400 bg-red-950/20 border-red-900/40",
+                NOT_APPLICABLE: "text-slate-400 bg-slate-900/20 border-slate-850",
+              };
+              const c = confColors[r.conformity as keyof typeof confColors] || confColors.NOT_APPLICABLE;
+              return (
+                <div key={r.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 border border-slate-850 bg-[#0e1726]/10 rounded-xl">
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-semibold text-white">Injecte #{r.injectionId.slice(-4)}</p>
+                    {r.actualAction && <p className="text-[11px] text-slate-400 truncate max-w-lg">{r.actualAction}</p>}
+                  </div>
+                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                    {r.reactionDelayMin != null && (
+                      <span className="text-[10px] font-mono bg-slate-850 px-2 py-0.5 rounded text-slate-400">
+                        {r.reactionDelayMin} min
+                      </span>
+                    )}
+                    <span className="text-[10px] font-mono bg-slate-850 px-2 py-0.5 rounded text-slate-400">
+                      Score: {r.conformityScore || 0}%
+                    </span>
+                    <Badge className={`text-[10px] border px-2 py-0 font-medium rounded-full ${c}`}>
+                      {r.conformity === "CONFORMANT" ? "Conforme" : r.conformity === "PARTIAL" ? "Partiel" : r.conformity === "NON_CONFORMANT" ? "Non-Conforme" : "N/A"}
+                    </Badge>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Participant View ────────────────────────────────────────────────────
 export default function ParticipantView({
   session,
@@ -864,7 +1108,7 @@ export default function ParticipantView({
   initialMessages,
   initialCalls,
 }: {
-  session: { id: string; title: string; status: string; wsRoomId: string; startedAt?: string | null; durationMinutes?: number | null; simulationId?: string; participants?: any[]; crisisLog?: any[]; };
+  session: { id: string; title: string; status: string; wsRoomId: string; startedAt?: string | null; pausedAt?: string | null; durationMinutes?: number | null; simulationId?: string; participants?: any[]; crisisLog?: any[]; };
   participant: { id: string; displayName: string; role: string; team?: string | null; simEmail?: string | null; simPhone?: string | null };
   initialMessages: Msg[];
   initialCalls: Call[];
@@ -874,13 +1118,46 @@ export default function ParticipantView({
   const [participants, setParticipants] = useState<any[]>(session.participants || []);
   const [incomingCall, setIncomingCall] = useState<Call | null>(null);
   const [activeCall, setActiveCall] = useState<Call | null>(null);
-  const [activeChannel, setActiveChannel] = useState<string>("ALL");
   const [sessionStatus, setSessionStatus] = useState(session.status);
+  const [startedAt, setStartedAt] = useState<string | null>(session.startedAt || null);
+  const [pausedAt, setPausedAt] = useState<string | null>(session.pausedAt || null);
+  const [activeChannel, setActiveChannel] = useState<string>(
+    session.status === "DEBRIEF" || session.status === "ENDED" ? "PERFORMANCE" : "ALL"
+  );
   const [elapsed, setElapsed] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
   const lastPollRef = useRef(new Date().toISOString());
   const hasPusher = !!process.env.NEXT_PUBLIC_PUSHER_KEY;
+
+  const [scoreData, setScoreData] = useState<any>(null);
+  const [loadingScore, setLoadingScore] = useState(false);
+
+  const loadScore = useCallback(async () => {
+    if (!session.simulationId) return;
+    setLoadingScore(true);
+    const r = await getParticipantScoreForSimulation(session.simulationId, participant.id);
+    if (r.success && r.data) {
+      setScoreData(r.data);
+    }
+    setLoadingScore(false);
+  }, [session.simulationId, participant.id]);
+
+  useEffect(() => {
+    if (sessionStatus === "DEBRIEF" || sessionStatus === "ENDED" || activeChannel === "PERFORMANCE") {
+      loadScore();
+    }
+  }, [sessionStatus, activeChannel, loadScore]);
+
+  // Fallback scoring polling when score is not ready yet
+  useEffect(() => {
+    if ((sessionStatus === "DEBRIEF" || sessionStatus === "ENDED" || activeChannel === "PERFORMANCE") && !scoreData && !loadingScore) {
+      const t = setInterval(() => {
+        loadScore();
+      }, 5000);
+      return () => clearInterval(t);
+    }
+  }, [sessionStatus, activeChannel, scoreData, loadingScore, loadScore]);
 
   // Register as connected on mount
   useEffect(() => {
@@ -895,12 +1172,22 @@ export default function ParticipantView({
 
   // Elapsed timer
   useEffect(() => {
-    if (!session.startedAt) return;
+    if (!startedAt) return;
+    
+    if (sessionStatus === "PAUSED") {
+      if (pausedAt) {
+        setElapsed(Math.floor((new Date(pausedAt).getTime() - new Date(startedAt).getTime()) / 1000));
+      } else {
+        // Fallback: keep current elapsed static
+      }
+      return;
+    }
+
     const t = setInterval(() => {
-      setElapsed(Math.floor((Date.now() - new Date(session.startedAt!).getTime()) / 1000));
+      setElapsed(Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000));
     }, 1000);
     return () => clearInterval(t);
-  }, [session.startedAt]);
+  }, [startedAt, sessionStatus, pausedAt]);
 
   // ── Pusher WebSocket ───────────────────────────────────────────────────────
   usePusherChannel({
@@ -967,11 +1254,22 @@ export default function ParticipantView({
       setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [{ ...msg, replies: [] }, ...prev]);
     }, []),
     onSessionStatus: useCallback((data: unknown) => {
-      const d = data as { status: string };
+      const d = data as { status: string; startedAt?: string | null; pausedAt?: string | null };
       setSessionStatus(d.status);
-      if (d.status === "ACTIVE") toast.success("🚀 La simulation démarre !");
+      if (d.startedAt !== undefined) setStartedAt(d.startedAt);
+      if (d.pausedAt !== undefined) setPausedAt(d.pausedAt);
+      if (d.status === "ACTIVE") {
+        toast.success("🚀 La simulation a été relancée !");
+        setActiveChannel("ALL");
+      }
       if (d.status === "PAUSED") toast.info("⏸ Simulation en pause");
-      if (d.status === "DEBRIEF") toast.info("📋 Passage en phase debrief");
+      if (d.status === "DEBRIEF") {
+        toast.info("📋 Passage en phase debrief");
+        setActiveChannel("PERFORMANCE");
+      }
+      if (d.status === "ENDED") {
+        setActiveChannel("PERFORMANCE");
+      }
     }, []),
     onIncomingCall: useCallback((data: unknown) => {
       const call = data as Call;
@@ -984,6 +1282,16 @@ export default function ParticipantView({
         setIncomingCall(null);
         sounds.stopPhoneRingtone();
       }
+    }, []),
+    onScoreReady: useCallback(() => {
+      toast.success("✨ Votre bilan de performance individuel est prêt !");
+      loadScore();
+    }, [loadScore]),
+    onFormAvailable: useCallback((data: unknown) => {
+      const d = data as { formId: string; type: string; title: string; urgent?: boolean };
+      toast.info(`📝 Nouveau questionnaire disponible : ${d.title}`, {
+        duration: 15000,
+      });
     }, []),
   });
 
@@ -1038,7 +1346,18 @@ export default function ParticipantView({
             }
           });
         }
-        if (data.session?.status) setSessionStatus(data.session.status);
+        if (data.session?.status) {
+          setSessionStatus(prev => {
+            if (prev !== data.session.status) {
+              if (data.session.status === "DEBRIEF" || data.session.status === "ENDED") {
+                setActiveChannel("PERFORMANCE");
+              }
+            }
+            return data.session.status;
+          });
+          if (data.session.startedAt) setStartedAt(data.session.startedAt);
+          if (data.session.pausedAt) setPausedAt(data.session.pausedAt);
+        }
       } catch {}
     };
 
@@ -1129,6 +1448,32 @@ export default function ParticipantView({
         <ActiveCallPanel call={activeCall} onEnd={handleEndCall} />
       )}
 
+      {/* Session paused modal overlay */}
+      {sessionStatus === "PAUSED" && (
+        <div className="fixed inset-0 z-[9999] bg-[#050914]/90 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#0e1628]/95 border border-amber-500/30 rounded-3xl p-8 max-w-md w-full text-center space-y-6 shadow-[0_0_50px_rgba(245,158,11,0.15)] animate-in fade-in zoom-in-95 duration-300">
+            <div className="w-16 h-16 mx-auto rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 animate-pulse">
+              <Pause className="h-8 w-8" />
+            </div>
+            
+            <div className="space-y-2">
+              <h2 className="text-xl font-extrabold text-white tracking-wide uppercase">Simulation Suspendue</h2>
+              <p className="text-xs font-bold text-amber-500 uppercase tracking-widest">Briefing en cours</p>
+            </div>
+
+            <p className="text-sm text-slate-300 leading-relaxed">
+              L'instructeur a suspendu temporairement l'exercice pour un briefing ou une pause technique.
+              Vos accès et communications sont gelés. Veuillez patienter...
+            </p>
+
+            <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
+              <span className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b] animate-ping" />
+              <span className="font-semibold tracking-wider uppercase font-mono">En attente de reprise...</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Top bar */}
       <header className="flex items-center gap-3 px-4 py-3 bg-gray-900 border-b border-gray-800 sticky top-0 z-30">
         <div className="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center font-bold text-sm flex-shrink-0">S</div>
@@ -1200,7 +1545,12 @@ export default function ParticipantView({
             );
           })}
 
-          <div className="mt-auto pt-3 border-t border-gray-800 px-2 space-y-1">
+          <div className="mt-auto pt-3 border-t border-slate-800/80 px-2 space-y-1">
+            {(sessionStatus === "DEBRIEF" || sessionStatus === "ENDED" || scoreData) && (
+              <button onClick={() => setActiveChannel("PERFORMANCE")} className={`flex items-center gap-2 px-3 py-2 w-full text-left rounded-lg text-sm font-semibold transition-all border border-amber-500/25 mb-1.5 ${activeChannel === "PERFORMANCE" ? "bg-amber-500/20 text-amber-200 shadow-[0_0_10px_rgba(245,158,11,0.15)]" : "text-amber-400/90 hover:bg-amber-500/10"}`}>
+                <Award className="h-4 w-4 flex-shrink-0 text-amber-400" /> <span className="truncate">Bilan & Performance</span>
+              </button>
+            )}
             <button onClick={() => setActiveChannel("CHAT")} className={`flex items-center gap-2 px-3 py-2 w-full text-left rounded-lg text-sm transition-colors ${activeChannel === "CHAT" ? "bg-gray-700 text-white" : "text-gray-400 hover:bg-gray-800"}`}>
               <MessageSquareText className="h-4 w-4 flex-shrink-0" /> <span className="truncate">Chat Interne</span>
             </button>
@@ -1214,15 +1564,15 @@ export default function ParticipantView({
               <FileStack className="h-4 w-4 flex-shrink-0" /> <span className="truncate">Documents</span>
             </button>
             
-            <div className="mt-4 pt-2 border-t border-gray-800 space-y-1">
-              <p className="text-xs text-gray-600">Mes coordonnées sim.</p>
+            <div className="mt-4 pt-2 border-t border-slate-800/80 space-y-1">
+              <p className="text-xs text-gray-650">Mes coordonnées sim.</p>
               {participant.simEmail && (
-                <p className="text-xs text-gray-600 truncate" title={participant.simEmail}>
+                <p className="text-xs text-gray-650 truncate" title={participant.simEmail}>
                   📧 {participant.simEmail}
                 </p>
               )}
               {participant.simPhone && (
-                <p className="text-xs text-gray-600">📞 {participant.simPhone}</p>
+                <p className="text-xs text-gray-650">📞 {participant.simPhone}</p>
               )}
             </div>
           </div>
@@ -1238,6 +1588,11 @@ export default function ParticipantView({
               }`}>
               Tout {unread > 0 && `(${unread})`}
             </button>
+            {(sessionStatus === "DEBRIEF" || sessionStatus === "ENDED" || scoreData) && (
+              <button onClick={() => setActiveChannel("PERFORMANCE")} className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold border border-amber-500/35 ${activeChannel === "PERFORMANCE" ? "bg-amber-500/20 text-amber-200" : "bg-gray-800 text-amber-400"}`}>
+                <Award className="h-3.5 w-3.5 text-amber-400" /> Bilan
+              </button>
+            )}
             {activeChannels.map(key => {
               const cfg = CHANNEL_CONFIG[key as keyof typeof CHANNEL_CONFIG];
               const c = channelCounts[key];
@@ -1276,6 +1631,8 @@ export default function ParticipantView({
               <CrisisLogPanel sessionId={session.id} participant={participant} initialEntries={session.crisisLog || []} />
             ) : activeChannel === "CRISIS_DOCS" ? (
               <CrisisDocsPanel sessionId={session.id} simulationId={session.simulationId || ""} participant={participant} />
+            ) : activeChannel === "PERFORMANCE" ? (
+              <BilanPerformance scoreData={scoreData} loading={loadingScore} onRefresh={loadScore} />
             ) : filteredMessages.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 text-center">
                 <div className="w-20 h-20 bg-gray-900 rounded-full flex items-center justify-center mb-4 border border-gray-800">

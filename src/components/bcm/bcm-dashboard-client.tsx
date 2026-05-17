@@ -13,6 +13,7 @@ import {
   RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend, Cell, PieChart, Pie,
 } from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 
 interface BcmData {
   summary: {
@@ -187,6 +188,13 @@ function RiskMatrixMini({ data }: { data: BcmData["processHeatmap"] }) {
   );
 }
 
+const bcmRadarConfig = {
+  value: {
+    label: "Score",
+    color: "#3b82f6",
+  },
+} satisfies ChartConfig;
+
 export default function BcmDashboardClient({ data }: { data: BcmData }) {
   const { summary, gapsBySeverity = {}, gapsByType = {}, strategiesByCategory = {}, processHeatmap = [] } = data;
 
@@ -315,13 +323,21 @@ export default function BcmDashboardClient({ data }: { data: BcmData }) {
             <CardDescription>Vue multi-dimensionnelle de la résilience</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={220}>
+            <ChartContainer config={bcmRadarConfig} className="mx-auto aspect-square max-h-[220px] w-full">
               <RadarChart data={radarData}>
+                <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
                 <PolarGrid />
                 <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10 }} />
-                <Radar name="Score" dataKey="value" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.25} />
+                <Radar
+                  name="Score"
+                  dataKey="value"
+                  stroke="var(--color-value)"
+                  fill="var(--color-value)"
+                  fillOpacity={0.2}
+                  dot={{ r: 3, fillOpacity: 1 }}
+                />
               </RadarChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
       </div>
