@@ -7,6 +7,10 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { joinParticipantSession } from "@/actions/simulation/sim-session-actions";
+import { Loader2 } from "lucide-react";
 
 interface Simulation {
   id: string;
@@ -79,10 +83,54 @@ const getAssignmentStatusBadge = (status: string) => {
 };
 
 export default function ParticipantModePage() {
+  const { data: session } = useSession();
+  const router = useRouter();
   const [simulations, setSimulations] = useState<Simulation[]>([]);
   const [activeIncidents, setActiveIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
+  const [joiningId, setJoiningId] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const handleJoinSimulation = async (simulationId: string) => {
+    if (!session?.user?.id) {
+      toast({
+        title: "Erreur",
+        description: "Vous devez être connecté pour rejoindre la simulation.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setJoiningId(simulationId);
+    try {
+      const result = await joinParticipantSession({
+        simulationId,
+        userId: session.user.id,
+        displayName: session.user.name || "Participant",
+        role: "Participant", // Default role, could be enhanced to fetch actual assignment role
+        email: session.user.email || undefined,
+      });
+
+      if (result.success && result.sessionId && result.participantId) {
+        router.push(`/simulation/${simulationId}/live?sessionId=${result.sessionId}&participantId=${result.participantId}`);
+      } else {
+        toast({
+          title: "Impossible de rejoindre",
+          description: result.error || "La session n'est pas encore active.",
+          variant: "destructive",
+        });
+        setJoiningId(null);
+      }
+    } catch (err) {
+      console.error("Erreur lors de la connexion à la session", err);
+      toast({
+        title: "Erreur",
+        description: "Une erreur inattendue s'est produite.",
+        variant: "destructive",
+      });
+      setJoiningId(null);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -155,12 +203,13 @@ export default function ParticipantModePage() {
                     {formatDate(simulation.startDate)} -{" "}
                     {formatDate(simulation.endDate)}
                   </div>
-                  <Button asChild>
-                    <Link
-                      href={`/simulation/${simulation.id}/participant-view`}
-                    >
-                      Accéder à la simulation
-                    </Link>
+                  <Button 
+                    onClick={() => handleJoinSimulation(simulation.id)}
+                    disabled={joiningId === simulation.id}
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                  >
+                    {joiningId === simulation.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Rejoindre la session (V2)
                   </Button>
                 </Card>
               ))}

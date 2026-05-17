@@ -237,6 +237,26 @@ export const IT_COMMANDS: LabCommand[] = [
   },
 
   {
+    cmd: "ls",
+    aliases: ["dir", "ls -la", "ls -l"],
+    description: "Liste les fichiers du répertoire courant",
+    category: "forensic",
+    hint: "ls",
+    outputFn: (_args) => {
+      return out([
+        line("total 44", "gray"),
+        line("drwxr-xr-x  2 root root 4096 Nov 18 08:00 ."),
+        line("drwxr-xr-x 10 root root 4096 Nov 18 07:55 .."),
+        line("-rwxr-xr-x  1 root root 8192 Nov 18 02:17 svc_update.exe", "red", true),
+        line("-rw-r--r--  1 root root   32 Nov 18 02:15 !!!READ_ME_LOCKBIT!!!.txt", "red", true),
+        line("-rw-r--r--  1 root root  144 Nov 18 01:00 config.json"),
+        gray(""),
+        yellow("ℹ  Utilisez 'cat' pour lire un fichier ou 'sha256sum' pour le hacher."),
+      ]);
+    },
+  },
+
+  {
     cmd: "nslookup",
     aliases: ["dig", "host", "Resolve-DnsName", "Get-DnsClientCache"],
     description: "Résolution DNS et investigation",
@@ -409,6 +429,7 @@ export const IT_COMMANDS: LabCommand[] = [
       line("  ps aux               Liste processus"),
       line("  kill-process <PID>   Terminer un processus"),
       cyan("FORENSIQUE"),
+      line("  ls                   Liste les fichiers"),
       line("  grep <pattern> <log> Recherche dans logs"),
       line("  find / -name <file>  Recherche de fichiers"),
       line("  sha256sum <file>     Hash de fichier"),

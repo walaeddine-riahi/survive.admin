@@ -9,8 +9,12 @@ import {
   Mail, Phone, MessageSquare, Bell, Zap, FileText,
   Globe, Radio, Send, CheckCircle2,
   Clock, PhoneIncoming, PhoneMissed, Mic, MicOff,
+  Shield, FileStack, ListTodo, MessageSquareText,
 } from "lucide-react";
-import { replyToMessage, markMessageRead, logSimEvent, markParticipantConnected } from "@/actions/simulation/sim-session-actions";
+import CrisisLogPanel from "./crisis-log-panel";
+import CrisisDocsPanel from "./crisis-docs-panel";
+import ChatPanel from "./chat-panel";
+import { replyToMessage, markMessageRead, logSimEvent, markParticipantConnected, updateCall } from "@/actions/simulation/sim-session-actions";
 import { usePusherChannel } from "./use-pusher-channel";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -335,7 +339,7 @@ export default function ParticipantView({
   initialMessages,
   initialCalls,
 }: {
-  session: { id: string; title: string; status: string; wsRoomId: string; startedAt?: string | null; durationMinutes?: number | null };
+  session: { id: string; title: string; status: string; wsRoomId: string; startedAt?: string | null; durationMinutes?: number | null; simulationId?: string; participants?: any[]; };
   participant: { id: string; displayName: string; role: string; team?: string | null; simEmail?: string | null; simPhone?: string | null };
   initialMessages: Msg[];
   initialCalls: Call[];
@@ -478,6 +482,10 @@ export default function ParticipantView({
   async function handleAnswerCall(call: Call) {
     setIncomingCall(null);
     setActiveCall(call);
+    
+    // Set call status to ACTIVE in database
+    await updateCall(call.callId, { status: "ACTIVE", answeredAt: true });
+
     await logSimEvent(session.id, {
       type: "call_answered",
       actorId: participant.id,
@@ -498,6 +506,14 @@ export default function ParticipantView({
 
   async function handleEndCall(notes: string) {
     if (!activeCall) return;
+    
+    // Send transcript to instructor
+    await updateCall(activeCall.callId, { 
+      status: "COMPLETED", 
+      endedAt: true, 
+      transcript: notes || "Appel terminé sans notes." 
+    });
+
     await logSimEvent(session.id, {
       type: "call_ended",
       actorId: participant.id,
@@ -615,15 +631,27 @@ export default function ParticipantView({
           })}
 
           <div className="mt-auto pt-3 border-t border-gray-800 px-2 space-y-1">
-            <p className="text-xs text-gray-600">Mes coordonnées sim.</p>
-            {participant.simEmail && (
-              <p className="text-xs text-gray-600 truncate" title={participant.simEmail}>
-                📧 {participant.simEmail}
-              </p>
-            )}
-            {participant.simPhone && (
-              <p className="text-xs text-gray-600">📞 {participant.simPhone}</p>
-            )}
+            <button onClick={() => setActiveChannel("CHAT")} className={`flex items-center gap-2 px-3 py-2 w-full text-left rounded-lg text-sm transition-colors ${activeChannel === "CHAT" ? "bg-gray-700 text-white" : "text-gray-400 hover:bg-gray-800"}`}>
+              <MessageSquareText className="h-4 w-4 flex-shrink-0" /> <span className="truncate">Chat Interne</span>
+            </button>
+            <button onClick={() => setActiveChannel("CRISIS_LOG")} className={`flex items-center gap-2 px-3 py-2 w-full text-left rounded-lg text-sm transition-colors ${activeChannel === "CRISIS_LOG" ? "bg-gray-700 text-white" : "text-gray-400 hover:bg-gray-800"}`}>
+              <Shield className="h-4 w-4 flex-shrink-0" /> <span className="truncate">Main Courante</span>
+            </button>
+            <button onClick={() => setActiveChannel("CRISIS_DOCS")} className={`flex items-center gap-2 px-3 py-2 w-full text-left rounded-lg text-sm transition-colors ${activeChannel === "CRISIS_DOCS" ? "bg-gray-700 text-white" : "text-gray-400 hover:bg-gray-800"}`}>
+              <FileStack className="h-4 w-4 flex-shrink-0" /> <span className="truncate">Documents</span>
+            </button>
+            
+            <div className="mt-4 pt-2 border-t border-gray-800 space-y-1">
+              <p className="text-xs text-gray-600">Mes coordonnées sim.</p>
+              {participant.simEmail && (
+                <p className="text-xs text-gray-600 truncate" title={participant.simEmail}>
+                  📧 {participant.simEmail}
+                </p>
+              )}
+              {participant.simPhone && (
+                <p className="text-xs text-gray-600">📞 {participant.simPhone}</p>
+              )}
+            </div>
           </div>
         </aside>
 
@@ -651,11 +679,26 @@ export default function ParticipantView({
                 </button>
               );
             })}
+            <button onClick={() => setActiveChannel("CHAT")} className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium ${activeChannel === "CHAT" ? "bg-gray-700 text-white" : "bg-gray-800 text-gray-400"}`}>
+              <MessageSquareText className="h-3 w-3" /> Chat
+            </button>
+            <button onClick={() => setActiveChannel("CRISIS_LOG")} className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium ${activeChannel === "CRISIS_LOG" ? "bg-gray-700 text-white" : "bg-gray-800 text-gray-400"}`}>
+              <Shield className="h-3 w-3" /> Main Courante
+            </button>
+            <button onClick={() => setActiveChannel("CRISIS_DOCS")} className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium ${activeChannel === "CRISIS_DOCS" ? "bg-gray-700 text-white" : "bg-gray-800 text-gray-400"}`}>
+              <FileStack className="h-3 w-3" /> Documents
+            </button>
           </div>
 
           {/* Messages feed */}
-          <div className={`flex-1 overflow-y-auto p-4 space-y-3 ${activeCall ? "pb-52" : ""}`}>
-            {filteredMessages.length === 0 ? (
+          <div className={`flex-1 overflow-y-auto p-4 space-y-3 ${activeCall ? "pb-52" : ""} ${activeChannel === "CHAT" ? "p-0" : ""}`}>
+            {activeChannel === "CHAT" ? (
+              <ChatPanel sessionId={session.id} participant={participant} allParticipants={session.participants || []} />
+            ) : activeChannel === "CRISIS_LOG" ? (
+              <CrisisLogPanel sessionId={session.id} participant={participant} />
+            ) : activeChannel === "CRISIS_DOCS" ? (
+              <CrisisDocsPanel sessionId={session.id} simulationId={session.simulationId || ""} participant={participant} />
+            ) : filteredMessages.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 text-center">
                 <div className="w-20 h-20 bg-gray-900 rounded-full flex items-center justify-center mb-4 border border-gray-800">
                   <Bell className="h-9 w-9 text-gray-700" />

@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import {
   getChannels, getMessages, sendChatMessage,
-  markChannelRead, getChatDelta, createDirectChannel,
+  markChannelRead, getChatDelta, createDirectChannel, getAllChannels,
 } from "@/actions/simulation/chat-actions";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -158,7 +158,9 @@ export default function ChatPanel({
   // Load channels on mount
   useEffect(() => {
     const load = async () => {
-      const r = await getChannels(sessionId, participant.id);
+      const r = participant.isInstructor 
+        ? await getAllChannels(sessionId)
+        : await getChannels(sessionId, participant.id);
       if (r.success && r.data) {
         setChannels(r.data as Channel[]);
         // Auto-open general channel

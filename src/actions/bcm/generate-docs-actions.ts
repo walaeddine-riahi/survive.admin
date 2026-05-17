@@ -1,7 +1,7 @@
 "use server";
 
 import OpenAI from "openai";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { BCMSection } from "@/lib/bcm/docx-formatter";
 
 // Helper to initialize OpenAI client

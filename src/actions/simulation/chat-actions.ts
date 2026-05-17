@@ -80,6 +80,11 @@ export async function bootstrapChannels(sessionId: string) {
 
 export async function getChannels(sessionId: string, participantId: string) {
   try {
+    const checkCount = await prisma.chatChannel.count({ where: { sessionId } });
+    if (checkCount === 0) {
+      await bootstrapChannels(sessionId);
+    }
+
     const channels = await prisma.chatChannel.findMany({
       where: {
         sessionId,
@@ -117,6 +122,11 @@ export async function getChannels(sessionId: string, participantId: string) {
 
 export async function getAllChannels(sessionId: string) {
   try {
+    const checkCount = await prisma.chatChannel.count({ where: { sessionId } });
+    if (checkCount === 0) {
+      await bootstrapChannels(sessionId);
+    }
+
     const channels = await prisma.chatChannel.findMany({
       where: { sessionId, isArchived: false },
       include: {

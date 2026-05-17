@@ -13,7 +13,11 @@ import {
   Globe, Radio, Send, Play, Pause, Square, Users,
   Clock, AlertTriangle, CheckCircle2, Eye, Activity,
   ChevronDown, X, PhoneCall, Timer,
+  Shield, ListTodo, MessageSquareText,
 } from "lucide-react";
+import InstructorCrisisLogMonitor from "./instructor-crisis-log";
+import FormSynthesisView from "./form-synthesis";
+import ChatPanel from "./chat-panel";
 import {
   sendSimMessage, updateSessionStatus, initiateCall,
   updateCall, logSimEvent,
@@ -365,7 +369,7 @@ export default function InstructorView({
   const [events, setEvents] = useState<Event[]>(initialEvents);
   const [lastPoll, setLastPoll] = useState(new Date().toISOString());
   const [elapsed, setElapsed] = useState(0);
-  const [activeTab, setActiveTab] = useState<"inject"|"feed"|"participants"|"calls">("inject");
+  const [activeTab, setActiveTab] = useState<string>("feed");
   const pollRef = useRef<NodeJS.Timeout | null>(null);
 
   // Timer
@@ -445,8 +449,8 @@ export default function InstructorView({
       setParticipants(prev => prev.map(p => p.id === d.participantId ? { ...p, isConnected: false } : p));
     }, []),
     onCallUpdated: useCallback((data: unknown) => {
-      const d = data as { callId: string; status: string };
-      setCalls(prev => prev.map((c: Call) => c.id === d.callId ? { ...c, status: d.status } : c));
+      const d = data as { callId: string; status: string; transcript?: string };
+      setCalls(prev => prev.map((c: Call) => c.id === d.callId ? { ...c, status: d.status, transcript: d.transcript || c.transcript } : c));
       if (d.status === "ACTIVE") toast.success("📞 Appel décroché !");
       if (d.status === "MISSED") toast.error("📵 Appel manqué");
     }, []),
@@ -567,14 +571,17 @@ export default function InstructorView({
         {/* Center — feed + tabs */}
         <div className="flex-1 flex flex-col min-h-0">
           {/* Tabs */}
-          <div className="flex border-b border-gray-800 px-4">
+          <div className="flex border-b border-gray-800 px-4 overflow-x-auto no-scrollbar flex-shrink-0">
             {[
-              { key: "feed", label: "Feed temps réel", count: messages.length },
+              { key: "feed", label: "Feed", count: messages.length },
               { key: "participants", label: "Participants", count: connectedCount },
               { key: "calls", label: "Appels", count: calls.length },
+              { key: "chat", label: "Chat", count: 0 },
+              { key: "crisis_log", label: "Main Courante", count: 0 },
+              { key: "forms", label: "Formulaires", count: 0 },
             ].map(tab => (
               <button key={tab.key}
-                onClick={() => setActiveTab(tab.key as "inject"|"feed"|"participants"|"calls")}
+                onClick={() => setActiveTab(tab.key)}
                 className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === tab.key
                     ? "border-orange-500 text-orange-400"
@@ -590,7 +597,7 @@ export default function InstructorView({
             ))}
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className={`flex-1 overflow-y-auto ${activeTab === "chat" ? "p-0" : "p-4"}`}>
             {/* FEED TAB */}
             {activeTab === "feed" && (
               <div className="space-y-3">
@@ -695,6 +702,23 @@ export default function InstructorView({
                   </div>
                 )}
               </div>
+            )}
+
+            {/* CHAT TAB */}
+            {activeTab === "chat" && (
+              <div className="h-full">
+                <ChatPanel sessionId={session.id} participant={{ id: "instructor", displayName: "Instructeur", role: "Supervision", isInstructor: true }} allParticipants={participants} />
+              </div>
+            )}
+
+            {/* CRISIS LOG TAB */}
+            {activeTab === "crisis_log" && (
+              <InstructorCrisisLogMonitor sessionId={session.id} />
+            )}
+
+            {/* FORMS TAB */}
+            {activeTab === "forms" && (
+              <FormSynthesisView sessionId={session.id} />
             )}
           </div>
         </div>

@@ -51,8 +51,8 @@ const routes: Route[] = [
         rolesRequired: ["ADMIN"],
       },
       {
-        title: "Créer simulation",
-        href: "/simulation/create",
+        title: "Créer simulation (Wizard)",
+        href: "/simulation/builder",
         rolesRequired: ["ADMIN"],
       },
       { title: "Scénarios", href: "/scenario", rolesRequired: ["ADMIN"] },

@@ -550,6 +550,7 @@ export async function updateCall(callId: string, data: {
       status: data.status,
       callerName: call.callerName,
       recipientId: call.recipientId,
+      transcript: data.transcript,
     });
 
     return { success: true, data: call };
@@ -628,5 +629,89 @@ export async function getSimSessions(simulationId: string) {
     return { success: true, data: sessions };
   } catch {
     return { success: false, error: "Erreur récupération sessions" };
+  }
+}
+
+// ─── Bridge V1 -> V2 ──────────────────────────────────────────────────────────
+
+export async function getOrCreateInstructorSession(simulationId: string, title: string) {
+  try {
+    // Look for an existing session that is not ended
+    const existing = await prisma.simSession.findFirst({
+      where: { simulationId, status: { not: "ENDED" } },
+      orderBy: { scheduledAt: "desc" },
+    });
+
+    if (existing) {
+      return { success: true, sessionId: existing.id };
+    }
+
+    // Otherwise, create a new one
+    const wsRoomId = `sim-${randomBytes(8).toString("hex")}`;
+    const newSession = await prisma.simSession.create({
+      data: {
+        simulationId,
+        title: title || "Session V2",
+        scheduledAt: new Date(),
+        wsRoomId,
+        status: "SETUP",
+      },
+    });
+
+    return { success: true, sessionId: newSession.id };
+  } catch (error) {
+    console.error("getOrCreateInstructorSession:", error);
+    return { success: false, error: "Erreur création session V2" };
+  }
+}
+
+export async function joinParticipantSession(input: {
+  simulationId: string;
+  userId: string;
+  displayName: string;
+  role: string;
+  team?: string;
+  email?: string;
+}) {
+  try {
+    // Look for an active session
+    const session = await prisma.simSession.findFirst({
+      where: { simulationId: input.simulationId, status: { not: "ENDED" } },
+      orderBy: { scheduledAt: "desc" },
+    });
+
+    if (!session) {
+      return { success: false, error: "La session n'a pas encore été démarrée par l'instructeur." };
+    }
+
+    // Check if participant already exists in this session
+    let participant = await prisma.simParticipant.findFirst({
+      where: { sessionId: session.id, userId: input.userId },
+    });
+
+    if (!participant) {
+      // Add participant
+      const slug = input.displayName.toLowerCase().replace(/\s+/g, ".").replace(/[^a-z.]/g, "");
+      const simEmail = `${slug}@sim.survive.io`;
+      const simPhone = `+SIM-${Math.floor(1000 + Math.random() * 9000)}`;
+
+      participant = await prisma.simParticipant.create({
+        data: {
+          sessionId: session.id,
+          userId: input.userId,
+          displayName: input.displayName,
+          role: input.role || "Participant",
+          team: input.team,
+          email: input.email,
+          simEmail,
+          simPhone,
+        },
+      });
+    }
+
+    return { success: true, sessionId: session.id, participantId: participant.id };
+  } catch (error) {
+    console.error("joinParticipantSession:", error);
+    return { success: false, error: "Erreur lors de la connexion à la session" };
   }
 }
