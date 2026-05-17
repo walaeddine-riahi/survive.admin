@@ -176,6 +176,30 @@ export async function POST(
 
     console.log("Participant ajouté avec succès:", participant);
 
+    // Find associated SimSession if it exists (for live V2)
+    const simSession = await prisma.simSession.findFirst({
+      where: { simulationId },
+    });
+
+    let simParticipantId: string | undefined;
+
+    if (simSession) {
+      // Ensure the participant is also in the live session
+      const simParticipant = await prisma.simParticipant.upsert({
+        where: { sessionId_userId: { sessionId: simSession.id, userId: user.id } },
+        create: {
+          sessionId: simSession.id,
+          userId: user.id,
+          displayName: `${user.firstName} ${user.lastName}`,
+          role: "Participant",
+          email: user.email,
+          simEmail: `${user.firstName?.toLowerCase()}.${user.lastName?.toLowerCase()}@sim.survive.io`,
+        },
+        update: {},
+      });
+      simParticipantId = simParticipant.id;
+    }
+
     let emailSent = false;
 
     if (user.firstName) {
@@ -186,7 +210,9 @@ export async function POST(
           firstName: user.firstName,
           password: user.password,
           simulationTitle: simulation.title,
-          simulationId
+          simulationId,
+          sessionId: simSession?.id,
+          participantId: simParticipantId
         });
         console.log("Email de bienvenue envoyé avec succès.");
         emailSent = true;

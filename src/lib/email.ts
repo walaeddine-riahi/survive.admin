@@ -40,7 +40,9 @@ const welcomeEmailTemplate = ({
   simulationTitle,
   simulationId,
   baseUrl,
-  magicToken
+  magicToken,
+  sessionId,
+  participantId
 }: {
   firstName: string;
   userEmail: string;
@@ -49,10 +51,14 @@ const welcomeEmailTemplate = ({
   simulationId: string;
   baseUrl: string;
   magicToken?: string;
+  sessionId?: string;
+  participantId?: string;
 }) => {
-  const ctaUrl = magicToken 
-    ? `${baseUrl}/magic-login?token=${magicToken}&simulationId=${simulationId}`
-    : `${baseUrl}/simulation/${simulationId}/participant-view`;
+  const ctaUrl = (sessionId && participantId)
+    ? `${baseUrl}/simulation/${simulationId}/live?sessionId=${sessionId}&participantId=${participantId}`
+    : magicToken 
+      ? `${baseUrl}/magic-login?token=${magicToken}&simulationId=${simulationId}`
+      : `${baseUrl}/simulation/${simulationId}/participant-view`;
 
   return `
 <!DOCTYPE html>
@@ -61,157 +67,103 @@ const welcomeEmailTemplate = ({
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Invitation à l'exercice de gestion de crise - S.U.R.V.I.V.E.</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
+    body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; background-color: #0A0A0A; color: #E5E5E5; -webkit-font-smoothing: antialiased; }
+    .container { width: 100%; padding: 40px 10px; background-color: #0A0A0A; }
+    .card { max-width: 600px; margin: 0 auto; background-color: #121212; border-radius: 12px; overflow: hidden; border: 1px solid #262626; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8); }
+    .accent-line { height: 4px; background: linear-gradient(90deg, #F97316 0%, #EA580C 50%, #C2410C 100%); }
+    .header { padding: 40px 30px 20px; text-align: center; }
+    .logo { font-size: 32px; font-weight: 900; letter-spacing: 6px; color: #FFFFFF; text-transform: uppercase; }
+    .subtitle { font-size: 11px; font-weight: 800; color: #EA580C; letter-spacing: 5px; text-transform: uppercase; margin-top: 8px; }
+    .banner { padding: 10px 40px 30px; text-align: center; border-bottom: 1px solid #1F1F1F; }
+    .badge { display: inline-block; background-color: rgba(234, 88, 12, 0.1); border: 1px solid rgba(234, 88, 12, 0.2); border-radius: 4px; padding: 6px 14px; font-size: 11px; font-weight: 800; color: #EA580C; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 20px; }
+    .title { margin: 0; font-size: 26px; font-weight: 800; color: #FFFFFF; line-height: 1.3; letter-spacing: -0.5px; }
+    .desc { margin: 12px 0 0; font-size: 15px; color: #A3A3A3; }
+    .sim-tag { display: inline-block; background-color: #171717; border: 1px solid #262626; border-radius: 6px; padding: 10px 20px; margin-top: 20px; }
+    .sim-tag-text { font-size: 14px; font-weight: 600; color: #D4D4D4; }
+    .content { padding: 40px 45px; color: #D4D4D4; font-size: 15px; line-height: 1.7; }
+    .greeting { margin: 0 0 20px; font-size: 17px; color: #FFFFFF; font-weight: 600; }
+    .creds-box { background-color: #0F0F0F; border: 1px solid #262626; border-radius: 12px; margin: 35px 0; padding: 30px; }
+    .creds-title { font-size: 12px; font-weight: 800; color: #A3A3A3; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 24px; display: flex; align-items: center; }
+    .creds-label { color: #737373; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 8px; }
+    .creds-val { padding: 14px 18px; background-color: #171717; border: 1px solid #262626; border-radius: 8px; font-family: monospace; color: #FFFFFF; font-size: 16px; font-weight: 700; letter-spacing: 1px; margin-bottom: 20px; }
+    .creds-val.pwd { color: #EA580C; }
+    .creds-warn { margin: 0; font-size: 12px; color: #737373; font-style: italic; }
+    .req-box { margin: 35px 0; padding: 25px; background: linear-gradient(180deg, rgba(234,88,12,0.03) 0%, rgba(234,88,12,0) 100%); border: 1px solid #262626; border-radius: 12px; }
+    .req-title { font-size: 13px; font-weight: 800; color: #FFFFFF; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 16px; }
+    .req-list { list-style: none; padding: 0; margin: 0; }
+    .req-item { font-size: 14px; color: #A3A3A3; margin-bottom: 12px; padding-left: 20px; position: relative; }
+    .req-item:before { content: "→"; position: absolute; left: 0; color: #EA580C; font-weight: bold; }
+    .cta-container { text-align: center; margin: 45px 0 30px; }
+    .cta-btn { display: inline-block; background: #EA580C; background: linear-gradient(135deg, #F97316 0%, #EA580C 100%); color: #FFFFFF; text-decoration: none; padding: 18px 48px; border-radius: 8px; font-weight: 800; font-size: 15px; letter-spacing: 1px; text-transform: uppercase; box-shadow: 0 10px 25px -5px rgba(234, 88, 12, 0.4); border: 1px solid rgba(255, 255, 255, 0.2); transition: transform 0.2s, box-shadow 0.2s; }
+    .cta-link { margin: 20px 0 0; font-size: 12px; color: #525252; text-align: center; }
+    .cta-link a { color: #EA580C; text-decoration: underline; }
+    .footer { background-color: #0A0A0A; padding: 35px 45px; border-top: 1px solid #1F1F1F; text-align: center; }
+    .footer p { margin: 0; font-size: 12px; color: #525252; line-height: 1.6; }
+    .footer .copy { margin-top: 16px; font-weight: 600; color: #737373; }
+  </style>
 </head>
-<body style="margin:0; padding:0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #12100E; color: #F5F4F0; -webkit-font-smoothing: antialiased;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #12100E; padding: 40px 10px;">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #1A1715; border-radius: 16px; overflow: hidden; border: 1px solid #2B2623; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);">
-          <!-- Top Cyber Neon Orange Accent Line -->
-          <tr>
-            <td height="6" style="background: linear-gradient(90deg, #F97316 0%, #FF8A3D 50%, #D97706 100%);"></td>
-          </tr>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="accent-line"></div>
+      
+      <div class="header">
+        <div class="logo">S.U.R.V.I.V.E.</div>
+        <div class="subtitle">Resilience Simulation Network</div>
+      </div>
+
+      <div class="banner">
+        <div class="badge">🚨 Déploiement Tactique</div>
+        <h1 class="title">Alerte d'incubation opérationnelle</h1>
+        <p class="desc">Vous avez été désigné(e) pour intégrer la cellule de réponse aux incidents.</p>
+        <div class="sim-tag">
+          <span class="sim-tag-text">Opérationnel : ${simulationTitle}</span>
+        </div>
+      </div>
+      
+      <div class="content">
+        <p class="greeting">Bonjour ${firstName},</p>
+        <p>Dans le cadre des protocoles de continuité d'activité de notre réseau, vous êtes affecté(e) en tant que participant officiel à l'exercice de crise sur la plateforme de simulation avancée <strong>SURVIVE</strong>.</p>
+        
+        <div class="creds-box">
+          <div class="creds-title">🔐 Vos Accès Sécurisés</div>
           
-          <!-- Logo & Header Section -->
-          <tr>
-            <td align="center" style="padding: 45px 30px 20px 30px;">
-              <table role="presentation" cellspacing="0" cellpadding="0">
-                <tr>
-                  <td align="center">
-                    <div style="font-size: 28px; font-weight: 900; letter-spacing: 4px; color: #F5F4F0; text-transform: uppercase; font-family: sans-serif;">
-                      S.U.R.V.I.V.E.
-                    </div>
-                    <div style="font-size: 11px; font-weight: 700; color: #F97316; letter-spacing: 4px; text-transform: uppercase; margin-top: 6px;">
-                      Resilience Simulation Network
-                    </div>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Welcome Banner Section -->
-          <tr>
-            <td align="center" style="padding: 10px 40px 35px 40px; border-bottom: 1px solid #26211E;">
-              <div style="display: inline-block; background-color: rgba(249, 115, 22, 0.08); border: 1px solid rgba(249, 115, 22, 0.25); border-radius: 4px; padding: 5px 12px; font-size: 11px; text-transform: uppercase; font-weight: 700; color: #F97316; letter-spacing: 1px; margin-bottom: 20px;">
-                🚨 EXERCICE TACTIQUE ACTIF
-              </div>
-              <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #F5F4F0; text-align: center; line-height: 1.4; letter-spacing: -0.5px;">
-                Alerte d'incubation opérationnelle
-              </h1>
-              <p style="margin: 10px 0 0 0; font-size: 15px; color: #A89F99;">
-                Vous avez été désigné(e) pour intégrer la cellule de réponse.
-              </p>
-              <div style="display: inline-block; background-color: rgba(249, 115, 22, 0.08); border: 1px solid rgba(249, 115, 22, 0.25); border-radius: 6px; padding: 8px 18px; margin-top: 15px;">
-                <span style="font-size: 13px; font-weight: 700; color: #F97316; vertical-align: middle;">
-                  ● Opérationnel : ${simulationTitle}
-                </span>
-              </div>
-            </td>
-          </tr>
+          <span class="creds-label">Identifiant (E-mail)</span>
+          <div class="creds-val">${userEmail}</div>
           
-          <!-- Main Content -->
-          <tr>
-            <td style="padding: 40px 45px 30px 45px; color: #D8D2CB; font-size: 15px; line-height: 1.7;">
-              <p style="margin: 0 0 18px 0; font-size: 16px; color: #F5F4F0;">Bonjour <strong>${firstName}</strong>,</p>
-              
-              <p style="margin: 0 0 24px 0;">Dans le cadre des protocoles de continuité d'activité opérationnelle de notre réseau, vous êtes affecté(e) comme participant officiel à l'exercice de crise majeure de cybersécurité sur la plateforme d'exercice <strong>SURVIVE</strong>.</p>
-              
-              <!-- Credentials Container -->
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #211D1B; border: 1px solid #332B27; border-radius: 12px; margin: 30px 0; box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);">
-                <tr>
-                  <td style="padding: 28px;">
-                    <div style="font-size: 13px; font-weight: 800; color: #F97316; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px;">
-                      🔐 Vos Identifiants de Connexion Sécurisés
-                    </div>
-                    
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-                      <tr>
-                        <td style="padding-bottom: 6px;">
-                          <span style="color: #9E938A; font-size: 13px; font-weight: 600;">Identifiant de connexion / E-mail</span>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 12px 16px; background-color: #12100E; border: 1px solid #2B2623; border-radius: 8px; font-family: monospace; color: #FAF9F5; font-size: 15px; font-weight: bold; letter-spacing: 0.5px;">
-                          ${userEmail}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 18px 0 6px 0;">
-                          <span style="color: #9E938A; font-size: 13px; font-weight: 600;">Mot de passe de sécurité</span>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 12px 16px; background-color: #12100E; border: 1px solid #2B2623; border-radius: 8px; font-family: monospace; color: #F97316; font-size: 15px; font-weight: bold; letter-spacing: 0.5px;">
-                          ${password || "survive"}
-                        </td>
-                      </tr>
-                    </table>
-                    <p style="margin: 15px 0 0 0; font-size: 12px; color: #8F8278; font-style: italic; display: flex; align-items: center;">
-                      ⚠️ Ce mot de passe temporaire doit être conservé de manière confidentielle.
-                    </p>
-                  </td>
-                </tr>
-              </table>
+          <span class="creds-label">Mot de passe temporaire</span>
+          <div class="creds-val pwd" style="margin-bottom: 15px;">${password || "survive"}</div>
+          
+          <p class="creds-warn">⚠️ Ce mot de passe est strictement personnel. Ne le partagez avec personne.</p>
+        </div>
 
-              <!-- Platform actions preview -->
-              <div style="margin-top: 35px; margin-bottom: 30px; background-color: rgba(255,255,255,0.01); border: 1px solid #26211E; padding: 20px; border-radius: 8px;">
-                <h3 style="font-size: 14px; font-weight: 800; color: #F5F4F0; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 15px 0;">
-                  Vos prérequis opérationnels :
-                </h3>
-                <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-                  <tr>
-                    <td style="padding: 8px 0; font-size: 14px; color: #A89F99;">
-                      <span style="color: #F97316; font-weight: bold; margin-right: 10px;">✦</span> Réagir en temps réel aux injections réglementaires et techniques d'incident
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; font-size: 14px; color: #A89F99;">
-                      <span style="color: #F97316; font-weight: bold; margin-right: 10px;">✦</span> Participer aux communications inter-cellules via mémos et rapports Sitreps
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; font-size: 14px; color: #A89F99;">
-                      <span style="color: #F97316; font-weight: bold; margin-right: 10px;">✦</span> Suivre l'évolution chronologique et piloter la cellule de crise
-                    </td>
-                  </tr>
-                </table>
-              </div>
+        <div class="req-box">
+          <h3 class="req-title">Vos objectifs d'intervention :</h3>
+          <ul class="req-list">
+            <li class="req-item">Traiter et réagir en temps réel aux injections (emails, sms, appels)</li>
+            <li class="req-item">Coordonner la réponse via la messagerie inter-cellules</li>
+            <li class="req-item">Consulter les documents de crise mis à disposition</li>
+          </ul>
+        </div>
 
-              <!-- Main CTA Button -->
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 40px 0 30px 0;">
-                <tr>
-                  <td align="center">
-                    <a href="${ctaUrl}" target="_blank"
-                       style="background: linear-gradient(135deg, #F97316 0%, #D97706 100%); color: #12100E; text-decoration: none; padding: 16px 42px; border-radius: 8px; display: inline-block; font-weight: 800; font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; box-shadow: 0 8px 24px rgba(249, 115, 22, 0.35); border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.2s;">
-                      Accéder à la Simulation
-                    </a>
-                  </td>
-                </tr>
-              </table>
+        <div class="cta-container">
+          <a href="${ctaUrl}" class="cta-btn" target="_blank">Rejoindre la simulation</a>
+        </div>
 
-              <p style="margin: 20px 0 0 0; font-size: 13px; color: #6E6660; text-align: center;">
-                Lien direct : <a href="${ctaUrl}" style="color: #F97316; text-decoration: none;">${ctaUrl}</a>
-              </p>
-            </td>
-          </tr>
+        <p class="cta-link">
+          Si le bouton ne fonctionne pas, copiez ce lien : <br>
+          <a href="${ctaUrl}">${ctaUrl}</a>
+        </p>
+      </div>
 
-          <!-- Footer Block -->
-          <tr>
-            <td style="background-color: #12100E; padding: 35px 45px; border-top: 1px solid #26211E; text-align: center; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
-              <p style="margin: 0; font-size: 12px; color: #5C5550; line-height: 1.6;">
-                Ceci est une notification automatique sécurisée générée par S.U.R.V.I.V.E. - Plateforme de Simulation de Crise.<br>
-                Merci de ne pas y répondre directement.
-              </p>
-              <p style="margin: 18px 0 0 0; font-size: 12px; color: #736B65; font-weight: 600;">
-                © ${new Date().getFullYear()} S.U.R.V.I.V.E. Resilience Network. Tous droits réservés.
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
+      <div class="footer">
+        <p>Notification système sécurisée générée par S.U.R.V.I.V.E.<br>Merci de ne pas répondre à cet e-mail.</p>
+        <p class="copy">© ${new Date().getFullYear()} S.U.R.V.I.V.E. Resilience Network. Tous droits réservés.</p>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
 `;
@@ -223,6 +175,8 @@ export interface WelcomeEmailParams {
   password?: string;
   simulationTitle: string;
   simulationId: string;
+  sessionId?: string;
+  participantId?: string;
 }
 
 export const sendWelcomeEmail = async (
@@ -230,7 +184,9 @@ export const sendWelcomeEmail = async (
   firstName?: string,
   password?: string,
   simulationTitle?: string,
-  simulationId?: string
+  simulationId?: string,
+  sessionId?: string,
+  participantId?: string
 ) => {
   try {
     let emailVal: string;
@@ -238,6 +194,8 @@ export const sendWelcomeEmail = async (
     let passwordVal: string;
     let simulationTitleVal: string;
     let simulationIdVal: string;
+    let sessionIdVal: string | undefined;
+    let participantIdVal: string | undefined;
 
     if (typeof optionsOrEmail === "object" && optionsOrEmail !== null) {
       emailVal = optionsOrEmail.email;
@@ -245,12 +203,16 @@ export const sendWelcomeEmail = async (
       passwordVal = optionsOrEmail.password || "survive";
       simulationTitleVal = optionsOrEmail.simulationTitle;
       simulationIdVal = optionsOrEmail.simulationId;
+      sessionIdVal = optionsOrEmail.sessionId;
+      participantIdVal = optionsOrEmail.participantId;
     } else {
       emailVal = optionsOrEmail;
       firstNameVal = firstName || "";
       passwordVal = password || "survive";
       simulationTitleVal = simulationTitle || "";
       simulationIdVal = simulationId || "";
+      sessionIdVal = sessionId;
+      participantIdVal = participantId;
     }
 
     let finalPassword = passwordVal;
@@ -278,7 +240,9 @@ export const sendWelcomeEmail = async (
         simulationTitle: simulationTitleVal,
         simulationId: simulationIdVal,
         baseUrl,
-        magicToken
+        magicToken,
+        sessionId: sessionIdVal,
+        participantId: participantIdVal
       }),
     };
 

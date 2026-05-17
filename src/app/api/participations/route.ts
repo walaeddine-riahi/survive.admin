@@ -70,6 +70,29 @@ export async function POST(request: Request) {
       select: { id: true, title: true },
     });
 
+    // Find associated SimSession if it exists
+    const simSession = await prisma.simSession.findFirst({
+      where: { simulationId },
+    });
+
+    let simParticipantId: string | undefined;
+
+    if (simSession && user) {
+      const simParticipant = await prisma.simParticipant.upsert({
+        where: { sessionId_userId: { sessionId: simSession.id, userId: user.id } },
+        create: {
+          sessionId: simSession.id,
+          userId: user.id,
+          displayName: `${user.firstName} ${user.lastName}`,
+          role: role || "Participant",
+          email: user.email,
+          simEmail: `${user.firstName?.toLowerCase()}.${user.lastName?.toLowerCase()}@sim.survive.io`,
+        },
+        update: {},
+      });
+      simParticipantId = simParticipant.id;
+    }
+
     if (
       user &&
       user.firstName &&
@@ -83,7 +106,9 @@ export async function POST(request: Request) {
           firstName: user.firstName,
           password: user.password,
           simulationTitle: simulation.title,
-          simulationId: simulation.id
+          simulationId: simulation.id,
+          sessionId: simSession?.id,
+          participantId: simParticipantId
         });
         console.log("Email de bienvenue envoyé avec succès.");
         emailSent = true;
