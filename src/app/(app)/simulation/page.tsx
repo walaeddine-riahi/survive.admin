@@ -6,8 +6,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import {
@@ -18,14 +16,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -38,6 +28,18 @@ import {
   Trash2,
   Eye,
   LayoutDashboard,
+  Play,
+  Activity,
+  Award,
+  Clock,
+  Sparkles,
+  Server,
+  Mail,
+  Phone,
+  MessageSquare,
+  Shield,
+  Workflow,
+  BookOpen,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -76,14 +78,6 @@ interface Simulation {
   scenarios: Scenario[]; // Include scenarios in Simulation type
 }
 
-interface SimulationFormData {
-  title: string;
-  description?: string;
-  startDate: Date;
-  endDate: Date;
-  status: "planned" | "ongoing" | "completed" | "cancelled";
-}
-
 const formatDate = (dateString: string) => {
   if (!dateString) return "Date invalide";
   try {
@@ -103,26 +97,35 @@ const getStatusBadge = (status: string) => {
   switch (status) {
     case "planned":
       return (
-        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 shadow-[0_0_10px_rgba(124,58,237,0.1)] font-bold uppercase text-[10px]">
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-[0_0_12px_rgba(99,102,241,0.15)]">
           Planifié
-        </Badge>
+        </span>
       );
     case "ongoing":
       return (
-        <Badge variant="outline" className="bg-secondary/10 text-secondary border-secondary/20 shadow-[0_0_10px_rgba(34,211,238,0.1)] font-bold uppercase text-[10px] animate-pulse">
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-[0_0_12px_rgba(34,211,238,0.2)] animate-pulse">
+          <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-ping mr-1.5" />
           En cours
-        </Badge>
+        </span>
       );
     case "completed":
       return (
-        <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/20 font-bold uppercase text-[10px]">
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_12px_rgba(16,185,129,0.15)]">
           Terminé
-        </Badge>
+        </span>
       );
     case "cancelled":
-      return <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20 font-bold uppercase text-[10px]">Annulé</Badge>;
+      return (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-rose-500/10 text-rose-400 border border-rose-500/20">
+          Annulé
+        </span>
+      );
     default:
-      return <Badge variant="outline" className="text-muted-foreground border-white/5 font-bold uppercase text-[10px]">Non défini</Badge>;
+      return (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-slate-500/10 text-slate-400 border border-slate-500/20">
+          Non défini
+        </span>
+      );
   }
 };
 
@@ -245,65 +248,246 @@ export default function SimulationPage() {
     console.log("Delete scenario", scenarioId);
   };
 
-  if (loading) return <div className="flex items-center justify-center h-[60vh] text-primary animate-pulse font-black tracking-widest uppercase">Initialisation...</div>;
-  if (error) return <div className="text-red-400 glass-card p-6 border-red-500/20 text-center">Erreur Système: {error}</div>;
+  const renderSimulationGrid = (sims: Simulation[], emptyMessage: string) => {
+    if (sims.length === 0) {
+      return (
+        <div className="glass-card p-16 text-center border border-dashed border-slate-800/80 bg-slate-950/20 rounded-3xl flex flex-col items-center justify-center min-h-[320px] animate-in fade-in duration-500">
+          <div className="p-4 rounded-full bg-slate-900/60 text-slate-500 mb-4 border border-slate-800/80">
+            <Server className="h-8 w-8" />
+          </div>
+          <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-2">Aucune simulation détectée</h3>
+          <p className="text-xs text-slate-500 max-w-md">{emptyMessage}</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        {sims.map((sim) => (
+          <Card key={sim.id} className="relative overflow-hidden group bg-slate-950/40 border border-slate-800/80 hover:border-violet-500/40 hover:shadow-[0_0_30px_rgba(124,58,237,0.06)] rounded-3xl p-6 transition-all duration-300 flex flex-col justify-between">
+            {/* Top Glow Accent */}
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-violet-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            
+            <div className="space-y-4">
+              {/* Header Status & Icon */}
+              <div className="flex items-center justify-between">
+                <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80 group-hover:border-violet-500/20 group-hover:text-violet-400 text-slate-400 transition-colors">
+                  <Shield className="h-4.5 w-4.5" />
+                </div>
+                {getStatusBadge(sim.status)}
+              </div>
+
+              {/* Title & Description */}
+              <div className="space-y-1.5">
+                <h3 className="font-black text-lg text-white group-hover:text-violet-400 transition-colors leading-snug line-clamp-1">{sim.title}</h3>
+                <p className="text-xs text-slate-400 line-clamp-2 min-h-[32px] leading-relaxed">{sim.description || "Aucune directive opérationnelle n'a été spécifiée."}</p>
+              </div>
+
+              {/* Timing info */}
+              <div className="flex items-center gap-2.5 text-[11px] font-bold text-slate-400 bg-slate-900/40 border border-slate-900/60 p-3 rounded-2xl">
+                <Calendar className="h-4 w-4 text-violet-400" />
+                <span className="text-slate-300">{formatDate(sim.startDate)}</span>
+                <span className="opacity-30">—</span>
+                <span className="text-slate-300">{formatDate(sim.endDate)}</span>
+              </div>
+
+              {/* Extra micro-metrics */}
+              <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase tracking-widest pt-2 border-t border-slate-900/85">
+                <div className="flex items-center gap-1.5">
+                  <Workflow className="h-3.5 w-3.5 text-slate-600" />
+                  <span>{sim.scenarios?.length || 0} Scénarios</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Activity className="h-3.5 w-3.5 text-slate-600" />
+                  <span>
+                    {sim.scenarios?.reduce((acc, sc) => acc + (sc.injections?.length || 0), 0) || 0} Injects
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2.5 mt-6 border-t border-slate-800/80 pt-4">
+              <Button 
+                className="flex-1 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-widest h-10 rounded-xl shadow-lg shadow-violet-950/20 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                onClick={() => router.push(`/simulation/${sim.id}/dashboard`)}
+              >
+                <LayoutDashboard className="h-3.5 w-3.5" /> Dashboard
+              </Button>
+              <Button 
+                variant="outline"
+                className="px-3 bg-slate-900/60 border-slate-800/80 hover:bg-slate-800/60 text-slate-300 hover:text-white rounded-xl h-10 transition-all flex items-center justify-center gap-1.5"
+                onClick={() => setSelectedSimulation(sim)}
+                title="Voir les Scénarios"
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="px-3 bg-slate-900/60 border-slate-800/80 hover:bg-slate-800/60 text-slate-300 hover:text-white rounded-xl h-10 transition-all flex items-center justify-center">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="glass-card min-w-[190px] bg-slate-950/95 border-slate-850 shadow-2xl rounded-2xl p-1.5">
+                  <DropdownMenuItem onClick={() => router.push(`/simulation/${sim.id}/instructor-view`)} className="gap-2.5 cursor-pointer rounded-xl hover:bg-violet-600/10 hover:text-violet-300 font-medium text-xs py-2">
+                    <Play className="h-3.5 w-3.5 text-violet-400" /> Vue Instructeur
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { setSelectedSimulation(sim); setIsSimulationFormOpen(true); }} className="gap-2.5 cursor-pointer rounded-xl hover:bg-indigo-600/10 hover:text-indigo-300 font-medium text-xs py-2">
+                    <Edit className="h-3.5 w-3.5 text-indigo-400" /> Modifier la Fiche
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleDeleteSimulation(sim.id)} className="gap-2.5 cursor-pointer rounded-xl hover:bg-rose-600/10 hover:text-rose-400 text-rose-400 font-medium text-xs py-2">
+                    <Trash2 className="h-3.5 w-3.5" /> Supprimer
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </Card>
+        ))}
+      </div>
+    );
+  };
+
+  if (loading) return <div className="flex items-center justify-center h-[60vh] text-violet-500 animate-pulse font-black tracking-widest uppercase text-xs">Initialisation du Centre de Commandement...</div>;
+  if (error) return <div className="text-red-400 glass-card p-6 border border-red-500/20 rounded-3xl text-center max-w-lg mx-auto mt-20">Erreur Système: {error}</div>;
 
   if (selectedSimulation) {
+    const totalInjects = selectedSimulation.scenarios?.reduce((acc, sc) => acc + (sc.injections?.length || 0), 0) || 0;
+
     return (
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <Button variant="ghost" onClick={() => setSelectedSimulation(null)} className="hover:bg-white/5 rounded-xl group px-0">
-              <ChevronLeft className="mr-2 h-4 w-4 group-hover:-translate-x-1 transition-transform" /> 
-              <span className="text-muted-foreground">Retour au centre de commandement</span>
+        {/* Navigation & Title */}
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-b border-slate-900 pb-6">
+          <div className="space-y-2.5">
+            <Button 
+              variant="ghost" 
+              onClick={() => setSelectedSimulation(null)} 
+              className="hover:bg-slate-900/60 text-slate-400 hover:text-white rounded-xl px-3 -ml-3 h-9 text-xs font-bold uppercase tracking-widest gap-2"
+            >
+              <ChevronLeft className="h-4 w-4" /> 
+              <span>Retour au centre de commandement</span>
             </Button>
-            <h2 className="text-3xl font-black bg-gradient-to-r from-white to-white/50 bg-clip-text text-transparent">
-              Scénarios: {selectedSimulation.title}
-            </h2>
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="text-3xl font-black bg-gradient-to-r from-white via-white to-slate-500 bg-clip-text text-transparent leading-none">
+                {selectedSimulation.title}
+              </h2>
+              {getStatusBadge(selectedSimulation.status)}
+            </div>
+            <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
+              {selectedSimulation.description || "Aucune consigne opérationnelle fournie pour cette simulation."}
+            </p>
           </div>
-          <Button onClick={() => { setSelectedScenario(null); setIsScenarioFormOpen(true); }} className="button-premium">
+          <Button onClick={() => { setSelectedScenario(null); setIsScenarioFormOpen(true); }} className="button-premium shadow-lg shadow-violet-950/20 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-widest h-11 px-5 rounded-xl">
             <Plus className="mr-2 h-4 w-4" /> Nouveau Scénario
           </Button>
         </div>
 
+        {/* Info Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 bg-slate-900/20 border border-slate-900 p-5 rounded-3xl">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-2xl bg-slate-900/60 text-slate-400">
+              <BookOpen className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="text-lg font-black text-white">{selectedSimulation.scenarios?.length || 0}</div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Scénarios Actifs</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-2xl bg-slate-900/60 text-slate-400">
+              <Activity className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="text-lg font-black text-white">{totalInjects}</div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Injections programmées</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-2xl bg-slate-900/60 text-slate-400">
+              <Clock className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="text-lg font-black text-white">{formatDate(selectedSimulation.startDate)}</div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date de Lancement</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Scenarios List */}
         <div className="grid grid-cols-1 gap-6">
           {(selectedSimulation.scenarios?.length ?? 0) === 0 ? (
-            <div className="glass-card p-12 text-center border-dashed">
-              <p className="text-muted-foreground font-medium">Aucun scénario opérationnel détecté pour cette simulation.</p>
+            <div className="glass-card p-16 text-center border border-dashed border-slate-800 bg-slate-950/20 rounded-3xl flex flex-col items-center justify-center">
+              <div className="p-4 rounded-full bg-slate-900/60 text-slate-500 mb-4 border border-slate-800">
+                <Workflow className="h-8 w-8" />
+              </div>
+              <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-2">Aucun scénario opérationnel</h3>
+              <p className="text-xs text-slate-500 max-w-sm">Créez un scénario pour ajouter des séquences d'injections et structurer l'exercice de crise.</p>
             </div>
           ) : (
             (selectedSimulation.scenarios || []).map((scenario) => (
-              <Card key={scenario.id} className="glass-card hover:border-primary/30 transition-all duration-300">
-                <CardHeader className="flex flex-row items-center justify-between border-b border-white/5 pb-4">
-                  <div>
-                    <CardTitle className="text-xl font-bold">{scenario.name}</CardTitle>
-                    <p className="text-xs text-muted-foreground mt-1">{scenario.description || "Pas de description opérationnelle."}</p>
+              <Card key={scenario.id} className="relative overflow-hidden bg-slate-950/40 border border-slate-850 hover:border-slate-800 transition-all rounded-3xl p-6">
+                <div className="flex items-start justify-between border-b border-slate-900 pb-4 mb-6">
+                  <div className="space-y-1">
+                    <CardTitle className="text-xl font-black text-white flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.5)]" />
+                      {scenario.name}
+                    </CardTitle>
+                    <p className="text-xs text-slate-400 leading-relaxed max-w-xl">{scenario.description || "Aucune description opérationnelle spécifiée."}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" className="rounded-xl hover:bg-white/5" onClick={() => { setSelectedScenario(scenario); setIsScenarioFormOpen(true); }}>
-                      <Edit className="h-4 w-4" />
+                    <Button variant="ghost" size="icon" className="rounded-xl hover:bg-slate-900/60 text-slate-400 hover:text-white h-9 w-9" onClick={() => { setSelectedScenario(scenario); setIsScenarioFormOpen(true); }}>
+                      <Edit className="h-4.5 w-4.5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="rounded-xl hover:bg-red-500/20 text-red-400" onClick={() => handleDeleteScenario(scenario.id)}>
-                      <Trash2 className="h-4 w-4" />
+                    <Button variant="ghost" size="icon" className="rounded-xl hover:bg-rose-500/10 text-rose-400 h-9 w-9" onClick={() => handleDeleteScenario(scenario.id)}>
+                      <Trash2 className="h-4.5 w-4.5" />
                     </Button>
                   </div>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <div className="bg-white/5 rounded-2xl p-6 border border-white/5">
-                    <h4 className="text-xs font-black uppercase tracking-widest text-primary mb-4 flex items-center gap-2">
-                      <div className="h-1.5 w-1.5 rounded-full bg-primary" /> Injections de Données ({scenario.injections?.length ?? 0})
+                </div>
+                
+                <CardContent className="p-0">
+                  <div className="bg-slate-900/20 border border-slate-900 rounded-2xl p-5">
+                    <h4 className="text-[11px] font-black uppercase tracking-wider text-violet-400 mb-4 flex items-center gap-2">
+                      <Workflow className="h-4 w-4" />
+                      Séquence d'injections de données ({scenario.injections?.length ?? 0})
                     </h4>
                     {(!scenario.injections || scenario.injections.length === 0) ? (
-                      <p className="text-[10px] text-muted-foreground italic uppercase tracking-tighter">Séquence d'injection vide.</p>
+                      <p className="text-xs text-slate-500 italic p-3">Aucune injection planifiée dans cette séquence.</p>
                     ) : (
-                      <div className="space-y-3">
-                        {(scenario.injections || []).map((inj, idx) => (
-                          <div key={idx} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5 text-xs">
-                            <span className="font-mono text-primary font-bold">#{idx+1}</span>
-                            <span className="flex-1 font-medium">{inj.name}</span>
-                            <Badge variant="outline" className="text-[9px] uppercase border-white/10">{inj.triggerType}</Badge>
-                          </div>
-                        ))}
+                      <div className="relative pl-6 space-y-4 border-l border-slate-800 ml-3">
+                        {(scenario.injections || []).map((inj, idx) => {
+                          const nameLower = inj.name.toLowerCase();
+                          let icon = <Server className="h-4 w-4" />;
+                          if (nameLower.includes("mail") || nameLower.includes("courriel")) icon = <Mail className="h-4 w-4" />;
+                          else if (nameLower.includes("sms") || nameLower.includes("whatsapp")) icon = <MessageSquare className="h-4 w-4" />;
+                          else if (nameLower.includes("call") || nameLower.includes("appel") || nameLower.includes("tel")) icon = <Phone className="h-4 w-4" />;
+
+                          return (
+                            <div key={idx} className="relative flex items-center gap-4 p-3.5 rounded-xl bg-slate-900/40 border border-slate-900 hover:border-slate-800 hover:bg-slate-900/60 transition-all text-xs group">
+                              {/* Flow dot accent */}
+                              <div className="absolute -left-[31px] top-1/2 -translate-y-1/2 h-4 w-4 rounded-full border-2 border-slate-950 bg-slate-900 flex items-center justify-center text-slate-500 group-hover:bg-violet-600 group-hover:border-violet-400 group-hover:text-white transition-all text-[8px] font-bold">
+                                {idx + 1}
+                              </div>
+                              
+                              <div className="p-2 rounded-lg bg-slate-950/60 text-slate-400 group-hover:text-violet-400 transition-colors">
+                                {icon}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-bold text-white group-hover:text-violet-400 transition-colors truncate">{inj.name}</p>
+                                <p className="text-[10px] text-slate-400 mt-0.5 truncate">{inj.description || "Aucune description technique."}</p>
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <Badge variant="outline" className="text-[9px] font-black uppercase tracking-wider border-slate-800 bg-slate-950/40 text-slate-400">
+                                  {inj.triggerType}
+                                </Badge>
+                                {inj.timeOffset !== null && inj.timeOffset !== undefined && (
+                                  <Badge variant="outline" className="text-[9px] font-bold border-violet-500/10 bg-violet-500/5 text-violet-400">
+                                    +{inj.timeOffset} min
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -317,35 +501,86 @@ export default function SimulationPage() {
   }
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Title & Top Action */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-4xl font-black bg-gradient-to-r from-white to-white/50 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-black bg-gradient-to-r from-white via-white to-slate-500 bg-clip-text text-transparent leading-none">
             Centre de Simulations
           </h1>
-          <p className="text-xs text-muted-foreground mt-2 font-bold uppercase tracking-widest flex items-center gap-2">
-            <span className="h-1 w-1 rounded-full bg-primary animate-pulse" /> État du Système: Opérationnel
+          <p className="text-xs text-slate-400 mt-2.5 font-bold uppercase tracking-widest flex items-center gap-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" /> État du Système: Opérationnel
           </p>
         </div>
-        <Button onClick={() => { setSelectedSimulation(null); setIsSimulationFormOpen(true); }} className="button-premium">
+        <Button onClick={() => { setSelectedSimulation(null); setIsSimulationFormOpen(true); }} className="button-premium shadow-lg shadow-violet-950/20 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-widest h-11 px-5 rounded-xl">
           <Plus className="mr-2 h-4 w-4" /> Initialiser Simulation
         </Button>
       </div>
 
+      {/* Analytics Dashboard Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 animate-in fade-in slide-in-from-top-4 duration-700">
+        <div className="glass-card p-5 relative overflow-hidden bg-slate-900/40 border border-slate-800/80 rounded-2xl flex items-center gap-4 group hover:border-slate-700 transition-all duration-300">
+          <div className="p-3.5 rounded-xl bg-violet-500/10 text-violet-400 border border-violet-500/20">
+            <Activity className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="text-2xl font-black text-white">{simulations.length}</div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Simulations Totales</div>
+          </div>
+          <div className="absolute -right-4 -bottom-4 w-16 h-16 bg-violet-500/5 rounded-full blur-xl group-hover:bg-violet-500/10 transition-all" />
+        </div>
+        
+        <div className="glass-card p-5 relative overflow-hidden bg-slate-900/40 border border-slate-800/80 rounded-2xl flex items-center gap-4 group hover:border-slate-700 transition-all duration-300">
+          <div className="p-3.5 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex items-center justify-center relative">
+            <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-cyan-400 rounded-full animate-ping" />
+            <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-cyan-500 rounded-full" />
+            <Play className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="text-2xl font-black text-white">{simulations.filter(s => s.status === "ongoing").length}</div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sessions Actives</div>
+          </div>
+          <div className="absolute -right-4 -bottom-4 w-16 h-16 bg-cyan-500/5 rounded-full blur-xl group-hover:bg-cyan-500/10 transition-all" />
+        </div>
+
+        <div className="glass-card p-5 relative overflow-hidden bg-slate-900/40 border border-slate-800/80 rounded-2xl flex items-center gap-4 group hover:border-slate-700 transition-all duration-300">
+          <div className="p-3.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+            <Calendar className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="text-2xl font-black text-white">{simulations.filter(s => s.status === "planned").length}</div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Planifiées</div>
+          </div>
+          <div className="absolute -right-4 -bottom-4 w-16 h-16 bg-indigo-500/5 rounded-full blur-xl group-hover:bg-indigo-500/10 transition-all" />
+        </div>
+
+        <div className="glass-card p-5 relative overflow-hidden bg-slate-900/40 border border-slate-800/80 rounded-2xl flex items-center gap-4 group hover:border-slate-700 transition-all duration-300">
+          <div className="p-3.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <Award className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="text-2xl font-black text-white">{simulations.filter(s => s.status === "completed").length}</div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Terminées</div>
+          </div>
+          <div className="absolute -right-4 -bottom-4 w-16 h-16 bg-emerald-500/5 rounded-full blur-xl group-hover:bg-emerald-500/10 transition-all" />
+        </div>
+      </div>
+
       <div className="flex flex-col md:flex-row gap-6 items-start">
         <Tabs defaultValue="all" className="flex-1 w-full">
+          {/* Filters & Search Scanner */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
-            <TabsList className="bg-white/5 p-1.5 rounded-2xl border border-white/5 backdrop-blur-md">
-              <TabsTrigger value="all" className="px-8 py-2.5 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white transition-all font-black uppercase text-xs tracking-widest">Global</TabsTrigger>
-              <TabsTrigger value="ongoing" className="px-8 py-2.5 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white transition-all font-black uppercase text-xs tracking-widest">En Cours</TabsTrigger>
-              <TabsTrigger value="planned" className="px-8 py-2.5 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white transition-all font-black uppercase text-xs tracking-widest">Planifiées</TabsTrigger>
+            <TabsList className="bg-slate-950/60 p-1 rounded-2xl border border-slate-900 backdrop-blur-md">
+              <TabsTrigger value="all" className="px-6 py-2 rounded-xl data-[state=active]:bg-violet-600 data-[state=active]:text-white transition-all font-black uppercase text-[10px] tracking-widest text-slate-400">Global</TabsTrigger>
+              <TabsTrigger value="ongoing" className="px-6 py-2 rounded-xl data-[state=active]:bg-violet-600 data-[state=active]:text-white transition-all font-black uppercase text-[10px] tracking-widest text-slate-400">En Cours</TabsTrigger>
+              <TabsTrigger value="planned" className="px-6 py-2 rounded-xl data-[state=active]:bg-violet-600 data-[state=active]:text-white transition-all font-black uppercase text-[10px] tracking-widest text-slate-400">Planifiées</TabsTrigger>
             </TabsList>
 
             <div className="relative w-full md:w-80">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-violet-400" />
               <Input
                 placeholder="Scanner les simulations..."
-                className="input-premium pl-12 h-12"
+                className="pl-12 h-11 bg-slate-950/40 border-slate-900 focus-visible:ring-violet-500 focus-visible:border-violet-500 rounded-xl text-xs font-medium placeholder-slate-500 text-white"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -353,187 +588,21 @@ export default function SimulationPage() {
           </div>
 
           <TabsContent value="all" className="mt-0">
-            <Card className="glass-card overflow-hidden">
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader className="bg-white/5">
-                    <TableRow className="border-white/5 hover:bg-transparent">
-                      <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">Simulation</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase tracking-widest">Statut</TableHead>
-                      <TableHead className="text-[10px] font-black uppercase tracking-widest">Chronologie</TableHead>
-                      <TableHead className="text-right text-[10px] font-black uppercase tracking-widest pr-8">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredSimulations.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="h-64 text-center">
-                          <div className="flex flex-col items-center justify-center text-muted-foreground opacity-30">
-                            <Calendar className="h-12 w-12 mb-4" />
-                            <p className="font-black uppercase tracking-widest text-xs">Aucune simulation détectée</p>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredSimulations.map((simulation) => (
-                        <TableRow key={simulation.id} className="border-white/5 hover:bg-white/[0.02] transition-colors group">
-                          <TableCell className="py-6">
-                            <div className="flex flex-col">
-                              <span className="font-black text-foreground group-hover:text-primary transition-colors">{simulation.title}</span>
-                              <span className="text-[10px] text-muted-foreground mt-1 line-clamp-1">{simulation.description || "Aucun détail opérationnel."}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>{getStatusBadge(simulation.status)}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-3 text-xs font-bold text-muted-foreground">
-                              <Calendar className="h-3.5 w-3.5 text-primary" />
-                              <span>{formatDate(simulation.startDate)}</span>
-                              <span className="opacity-30">—</span>
-                              <span>{formatDate(simulation.endDate)}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right pr-8">
-                            <div className="flex items-center justify-end gap-2">
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-9 w-9 rounded-xl hover:bg-white/5 text-primary" 
-                                onClick={() => router.push(`/simulation/${simulation.id}/dashboard`)}
-                                title="Tableau de bord"
-                              >
-                                <LayoutDashboard className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-white/5" onClick={() => setSelectedSimulation(simulation)} title="Voir les scénarios">
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-white/5">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="glass-card min-w-[180px]">
-                                  <DropdownMenuItem onClick={() => router.push(`/simulation/${simulation.id}/dashboard`)} className="gap-2 cursor-pointer">
-                                    <LayoutDashboard className="h-4 w-4" /> Tableau de Bord
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => { setSelectedSimulation(simulation); setIsSimulationFormOpen(true); }} className="gap-2 cursor-pointer">
-                                    <Edit className="h-4 w-4" /> Modifier
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => router.push(`/simulation/${simulation.id}/instructor-view`)} className="gap-2 cursor-pointer">
-                                    <Eye className="h-4 w-4" /> Vue Instructeur
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleDeleteSimulation(simulation.id)} className="gap-2 cursor-pointer text-red-400 hover:text-red-300">
-                                    <Trash2 className="h-4 w-4" /> Supprimer
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+            {renderSimulationGrid(filteredSimulations, "Initialisez votre première simulation pour commencer vos entraînements de crise.")}
           </TabsContent>
           
           <TabsContent value="ongoing" className="mt-0">
-             <Card className="glass-card overflow-hidden">
-                <CardContent className="p-0">
-                   <Table>
-                      <TableHeader className="bg-white/5">
-                        <TableRow className="border-white/5 hover:bg-transparent">
-                          <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">Simulation</TableHead>
-                          <TableHead className="text-[10px] font-black uppercase tracking-widest">Statut</TableHead>
-                          <TableHead className="text-[10px] font-black uppercase tracking-widest">Chronologie</TableHead>
-                          <TableHead className="text-right text-[10px] font-black uppercase tracking-widest pr-8">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {ongoingSimulations.length === 0 ? (
-                           <TableRow><TableCell colSpan={4} className="h-64 text-center opacity-30 text-xs font-black uppercase tracking-widest">Aucune simulation en cours</TableCell></TableRow>
-                        ) : (
-                          ongoingSimulations.map((sim) => (
-                            <TableRow key={sim.id} className="border-white/5 hover:bg-white/[0.02]">
-                               <TableCell className="py-6 font-black">{sim.title}</TableCell>
-                               <TableCell>{getStatusBadge(sim.status)}</TableCell>
-                               <TableCell className="text-xs font-bold text-muted-foreground">{formatDate(sim.startDate)} — {formatDate(sim.endDate)}</TableCell>
-                               <TableCell className="text-right pr-8">
-                                  <div className="flex items-center justify-end gap-2">
-                                     <Button 
-                                       variant="ghost" 
-                                       size="icon" 
-                                       className="h-9 w-9 rounded-xl hover:bg-white/5 text-primary" 
-                                       onClick={() => router.push(`/simulation/${sim.id}/dashboard`)}
-                                       title="Tableau de bord"
-                                     >
-                                       <LayoutDashboard className="h-4 w-4" />
-                                     </Button>
-                                     <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-white/5" onClick={() => setSelectedSimulation(sim)} title="Voir les scénarios">
-                                       <Eye className="h-4 w-4" />
-                                     </Button>
-                                  </div>
-                               </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                   </Table>
-                </CardContent>
-             </Card>
+            {renderSimulationGrid(ongoingSimulations, "Aucune simulation de crise n'est active en ce moment.")}
           </TabsContent>
 
           <TabsContent value="planned" className="mt-0">
-             <Card className="glass-card overflow-hidden">
-                <CardContent className="p-0">
-                   <Table>
-                      <TableHeader className="bg-white/5">
-                        <TableRow className="border-white/5 hover:bg-transparent">
-                          <TableHead className="text-[10px] font-black uppercase tracking-widest py-4">Simulation</TableHead>
-                          <TableHead className="text-[10px] font-black uppercase tracking-widest">Statut</TableHead>
-                          <TableHead className="text-[10px] font-black uppercase tracking-widest">Chronologie</TableHead>
-                          <TableHead className="text-right text-[10px] font-black uppercase tracking-widest pr-8">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {plannedSimulations.length === 0 ? (
-                           <TableRow><TableCell colSpan={4} className="h-64 text-center opacity-30 text-xs font-black uppercase tracking-widest">Aucune simulation planifiée</TableCell></TableRow>
-                        ) : (
-                          plannedSimulations.map((sim) => (
-                            <TableRow key={sim.id} className="border-white/5 hover:bg-white/[0.02]">
-                               <TableCell className="py-6 font-black">{sim.title}</TableCell>
-                               <TableCell>{getStatusBadge(sim.status)}</TableCell>
-                               <TableCell className="text-xs font-bold text-muted-foreground">{formatDate(sim.startDate)} — {formatDate(sim.endDate)}</TableCell>
-                               <TableCell className="text-right pr-8">
-                                  <div className="flex items-center justify-end gap-2">
-                                     <Button 
-                                       variant="ghost" 
-                                       size="icon" 
-                                       className="h-9 w-9 rounded-xl hover:bg-white/5 text-primary" 
-                                       onClick={() => router.push(`/simulation/${sim.id}/dashboard`)}
-                                       title="Tableau de bord"
-                                     >
-                                       <LayoutDashboard className="h-4 w-4" />
-                                     </Button>
-                                     <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-white/5" onClick={() => setSelectedSimulation(sim)} title="Voir les scénarios">
-                                       <Eye className="h-4 w-4" />
-                                     </Button>
-                                  </div>
-                               </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                   </Table>
-                </CardContent>
-             </Card>
+            {renderSimulationGrid(plannedSimulations, "Aucune simulation n'est programmée dans le calendrier opérationnel.")}
           </TabsContent>
         </Tabs>
       </div>
 
       <Dialog open={isSimulationFormOpen} onOpenChange={setIsSimulationFormOpen}>
-        <DialogContent className="max-w-2xl bg-[var(--bg-surface)] border-[var(--border)] p-0 overflow-hidden shadow-2xl">
+        <DialogContent className="max-w-2xl bg-[var(--bg-surface)] border-[var(--border)] p-0 overflow-hidden shadow-2xl rounded-3xl">
           <SimulationForm
             initialData={selectedSimulation || undefined}
             onSave={selectedSimulation ? handleUpdateSimulation : handleCreateSimulation}
