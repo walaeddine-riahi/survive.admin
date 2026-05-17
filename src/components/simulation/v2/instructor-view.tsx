@@ -77,6 +77,9 @@ function InjectPanel({ session, participants, onSent }: {
   const [expiresIn, setExpiresIn] = useState("");
   const [callScript, setCallScript] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [mediaImageUrl, setMediaImageUrl] = useState("");
+  const [mediaYoutubeUrl, setMediaYoutubeUrl] = useState("");
+  const [mediaPdfUrl, setMediaPdfUrl] = useState("");
 
   const isCall = channel === "CALL";
   const realParticipants = participants.filter(p => !p.isInstructor && !p.isObserver);
@@ -129,6 +132,17 @@ function InjectPanel({ session, participants, onSent }: {
         }
       } else {
         // Send message
+        let finalBody = body;
+        if (mediaImageUrl.trim()) {
+          finalBody += `\n\n${mediaImageUrl.trim()}`;
+        }
+        if (mediaYoutubeUrl.trim()) {
+          finalBody += `\n\n${mediaYoutubeUrl.trim()}`;
+        }
+        if (mediaPdfUrl.trim()) {
+          finalBody += `\n\n${mediaPdfUrl.trim()}`;
+        }
+
         const r = await sendSimMessage({
           sessionId: session.id,
           channel,
@@ -138,7 +152,7 @@ function InjectPanel({ session, participants, onSent }: {
           isGroupMessage: isGroupMsg,
           groupName: isGroupMsg ? groupName : undefined,
           subject: subject || undefined,
-          body,
+          body: finalBody,
           callScript: callScript || undefined,
           expiresInMinutes: expiresIn ? parseInt(expiresIn) : undefined,
         });
@@ -147,6 +161,7 @@ function InjectPanel({ session, participants, onSent }: {
           const channelLabel = CHANNELS.find(c => c.key === channel)?.label || channel;
           toast.success(`✅ ${channelLabel} envoyé à ${isGroupMsg ? groupName : `${recipients.length} participant(s)`}`);
           setBody(""); setSubject(""); setCallScript(""); setSelectedRecipients([]);
+          setMediaImageUrl(""); setMediaYoutubeUrl(""); setMediaPdfUrl("");
           onSent();
         } else {
           toast.error(r.error || "Erreur serveur lors de l'envoi");
@@ -295,6 +310,32 @@ function InjectPanel({ session, participants, onSent }: {
           onChange={e => setBody(e.target.value)}
         />
       </div>
+
+      {!isCall && (
+        <div className="border border-gray-800 rounded-xl p-3 bg-gray-950/40 space-y-2">
+          <p className="text-[10px] font-bold text-orange-400 uppercase tracking-wider">📎 Pièces jointes & Médias (Optionnels)</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <div>
+              <Label className="text-[9px] text-gray-500">Image URL</Label>
+              <Input className="mt-0.5 h-7 text-xs bg-gray-805 border-gray-700 text-white"
+                placeholder="https://.../photo.png"
+                value={mediaImageUrl} onChange={e => setMediaImageUrl(e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-[9px] text-gray-500">Lien YouTube</Label>
+              <Input className="mt-0.5 h-7 text-xs bg-gray-805 border-gray-700 text-white"
+                placeholder="https://youtu.be/..."
+                value={mediaYoutubeUrl} onChange={e => setMediaYoutubeUrl(e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-[9px] text-gray-500">Document PDF URL</Label>
+              <Input className="mt-0.5 h-7 text-xs bg-gray-805 border-gray-700 text-white"
+                placeholder="https://.../doc.pdf"
+                value={mediaPdfUrl} onChange={e => setMediaPdfUrl(e.target.value)} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {!isCall && (
         <div>

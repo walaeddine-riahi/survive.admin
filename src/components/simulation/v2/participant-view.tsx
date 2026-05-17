@@ -159,7 +159,7 @@ function ActiveCallPanel({ call, onEnd }: { call: Call; onEnd: (notes: string) =
 
 // ─── Embeds Parser & Media Display ───────────────────────────────────────────
 interface EmbedMedia {
-  type: "image" | "youtube";
+  type: "image" | "youtube" | "pdf";
   url: string;
   youtubeId?: string;
 }
@@ -194,6 +194,21 @@ function parseEmbeds(text: string): EmbedMedia[] {
       foundImgs.add(url);
       embeds.push({
         type: "image",
+        url,
+      });
+    }
+  }
+
+  // 3. PDF Regex
+  const pdfRegex = /(https?:\/\/[^\s]+?\.pdf(?:\?[^\s]*)?)/gi;
+  let pdfMatch;
+  const foundPdfs = new Set<string>();
+  while ((pdfMatch = pdfRegex.exec(text)) !== null) {
+    const url = pdfMatch[1];
+    if (!foundPdfs.has(url)) {
+      foundPdfs.add(url);
+      embeds.push({
+        type: "pdf",
         url,
       });
     }
@@ -238,6 +253,27 @@ function MessageEmbeds({ text }: { text: string }) {
                 className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white p-1.5 rounded-lg text-[10px] font-semibold transition-colors flex items-center gap-1 backdrop-blur-sm"
               >
                 👁️ Ouvrir
+              </a>
+            </div>
+          );
+        }
+        if (embed.type === "pdf") {
+          return (
+            <div key={idx} className="flex items-center gap-3 p-3 bg-gray-900 border border-gray-800 rounded-xl max-w-lg shadow-sm hover:shadow-md transition-all">
+              <div className="w-10 h-10 bg-red-950/40 text-red-400 rounded-lg flex items-center justify-center flex-shrink-0">
+                <FileText className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-gray-200 truncate">Document PDF Joint</p>
+                <p className="text-[10px] text-gray-500 truncate">{embed.url}</p>
+              </div>
+              <a
+                href={embed.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white text-xs px-2.5 py-1.5 rounded-lg font-semibold transition-colors flex-shrink-0"
+              >
+                📥 Ouvrir
               </a>
             </div>
           );

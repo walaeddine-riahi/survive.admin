@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
-  Mail, Phone, MessageSquare, Send, Users, ShieldAlert,
+  Mail, Phone, MessageSquare, Send, Users, ShieldAlert, FileText,
 } from "lucide-react";
 import { sendSimMessage } from "@/actions/simulation/sim-session-actions";
 
@@ -20,7 +20,7 @@ interface ExternalChatPanelProps {
 
 // ─── Embeds Parser & Media Display ───────────────────────────────────────────
 interface EmbedMedia {
-  type: "image" | "youtube";
+  type: "image" | "youtube" | "pdf";
   url: string;
   youtubeId?: string;
 }
@@ -55,6 +55,21 @@ function parseEmbeds(text: string): EmbedMedia[] {
       foundImgs.add(url);
       embeds.push({
         type: "image",
+        url,
+      });
+    }
+  }
+
+  // 3. PDF Regex
+  const pdfRegex = /(https?:\/\/[^\s]+?\.pdf(?:\?[^\s]*)?)/gi;
+  let pdfMatch;
+  const foundPdfs = new Set<string>();
+  while ((pdfMatch = pdfRegex.exec(text)) !== null) {
+    const url = pdfMatch[1];
+    if (!foundPdfs.has(url)) {
+      foundPdfs.add(url);
+      embeds.push({
+        type: "pdf",
         url,
       });
     }
@@ -99,6 +114,27 @@ function MessageEmbeds({ text }: { text: string }) {
                 className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white p-1.5 rounded-lg text-[9px] font-semibold transition-colors flex items-center gap-1 backdrop-blur-sm"
               >
                 👁️ Ouvrir
+              </a>
+            </div>
+          );
+        }
+        if (embed.type === "pdf") {
+          return (
+            <div key={idx} className="flex items-center gap-3 p-2.5 bg-gray-900 border border-gray-800 rounded-xl max-w-md shadow-sm hover:shadow-md transition-all">
+              <div className="w-8 h-8 bg-red-950/40 text-red-400 rounded-lg flex items-center justify-center flex-shrink-0">
+                <FileText className="h-4 w-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-semibold text-gray-200 truncate">Document PDF Joint</p>
+                <p className="text-[9px] text-gray-500 truncate">{embed.url}</p>
+              </div>
+              <a
+                href={embed.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white text-[10px] px-2 py-1 rounded-lg font-semibold transition-colors flex-shrink-0"
+              >
+                📥 Ouvrir
               </a>
             </div>
           );
