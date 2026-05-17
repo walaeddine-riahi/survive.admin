@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import {
   getChannels, getMessages, sendChatMessage,
-  markChannelRead, getChatDelta, createDirectChannel, getAllChannels,
+  markChannelRead, getChatDelta, createDirectChannel, getAllChannels, createGroupChannel,
 } from "@/actions/simulation/chat-actions";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -146,6 +146,7 @@ export default function ChatPanel({
   const [isSending, setIsSending] = useState(false);
   const [showChannelList, setShowChannelList] = useState(true);
   const [showDMPicker, setShowDMPicker] = useState(false);
+  const [selectedTargetIds, setSelectedTargetIds] = useState<string[]>([]);
   const [lastPoll, setLastPoll] = useState(new Date().toISOString());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
@@ -296,6 +297,24 @@ export default function ChatPanel({
     }
   }
 
+  async function handleOpenGroupDM(targets: Participant[]) {
+    setShowDMPicker(false);
+    setSelectedTargetIds([]);
+    const r = await createGroupChannel(
+      sessionId,
+      { id: participant.id, displayName: participant.displayName },
+      targets.map(t => ({ id: t.id, displayName: t.displayName }))
+    );
+    if (r.success && r.data) {
+      const ch = r.data;
+      setChannels(prev => prev.some(c => c.id === ch.id) ? prev : [...prev, { ...ch, unreadCount: 0, messages: [] }]);
+      setActiveChannelId(ch.id);
+      setShowChannelList(false);
+    } else {
+      toast.error("Erreur de création de canal");
+    }
+  }
+
   const otherParticipants = allParticipants.filter(
     p => p.id !== participant.id && !p.isInstructor
   );
@@ -360,22 +379,76 @@ export default function ChatPanel({
         {otherParticipants.length > 0 && (
           <div className="border-t px-2 py-2">
             {showDMPicker ? (
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground px-2 pb-1">Envoyer un message à...</p>
-                {otherParticipants.map(p => (
-                  <button key={p.id} onClick={() => handleOpenDM(p)}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted text-left">
-                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xs font-semibold">
-                      {p.displayName[0]}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium truncate">{p.displayName}</p>
-                      <p className="text-xs text-muted-foreground truncate">{p.role}</p>
-                    </div>
-                  </button>
-                ))}
-                <Button size="sm" variant="ghost" className="h-7 text-xs w-full"
-                  onClick={() => setShowDMPicker(false)}>Annuler</Button>
+              <div className="space-y-2 p-1 bg-gray-950/40 rounded-lg border border-gray-800/40">
+                <div className="flex items-center justify-between px-2 pt-1 pb-1">
+                  <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Destinataires</p>
+                  {selectedTargetIds.length > 0 && (
+                    <button
+                      onClick={() => setSelectedTargetIds([])}
+                      className="text-[9px] text-blue-400 hover:text-blue-300 font-semibold"
+                    >
+                      Effacer
+                    </button>
+                  )}
+                </div>
+                
+                <div className="max-h-[160px] overflow-y-auto space-y-1 pr-1">
+                  {otherParticipants.map(p => {
+                    const isSelected = selectedTargetIds.includes(p.id);
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedTargetIds(prev => prev.filter(id => id !== p.id));
+                          } else {
+                            setSelectedTargetIds(prev => [...prev, p.id]);
+                          }
+                        }}
+                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg border transition-all text-left ${
+                          isSelected
+                            ? "bg-blue-600/10 border-blue-500/30 text-blue-200"
+                            : "bg-transparent border-transparent hover:bg-muted text-gray-400"
+                        }`}
+                      >
+                        <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0 transition-all ${
+                          isSelected ? "bg-blue-600 border-blue-500 text-white" : "border-gray-700 bg-gray-900"
+                        }`}>
+                          {isSelected && <span className="text-[9px] font-bold leading-none">✓</span>}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold truncate text-white">{p.displayName}</p>
+                          <p className="text-[9px] opacity-70 truncate">{p.role}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="flex gap-1.5 pt-1.5 border-t border-gray-800/50">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-[10px] flex-1 font-semibold text-gray-400"
+                    onClick={() => {
+                      setShowDMPicker(false);
+                      setSelectedTargetIds([]);
+                    }}
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="h-7 text-[10px] flex-1 font-bold bg-blue-600 hover:bg-blue-700 text-white"
+                    disabled={selectedTargetIds.length === 0}
+                    onClick={() => {
+                      const targets = otherParticipants.filter(p => selectedTargetIds.includes(p.id));
+                      handleOpenGroupDM(targets);
+                    }}
+                  >
+                    Démarrer ({selectedTargetIds.length})
+                  </Button>
+                </div>
               </div>
             ) : (
               <Button size="sm" variant="ghost" className="h-7 text-xs w-full gap-1.5 text-muted-foreground"

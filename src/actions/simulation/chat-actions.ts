@@ -183,6 +183,53 @@ export async function createDirectChannel(
   }
 }
 
+export async function createGroupChannel(
+  sessionId: string,
+  sender: { id: string; displayName: string },
+  targets: { id: string; displayName: string }[]
+) {
+  try {
+    if (targets.length === 0) return { success: false, error: "Aucun destinataire" };
+    
+    const allMembers = [sender, ...targets];
+    const memberIds = [...new Set(allMembers.map(m => m.id))].sort();
+    
+    // Check if a direct channel with EXACTLY these member ids exists
+    const existingChannels = await prisma.chatChannel.findMany({
+      where: {
+        sessionId,
+        type: "DIRECT",
+      }
+    });
+    
+    const existing = existingChannels.find(ch => {
+      if (ch.memberIds.length !== memberIds.length) return false;
+      const chSorted = [...ch.memberIds].sort();
+      return memberIds.every((id, idx) => id === chSorted[idx]);
+    });
+    
+    if (existing) return { success: true, data: existing };
+    
+    const channel = await prisma.chatChannel.create({
+      data: {
+        sessionId,
+        type: "DIRECT",
+        name: allMembers.length > 2 
+          ? `Groupe : ${allMembers.slice(0, 3).map(m => m.displayName).join(", ")}${allMembers.length > 3 ? "..." : ""}`
+          : `${sender.displayName} ↔ ${targets[0].displayName}`,
+        emoji: allMembers.length > 2 ? "👥" : "💬",
+        color: "#534AB7",
+        memberIds: memberIds,
+      },
+    });
+    
+    return { success: true, data: channel };
+  } catch (error) {
+    console.error("createGroupChannel error:", error);
+    return { success: false, error: "Erreur création canal de groupe" };
+  }
+}
+
 // ─── Get messages for a channel ───────────────────────────────────────────────
 
 export async function getMessages(channelId: string, limit = 50, before?: string) {
