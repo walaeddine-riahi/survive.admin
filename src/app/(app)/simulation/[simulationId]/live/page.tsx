@@ -68,10 +68,10 @@ export default async function LiveSimPage({
     );
   }
 
-  // Get messages for this participant
+  // Get messages for this participant (received or sent by them)
   const messages = session.messages.filter(
-    (m: { recipientIds: string[]; isGroupMessage: boolean }) =>
-      m.recipientIds.includes(participant.id) || m.isGroupMessage,
+    (m: { recipientIds: string[]; isGroupMessage: boolean; fromParticipantId?: string | null }) =>
+      m.recipientIds.includes(participant.id) || m.isGroupMessage || m.fromParticipantId === participant.id,
   );
 
   return (

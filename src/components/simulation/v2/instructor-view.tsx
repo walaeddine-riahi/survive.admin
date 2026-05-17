@@ -18,9 +18,10 @@ import {
 import InstructorCrisisLogMonitor from "./instructor-crisis-log";
 import FormSynthesisView from "./form-synthesis";
 import ChatPanel from "./chat-panel";
+import InstructorExternalActorsMonitor from "./instructor-external-actors";
 import {
   sendSimMessage, updateSessionStatus, initiateCall,
-  updateCall, logSimEvent,
+  updateCall, logSimEvent, addExternalActor,
 } from "@/actions/simulation/sim-session-actions";
 import { usePusherChannel } from "./use-pusher-channel";
 
@@ -589,6 +590,7 @@ export default function InstructorView({
               { key: "participants", label: "Participants", count: connectedCount },
               { key: "calls", label: "Appels", count: calls.length },
               { key: "chat", label: "Chat", count: 0 },
+              { key: "externes", label: "Acteurs Ext.", count: 0 },
               { key: "crisis_log", label: "Main Courante", count: 0 },
               { key: "forms", label: "Formulaires", count: 0 },
             ].map(tab => (
@@ -609,7 +611,7 @@ export default function InstructorView({
             ))}
           </div>
 
-          <div className={`flex-1 overflow-y-auto ${activeTab === "chat" ? "p-0" : "p-4"}`}>
+          <div className={`flex-1 overflow-y-auto ${activeTab === "chat" || activeTab === "externes" ? "p-0" : "p-4"}`}>
             {/* FEED TAB */}
             {activeTab === "feed" && (
               <div className="space-y-3">
@@ -698,7 +700,7 @@ export default function InstructorView({
                             await updateCall(call.id, { status: "MISSED", missedReason: "Participant n'a pas décroché" });
                             poll();
                           }}>
-                          <X className="h-3 w-3" /> Marquer manqué
+                            <X className="h-3 w-3" /> Marquer manqué
                         </Button>
                       </div>
                     )}
@@ -721,6 +723,11 @@ export default function InstructorView({
               <div className="h-full">
                 <ChatPanel sessionId={session.id} participant={{ id: "instructor", displayName: "Instructeur", role: "Supervision", isInstructor: true }} allParticipants={participants} />
               </div>
+            )}
+
+            {/* EXTERNAL ACTORS TAB */}
+            {activeTab === "externes" && (
+              <InstructorExternalActorsMonitor sessionId={session.id} participants={participants} initialMessages={messages} onUpdate={poll} />
             )}
 
             {/* CRISIS LOG TAB */}

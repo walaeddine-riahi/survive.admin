@@ -9,11 +9,12 @@ import {
   Mail, Phone, MessageSquare, Bell, Zap, FileText,
   Globe, Radio, Send, CheckCircle2,
   Clock, PhoneIncoming, PhoneMissed, Mic, MicOff,
-  Shield, FileStack, ListTodo, MessageSquareText,
+  Shield, FileStack, ListTodo, MessageSquareText, Users,
 } from "lucide-react";
 import CrisisLogPanel from "./crisis-log-panel";
 import CrisisDocsPanel from "./crisis-docs-panel";
 import ChatPanel from "./chat-panel";
+import ExternalChatPanel from "./external-chat-panel";
 import { replyToMessage, markMessageRead, logSimEvent, markParticipantConnected, updateCall } from "@/actions/simulation/sim-session-actions";
 import { usePusherChannel } from "./use-pusher-channel";
 
@@ -634,6 +635,9 @@ export default function ParticipantView({
             <button onClick={() => setActiveChannel("CHAT")} className={`flex items-center gap-2 px-3 py-2 w-full text-left rounded-lg text-sm transition-colors ${activeChannel === "CHAT" ? "bg-gray-700 text-white" : "text-gray-400 hover:bg-gray-800"}`}>
               <MessageSquareText className="h-4 w-4 flex-shrink-0" /> <span className="truncate">Chat Interne</span>
             </button>
+            <button onClick={() => setActiveChannel("EXTERNAL_CHAT")} className={`flex items-center gap-2 px-3 py-2 w-full text-left rounded-lg text-sm transition-colors ${activeChannel === "EXTERNAL_CHAT" ? "bg-gray-700 text-white" : "text-gray-400 hover:bg-gray-800"}`}>
+              <Users className="h-4 w-4 flex-shrink-0" /> <span className="truncate">Comm. Externes</span>
+            </button>
             <button onClick={() => setActiveChannel("CRISIS_LOG")} className={`flex items-center gap-2 px-3 py-2 w-full text-left rounded-lg text-sm transition-colors ${activeChannel === "CRISIS_LOG" ? "bg-gray-700 text-white" : "text-gray-400 hover:bg-gray-800"}`}>
               <Shield className="h-4 w-4 flex-shrink-0" /> <span className="truncate">Main Courante</span>
             </button>
@@ -682,6 +686,9 @@ export default function ParticipantView({
             <button onClick={() => setActiveChannel("CHAT")} className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium ${activeChannel === "CHAT" ? "bg-gray-700 text-white" : "bg-gray-800 text-gray-400"}`}>
               <MessageSquareText className="h-3 w-3" /> Chat
             </button>
+            <button onClick={() => setActiveChannel("EXTERNAL_CHAT")} className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium ${activeChannel === "EXTERNAL_CHAT" ? "bg-gray-700 text-white" : "bg-gray-800 text-gray-400"}`}>
+              <Users className="h-3 w-3" /> Externes
+            </button>
             <button onClick={() => setActiveChannel("CRISIS_LOG")} className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium ${activeChannel === "CRISIS_LOG" ? "bg-gray-700 text-white" : "bg-gray-800 text-gray-400"}`}>
               <Shield className="h-3 w-3" /> Main Courante
             </button>
@@ -694,6 +701,8 @@ export default function ParticipantView({
           <div className={`flex-1 overflow-y-auto p-4 space-y-3 ${activeCall ? "pb-52" : ""} ${activeChannel === "CHAT" ? "p-0" : ""}`}>
             {activeChannel === "CHAT" ? (
               <ChatPanel sessionId={session.id} participant={participant} allParticipants={session.participants || []} />
+            ) : activeChannel === "EXTERNAL_CHAT" ? (
+              <ExternalChatPanel sessionId={session.id} participant={participant} participants={session.participants || []} initialMessages={messages} />
             ) : activeChannel === "CRISIS_LOG" ? (
               <CrisisLogPanel sessionId={session.id} participant={participant} initialEntries={session.crisisLog || []} />
             ) : activeChannel === "CRISIS_DOCS" ? (

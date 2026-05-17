@@ -136,6 +136,41 @@ export async function addParticipant(sessionId: string, input: {
   }
 }
 
+export async function addExternalActor(sessionId: string, input: {
+  displayName: string;
+  role: string;
+  email?: string;
+  phone?: string;
+}) {
+  try {
+    const slug = input.displayName.toLowerCase().replace(/\s+/g, ".").replace(/[^a-z.]/g, "");
+    const simEmail = input.email || `${slug}@sim.survive.io`;
+    const simPhone = input.phone || `+SIM-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    // Generate a unique 24-character hex string for userId to bypass MongoDB unique constraint
+    const randomHex = Array.from({ length: 24 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+
+    const participant = await prisma.simParticipant.create({
+      data: {
+        sessionId,
+        userId: randomHex,
+        displayName: input.displayName,
+        role: input.role,
+        isInstructor: false,
+        isObserver: false,
+        isExternal: true,
+        simEmail,
+        simPhone,
+      },
+    });
+    revalidatePath("/simulation");
+    return { success: true, data: participant };
+  } catch (error) {
+    console.error("Error in addExternalActor:", error);
+    return { success: false, error: "Erreur ajout acteur externe" };
+  }
+}
+
 export async function markParticipantConnected(
   participantId: string,
   connected: boolean,

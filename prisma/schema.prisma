@@ -3033,6 +3033,7 @@ model SimParticipant {
   team            String?    // Team/cell name
   isInstructor    Boolean    @default(false)
   isObserver      Boolean    @default(false)
+  isExternal      Boolean    @default(false)
 
   // Simulated contact info (used by other participants to "call/SMS")
   simEmail        String?    // e.g. "pierre.martin@sim.survive.io"
