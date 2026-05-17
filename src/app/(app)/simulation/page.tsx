@@ -264,14 +264,14 @@ export default function SimulationPage() {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
         {sims.map((sim) => (
-          <Card key={sim.id} className="relative overflow-hidden group bg-slate-950/40 border border-slate-800/80 hover:border-violet-500/40 hover:shadow-[0_0_30px_rgba(124,58,237,0.06)] rounded-3xl p-6 transition-all duration-300 flex flex-col justify-between">
+          <Card key={sim.id} className="relative overflow-hidden group bg-slate-950/40 border border-slate-800/80 hover:border-orange-500/40 hover:shadow-[0_0_30px_rgba(249,115,22,0.06)] rounded-3xl p-6 transition-all duration-300 flex flex-col justify-between">
             {/* Top Glow Accent */}
-            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-violet-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-orange-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             
             <div className="space-y-4">
               {/* Header Status & Icon */}
               <div className="flex items-center justify-between">
-                <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80 group-hover:border-violet-500/20 group-hover:text-violet-400 text-slate-400 transition-colors">
+                <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/80 group-hover:border-orange-500/20 group-hover:text-orange-400 text-slate-400 transition-colors">
                   <Shield className="h-4.5 w-4.5" />
                 </div>
                 {getStatusBadge(sim.status)}
@@ -279,13 +279,13 @@ export default function SimulationPage() {
 
               {/* Title & Description */}
               <div className="space-y-1.5">
-                <h3 className="font-black text-lg text-white group-hover:text-violet-400 transition-colors leading-snug line-clamp-1">{sim.title}</h3>
+                <h3 className="font-black text-lg text-white group-hover:text-orange-400 transition-colors leading-snug line-clamp-1">{sim.title}</h3>
                 <p className="text-xs text-slate-400 line-clamp-2 min-h-[32px] leading-relaxed">{sim.description || "Aucune directive opérationnelle n'a été spécifiée."}</p>
               </div>
 
               {/* Timing info */}
               <div className="flex items-center gap-2.5 text-[11px] font-bold text-slate-400 bg-slate-900/40 border border-slate-900/60 p-3 rounded-2xl">
-                <Calendar className="h-4 w-4 text-violet-400" />
+                <Calendar className="h-4 w-4 text-orange-400" />
                 <span className="text-slate-300">{formatDate(sim.startDate)}</span>
                 <span className="opacity-30">—</span>
                 <span className="text-slate-300">{formatDate(sim.endDate)}</span>
@@ -309,7 +309,7 @@ export default function SimulationPage() {
             {/* Action Buttons */}
             <div className="flex gap-2.5 mt-6 border-t border-slate-800/80 pt-4">
               <Button 
-                className="flex-1 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-widest h-10 rounded-xl shadow-lg shadow-violet-950/20 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                className="flex-1 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-xs uppercase tracking-widest h-10 rounded-xl shadow-lg shadow-orange-950/20 transition-all active:scale-95 flex items-center justify-center gap-1.5"
                 onClick={() => router.push(`/simulation/${sim.id}/dashboard`)}
               >
                 <LayoutDashboard className="h-3.5 w-3.5" /> Dashboard
@@ -330,11 +330,11 @@ export default function SimulationPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="glass-card min-w-[190px] bg-slate-950/95 border-slate-850 shadow-2xl rounded-2xl p-1.5">
-                  <DropdownMenuItem onClick={() => router.push(`/simulation/${sim.id}/instructor-view`)} className="gap-2.5 cursor-pointer rounded-xl hover:bg-violet-600/10 hover:text-violet-300 font-medium text-xs py-2">
-                    <Play className="h-3.5 w-3.5 text-violet-400" /> Vue Instructeur
+                  <DropdownMenuItem onClick={() => router.push(`/simulation/${sim.id}/instructor-view`)} className="gap-2.5 cursor-pointer rounded-xl hover:bg-orange-600/10 hover:text-orange-300 font-medium text-xs py-2">
+                    <Play className="h-3.5 w-3.5 text-orange-400" /> Vue Instructeur
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { setSelectedSimulation(sim); setIsSimulationFormOpen(true); }} className="gap-2.5 cursor-pointer rounded-xl hover:bg-indigo-600/10 hover:text-indigo-300 font-medium text-xs py-2">
-                    <Edit className="h-3.5 w-3.5 text-indigo-400" /> Modifier la Fiche
+                  <DropdownMenuItem onClick={() => { setSelectedSimulation(sim); setIsSimulationFormOpen(true); }} className="gap-2.5 cursor-pointer rounded-xl hover:bg-orange-600/10 hover:text-orange-300 font-medium text-xs py-2">
+                    <Edit className="h-3.5 w-3.5 text-orange-400" /> Modifier la Fiche
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleDeleteSimulation(sim.id)} className="gap-2.5 cursor-pointer rounded-xl hover:bg-rose-600/10 hover:text-rose-400 text-rose-400 font-medium text-xs py-2">
                     <Trash2 className="h-3.5 w-3.5" /> Supprimer
@@ -348,7 +348,7 @@ export default function SimulationPage() {
     );
   };
 
-  if (loading) return <div className="flex items-center justify-center h-[60vh] text-violet-500 animate-pulse font-black tracking-widest uppercase text-xs">Initialisation du Centre de Commandement...</div>;
+  if (loading) return <div className="flex items-center justify-center h-[60vh] text-orange-500 animate-pulse font-black tracking-widest uppercase text-xs">Initialisation du Centre de Commandement...</div>;
   if (error) return <div className="text-red-400 glass-card p-6 border border-red-500/20 rounded-3xl text-center max-w-lg mx-auto mt-20">Erreur Système: {error}</div>;
 
   if (selectedSimulation) {
@@ -377,7 +377,7 @@ export default function SimulationPage() {
               {selectedSimulation.description || "Aucune consigne opérationnelle fournie pour cette simulation."}
             </p>
           </div>
-          <Button onClick={() => { setSelectedScenario(null); setIsScenarioFormOpen(true); }} className="button-premium shadow-lg shadow-violet-950/20 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-widest h-11 px-5 rounded-xl">
+          <Button onClick={() => { setSelectedScenario(null); setIsScenarioFormOpen(true); }} className="button-premium shadow-lg shadow-orange-950/20 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-xs uppercase tracking-widest h-11 px-5 rounded-xl">
             <Plus className="mr-2 h-4 w-4" /> Nouveau Scénario
           </Button>
         </div>
@@ -429,7 +429,7 @@ export default function SimulationPage() {
                 <div className="flex items-start justify-between border-b border-slate-900 pb-4 mb-6">
                   <div className="space-y-1">
                     <CardTitle className="text-xl font-black text-white flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.5)]" />
+                      <div className="h-2 w-2 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]" />
                       {scenario.name}
                     </CardTitle>
                     <p className="text-xs text-slate-400 leading-relaxed max-w-xl">{scenario.description || "Aucune description opérationnelle spécifiée."}</p>
@@ -446,7 +446,7 @@ export default function SimulationPage() {
                 
                 <CardContent className="p-0">
                   <div className="bg-slate-900/20 border border-slate-900 rounded-2xl p-5">
-                    <h4 className="text-[11px] font-black uppercase tracking-wider text-violet-400 mb-4 flex items-center gap-2">
+                    <h4 className="text-[11px] font-black uppercase tracking-wider text-orange-400 mb-4 flex items-center gap-2">
                       <Workflow className="h-4 w-4" />
                       Séquence d'injections de données ({scenario.injections?.length ?? 0})
                     </h4>
@@ -464,15 +464,15 @@ export default function SimulationPage() {
                           return (
                             <div key={idx} className="relative flex items-center gap-4 p-3.5 rounded-xl bg-slate-900/40 border border-slate-900 hover:border-slate-800 hover:bg-slate-900/60 transition-all text-xs group">
                               {/* Flow dot accent */}
-                              <div className="absolute -left-[31px] top-1/2 -translate-y-1/2 h-4 w-4 rounded-full border-2 border-slate-950 bg-slate-900 flex items-center justify-center text-slate-500 group-hover:bg-violet-600 group-hover:border-violet-400 group-hover:text-white transition-all text-[8px] font-bold">
+                              <div className="absolute -left-[31px] top-1/2 -translate-y-1/2 h-4 w-4 rounded-full border-2 border-slate-950 bg-slate-900 flex items-center justify-center text-slate-500 group-hover:bg-orange-600 group-hover:border-orange-400 group-hover:text-white transition-all text-[8px] font-bold">
                                 {idx + 1}
                               </div>
                               
-                              <div className="p-2 rounded-lg bg-slate-950/60 text-slate-400 group-hover:text-violet-400 transition-colors">
+                              <div className="p-2 rounded-lg bg-slate-950/60 text-slate-400 group-hover:text-orange-400 transition-colors">
                                 {icon}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="font-bold text-white group-hover:text-violet-400 transition-colors truncate">{inj.name}</p>
+                                <p className="font-bold text-white group-hover:text-orange-400 transition-colors truncate">{inj.name}</p>
                                 <p className="text-[10px] text-slate-400 mt-0.5 truncate">{inj.description || "Aucune description technique."}</p>
                               </div>
                               <div className="flex items-center gap-2 flex-shrink-0">
@@ -480,7 +480,7 @@ export default function SimulationPage() {
                                   {inj.triggerType}
                                 </Badge>
                                 {inj.timeOffset !== null && inj.timeOffset !== undefined && (
-                                  <Badge variant="outline" className="text-[9px] font-bold border-violet-500/10 bg-violet-500/5 text-violet-400">
+                                  <Badge variant="outline" className="text-[9px] font-bold border-orange-500/10 bg-orange-500/5 text-orange-400">
                                     +{inj.timeOffset} min
                                   </Badge>
                                 )}
@@ -512,7 +512,7 @@ export default function SimulationPage() {
             <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" /> État du Système: Opérationnel
           </p>
         </div>
-        <Button onClick={() => { setSelectedSimulation(null); setIsSimulationFormOpen(true); }} className="button-premium shadow-lg shadow-violet-950/20 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-widest h-11 px-5 rounded-xl">
+        <Button onClick={() => { setSelectedSimulation(null); setIsSimulationFormOpen(true); }} className="button-premium shadow-lg shadow-orange-950/20 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-xs uppercase tracking-widest h-11 px-5 rounded-xl">
           <Plus className="mr-2 h-4 w-4" /> Initialiser Simulation
         </Button>
       </div>
@@ -520,14 +520,14 @@ export default function SimulationPage() {
       {/* Analytics Dashboard Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 animate-in fade-in slide-in-from-top-4 duration-700">
         <div className="glass-card p-5 relative overflow-hidden bg-slate-900/40 border border-slate-800/80 rounded-2xl flex items-center gap-4 group hover:border-slate-700 transition-all duration-300">
-          <div className="p-3.5 rounded-xl bg-violet-500/10 text-violet-400 border border-violet-500/20">
+          <div className="p-3.5 rounded-xl bg-orange-500/10 text-orange-400 border border-orange-500/20">
             <Activity className="h-5 w-5" />
           </div>
           <div>
             <div className="text-2xl font-black text-white">{simulations.length}</div>
             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Simulations Totales</div>
           </div>
-          <div className="absolute -right-4 -bottom-4 w-16 h-16 bg-violet-500/5 rounded-full blur-xl group-hover:bg-violet-500/10 transition-all" />
+          <div className="absolute -right-4 -bottom-4 w-16 h-16 bg-orange-500/5 rounded-full blur-xl group-hover:bg-orange-500/10 transition-all" />
         </div>
         
         <div className="glass-card p-5 relative overflow-hidden bg-slate-900/40 border border-slate-800/80 rounded-2xl flex items-center gap-4 group hover:border-slate-700 transition-all duration-300">
@@ -571,16 +571,16 @@ export default function SimulationPage() {
           {/* Filters & Search Scanner */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
             <TabsList className="bg-slate-950/60 p-1 rounded-2xl border border-slate-900 backdrop-blur-md">
-              <TabsTrigger value="all" className="px-6 py-2 rounded-xl data-[state=active]:bg-violet-600 data-[state=active]:text-white transition-all font-black uppercase text-[10px] tracking-widest text-slate-400">Global</TabsTrigger>
-              <TabsTrigger value="ongoing" className="px-6 py-2 rounded-xl data-[state=active]:bg-violet-600 data-[state=active]:text-white transition-all font-black uppercase text-[10px] tracking-widest text-slate-400">En Cours</TabsTrigger>
-              <TabsTrigger value="planned" className="px-6 py-2 rounded-xl data-[state=active]:bg-violet-600 data-[state=active]:text-white transition-all font-black uppercase text-[10px] tracking-widest text-slate-400">Planifiées</TabsTrigger>
+              <TabsTrigger value="all" className="px-6 py-2 rounded-xl data-[state=active]:bg-orange-600 data-[state=active]:text-white transition-all font-black uppercase text-[10px] tracking-widest text-slate-400">Global</TabsTrigger>
+              <TabsTrigger value="ongoing" className="px-6 py-2 rounded-xl data-[state=active]:bg-orange-600 data-[state=active]:text-white transition-all font-black uppercase text-[10px] tracking-widest text-slate-400">En Cours</TabsTrigger>
+              <TabsTrigger value="planned" className="px-6 py-2 rounded-xl data-[state=active]:bg-orange-600 data-[state=active]:text-white transition-all font-black uppercase text-[10px] tracking-widest text-slate-400">Planifiées</TabsTrigger>
             </TabsList>
 
             <div className="relative w-full md:w-80">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-violet-400" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-orange-400" />
               <Input
                 placeholder="Scanner les simulations..."
-                className="pl-12 h-11 bg-slate-950/40 border-slate-900 focus-visible:ring-violet-500 focus-visible:border-violet-500 rounded-xl text-xs font-medium placeholder-slate-500 text-white"
+                className="pl-12 h-11 bg-slate-950/40 border-slate-900 focus-visible:ring-orange-500 focus-visible:border-orange-500 rounded-xl text-xs font-medium placeholder-slate-500 text-white"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
