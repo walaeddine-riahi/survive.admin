@@ -141,13 +141,25 @@ export async function bridgeSessionToScoring(
       );
 
       if (!injection) {
+        let scenarioId: string;
+        const existingScenario = await prisma.scenario.findFirst({ where: { simulationId } });
+        if (existingScenario) {
+          scenarioId = existingScenario.id;
+        } else {
+          const newScenario = await prisma.scenario.create({
+            data: { simulationId, title: "Scénario Live V2", description: "Scénario généré pour la session V2" }
+          });
+          scenarioId = newScenario.id;
+        }
+
         injection = await prisma.injection.create({
           data: {
             simulationId,
+            scenarioId,
             title: `[${msg.channel}] ${msg.senderName}: ${msg.body.slice(0, 60)}`,
             description: `Inject ID: ${msg.id}\nCanal: ${msg.channel}\nExpéditeur: ${msg.senderName}\nCorps: ${msg.body}`,
-            type: mapChannelToInjectType(msg.channel),
-            trigger: "manual",
+            type: mapChannelToInjectType(msg.channel) as any,
+            triggerType: "MANUAL",
             triggerTime: new Date(msg.triggeredAt),
             priority: msg.priority,
             targetRoles: msg.isGroupMessage ? [] : [],
@@ -410,17 +422,17 @@ export interface BridgeResult {
 
 function mapChannelToInjectType(channel: string): string {
   const map: Record<string, string> = {
-    EMAIL: "communication",
-    SMS: "communication",
-    CALL: "communication",
-    WHATSAPP: "communication",
-    ALERT: "incident",
-    FLASH_INFO: "information",
-    JOURNAL: "information",
-    SOCIAL_MEDIA: "media",
-    INTERNAL_RADIO: "communication",
+    EMAIL: "EMAIL",
+    SMS: "SMS",
+    CALL: "CALL",
+    WHATSAPP: "SMS",
+    ALERT: "ALERT",
+    FLASH_INFO: "NEWS_BROADCAST",
+    JOURNAL: "NEWSPAPER",
+    SOCIAL_MEDIA: "SOCIAL",
+    INTERNAL_RADIO: "NEWS_BROADCAST",
   };
-  return map[channel] || "communication";
+  return map[channel] || "OTHER";
 }
 
 function buildV2MetricsNarrative(metrics: ParticipantV2Metrics): string {
