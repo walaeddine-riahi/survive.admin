@@ -269,33 +269,39 @@ function NewEntryDialog({ sessionId, participant, onCreated, onClose, linkedMess
       return;
     }
     setIsSaving(true);
-    const r = await createLogEntry({
-      sessionId,
-      type,
-      participantId: participant.id,
-      participantName: participant.displayName,
-      participantRole: participant.role,
-      title: title.trim(),
-      content: content.trim(),
-      justification: justification.trim() || undefined,
-      impactScope,
-      alternativesConsidered: alternatives.trim() || undefined,
-      decisionStatus: type === "DECISION" ? "DRAFT" : undefined,
-      actionStatus: type === "ACTION" ? "TODO" : undefined,
-      assignedToName: assignedTo.trim() || undefined,
-      escalatedToName: escalatedTo.trim() || undefined,
-      escalatedToRole: escalatedRole.trim() || undefined,
-      linkedMessageId,
-    });
+    try {
+      const r = await createLogEntry({
+        sessionId,
+        type,
+        participantId: participant.id || undefined,
+        participantName: participant.displayName,
+        participantRole: participant.role,
+        title: title.trim(),
+        content: content.trim(),
+        justification: justification.trim() || undefined,
+        impactScope,
+        alternativesConsidered: alternatives.trim() || undefined,
+        decisionStatus: type === "DECISION" ? "DRAFT" : undefined,
+        actionStatus: type === "ACTION" ? "TODO" : undefined,
+        assignedToName: assignedTo.trim() || undefined,
+        escalatedToName: escalatedTo.trim() || undefined,
+        escalatedToRole: escalatedRole.trim() || undefined,
+        linkedMessageId: linkedMessageId || undefined,
+      });
 
-    if (r.success) {
-      toast.success(`${cfg.label} enregistrée dans la main courante`);
-      onCreated();
-      onClose();
-    } else {
-      toast.error(r.error);
+      if (r.success) {
+        toast.success(`${cfg.label} enregistrée dans la main courante`);
+        onCreated();
+        onClose();
+      } else {
+        toast.error(r.error || "Erreur serveur lors de la sauvegarde");
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Erreur réseau ou base de données lors de la sauvegarde");
+    } finally {
+      setIsSaving(false);
     }
-    setIsSaving(false);
   }
 
   return (
