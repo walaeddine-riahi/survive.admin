@@ -18,6 +18,97 @@ interface InstructorExternalActorsMonitorProps {
   onUpdate: () => void;
 }
 
+// ─── Embeds Parser & Media Display ───────────────────────────────────────────
+interface EmbedMedia {
+  type: "image" | "youtube";
+  url: string;
+  youtubeId?: string;
+}
+
+function parseEmbeds(text: string): EmbedMedia[] {
+  if (!text) return [];
+  const embeds: EmbedMedia[] = [];
+
+  // 1. YouTube Regex
+  const ytRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/gi;
+  let ytMatch;
+  const foundYtIds = new Set<string>();
+  while ((ytMatch = ytRegex.exec(text)) !== null) {
+    const videoId = ytMatch[1];
+    if (!foundYtIds.has(videoId)) {
+      foundYtIds.add(videoId);
+      embeds.push({
+        type: "youtube",
+        url: ytMatch[0],
+        youtubeId: videoId,
+      });
+    }
+  }
+
+  // 2. Image Regex
+  const imgRegex = /(https?:\/\/[^\s]+?\.(?:jpg|jpeg|png|gif|webp|svg)(?:\?[^\s]*)?)/gi;
+  let imgMatch;
+  const foundImgs = new Set<string>();
+  while ((imgMatch = imgRegex.exec(text)) !== null) {
+    const url = imgMatch[1];
+    if (!foundImgs.has(url)) {
+      foundImgs.add(url);
+      embeds.push({
+        type: "image",
+        url,
+      });
+    }
+  }
+
+  return embeds;
+}
+
+function MessageEmbeds({ text }: { text: string }) {
+  const embeds = parseEmbeds(text);
+  if (embeds.length === 0) return null;
+
+  return (
+    <div className="mt-2 space-y-2">
+      {embeds.map((embed, idx) => {
+        if (embed.type === "youtube" && embed.youtubeId) {
+          return (
+            <div key={idx} className="relative aspect-video w-full max-w-md rounded-xl overflow-hidden border border-gray-800 shadow-md bg-black">
+              <iframe
+                src={`https://www.youtube.com/embed/${embed.youtubeId}`}
+                title="YouTube video player"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                className="absolute inset-0 w-full h-full"
+              />
+            </div>
+          );
+        }
+        if (embed.type === "image") {
+          return (
+            <div key={idx} className="relative max-w-md rounded-xl overflow-hidden border border-gray-800 shadow-md bg-gray-950 group">
+              <img
+                src={embed.url}
+                alt="Embedded media"
+                className="w-full h-auto max-h-[220px] object-contain transition-transform duration-300 group-hover:scale-[1.02]"
+              />
+              <a
+                href={embed.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white p-1.5 rounded-lg text-[9px] font-semibold transition-colors flex items-center gap-1 backdrop-blur-sm"
+              >
+                👁️ Ouvrir
+              </a>
+            </div>
+          );
+        }
+        return null;
+      })}
+    </div>
+  );
+}
+
 export default function InstructorExternalActorsMonitor({
   sessionId,
   participants,
@@ -409,6 +500,7 @@ export default function InstructorExternalActorsMonitor({
                       <p className="text-xs leading-relaxed whitespace-pre-wrap">
                         {msg.body}
                       </p>
+                      <MessageEmbeds text={msg.body} />
                     </div>
                   </div>
                 );
