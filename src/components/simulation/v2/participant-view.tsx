@@ -159,7 +159,7 @@ function ActiveCallPanel({ call, onEnd }: { call: Call; onEnd: (notes: string) =
 
 // ─── Embeds Parser & Media Display ───────────────────────────────────────────
 interface EmbedMedia {
-  type: "image" | "youtube" | "pdf";
+  type: "image" | "youtube" | "pdf" | "drive";
   url: string;
   youtubeId?: string;
 }
@@ -167,50 +167,69 @@ interface EmbedMedia {
 function parseEmbeds(text: string): EmbedMedia[] {
   if (!text) return [];
   const embeds: EmbedMedia[] = [];
+  const foundUrls = new Set<string>();
 
-  // 1. YouTube Regex
-  const ytRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/gi;
-  let ytMatch;
-  const foundYtIds = new Set<string>();
-  while ((ytMatch = ytRegex.exec(text)) !== null) {
-    const videoId = ytMatch[1];
-    if (!foundYtIds.has(videoId)) {
-      foundYtIds.add(videoId);
+  // Extract all URLs
+  const urlRegex = /(https?:\/\/[^\s]+)/gi;
+  let match;
+  while ((match = urlRegex.exec(text)) !== null) {
+    let url = match[1];
+    
+    // Clean trailing punctuation if any (like commas, periods, parentheses at the end of URL in text)
+    url = url.replace(/[.,;:)\]]+$/, "");
+    
+    if (foundUrls.has(url)) continue;
+    foundUrls.add(url);
+
+    const lowerUrl = url.toLowerCase();
+
+    // 1. Check YouTube
+    const ytRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i;
+    const ytMatch = ytRegex.exec(url);
+    if (ytMatch) {
       embeds.push({
         type: "youtube",
-        url: ytMatch[0],
-        youtubeId: videoId,
-      });
-    }
-  }
-
-  // 2. Image Regex
-  const imgRegex = /(https?:\/\/[^\s]+?\.(?:jpg|jpeg|png|gif|webp|svg)(?:\?[^\s]*)?)/gi;
-  let imgMatch;
-  const foundImgs = new Set<string>();
-  while ((imgMatch = imgRegex.exec(text)) !== null) {
-    const url = imgMatch[1];
-    if (!foundImgs.has(url)) {
-      foundImgs.add(url);
-      embeds.push({
-        type: "image",
         url,
+        youtubeId: ytMatch[1]
       });
+      continue;
     }
-  }
 
-  // 3. PDF Regex
-  const pdfRegex = /(https?:\/\/[^\s]+?\.pdf(?:\?[^\s]*)?)/gi;
-  let pdfMatch;
-  const foundPdfs = new Set<string>();
-  while ((pdfMatch = pdfRegex.exec(text)) !== null) {
-    const url = pdfMatch[1];
-    if (!foundPdfs.has(url)) {
-      foundPdfs.add(url);
+    // 2. Check PDF
+    if (lowerUrl.includes(".pdf")) {
       embeds.push({
         type: "pdf",
-        url,
+        url
       });
+      continue;
+    }
+
+    // 3. Check Google Drive
+    if (lowerUrl.includes("drive.google.com")) {
+      embeds.push({
+        type: "drive",
+        url
+      });
+      continue;
+    }
+
+    // 4. Check Image
+    const isImage = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|tiff)(\?|$)/i.test(lowerUrl) ||
+                    [
+                      "bing.net/th",
+                      "googleusercontent.com",
+                      "unsplash.com/photo-",
+                      "images.unsplash.com",
+                      "images.pexels.com",
+                      "pixabay.com/get/",
+                      "i.imgur.com"
+                    ].some(host => lowerUrl.includes(host));
+    if (isImage) {
+      embeds.push({
+        type: "image",
+        url
+      });
+      continue;
     }
   }
 
@@ -278,10 +297,68 @@ function MessageEmbeds({ text }: { text: string }) {
             </div>
           );
         }
+        if (embed.type === "drive") {
+          const previewUrl = getGoogleDrivePreviewUrl(embed.url);
+          return (
+            <div key={idx} className="relative w-full max-w-2xl rounded-xl overflow-hidden border border-gray-800 bg-gray-950 shadow-md">
+              <div className="flex items-center justify-between px-3 py-2 bg-gray-900 border-b border-gray-800 text-[10px] md:text-xs">
+                <div className="flex items-center gap-2 text-blue-400 font-semibold">
+                  <FileText className="h-4 w-4" />
+                  <span>Aperçu Document Google Drive</span>
+                </div>
+                <a
+                  href={embed.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-gray-800 hover:bg-gray-700 text-white px-2.5 py-1 rounded text-[10px] font-semibold transition-colors flex items-center gap-1"
+                >
+                  👁️ Plein Écran
+                </a>
+              </div>
+              <div className="w-full h-[450px] bg-gray-900">
+                <iframe
+                  src={previewUrl}
+                  className="w-full h-full border-0"
+                  allow="autoplay"
+                  title="Google Drive File Preview"
+                />
+              </div>
+            </div>
+          );
+        }
         return null;
       })}
     </div>
   );
+}
+
+function getGoogleDrivePreviewUrl(url: string): string {
+  const match = /\/file\/d\/([a-zA-Z0-9_-]+)/.exec(url);
+  if (match && match[1]) {
+    return `https://drive.google.com/file/d/${match[1]}/preview`;
+  }
+  const idMatch = /[?&]id=([a-zA-Z0-9_-]+)/.exec(url);
+  if (idMatch && idMatch[1]) {
+    return `https://drive.google.com/file/d/${idMatch[1]}/preview`;
+  }
+  return url;
+}
+
+function cleanMessageBody(text: string): string {
+  if (!text) return "";
+  const embeds = parseEmbeds(text);
+  let cleaned = text;
+  
+  // Sort embeds by URL length descending to avoid partial matches
+  const sortedEmbeds = [...embeds].sort((a, b) => b.url.length - a.url.length);
+  
+  for (const embed of sortedEmbeds) {
+    const escapedUrl = embed.url.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const regex = new RegExp(`\\s*${escapedUrl}\\s*`, "gi");
+    cleaned = cleaned.replace(regex, "\n");
+  }
+  
+  return cleaned.replace(/\n{2,}/g, "\n\n").trim();
 }
 
 // ─── Message Thread ───────────────────────────────────────────────────────────
@@ -384,7 +461,7 @@ function MessageThread({ message, participantId, participantName, sessionId, onR
             )}
 
             {/* Body */}
-            <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{message.body}</p>
+            <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{cleanMessageBody(message.body)}</p>
             <MessageEmbeds text={message.body} />
 
             {/* Expiry */}
