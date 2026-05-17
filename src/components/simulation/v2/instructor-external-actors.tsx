@@ -55,11 +55,11 @@ export default function InstructorExternalActorsMonitor({
           const isSentByPartToActor =
             m.isFromParticipant &&
             m.fromParticipantId === p.id &&
-            m.recipientIds.includes(selectedActor.id);
+            m.recipientIds?.includes(selectedActor.id);
           const isReceivedByPartFromActor =
             !m.isFromParticipant &&
             m.senderName === selectedActor.displayName &&
-            m.recipientIds.includes(p.id);
+            m.recipientIds?.includes(p.id);
           return isSentByPartToActor || isReceivedByPartFromActor;
         });
       })
@@ -72,11 +72,11 @@ export default function InstructorExternalActorsMonitor({
           const isSentByPartToActor =
             m.isFromParticipant &&
             m.fromParticipantId === selectedParticipant.id &&
-            m.recipientIds.includes(selectedActor.id);
+            m.recipientIds?.includes(selectedActor.id);
           const isReceivedByPartFromActor =
             !m.isFromParticipant &&
             m.senderName === selectedActor.displayName &&
-            m.recipientIds.includes(selectedParticipant.id);
+            m.recipientIds?.includes(selectedParticipant.id);
           return isSentByPartToActor || isReceivedByPartFromActor;
         })
         .sort((a, b) => new Date(a.triggeredAt).getTime() - new Date(b.triggeredAt).getTime())
@@ -96,11 +96,11 @@ export default function InstructorExternalActorsMonitor({
         const isSentByPartToActor =
           m.isFromParticipant &&
           m.fromParticipantId === partId &&
-          m.recipientIds.includes(actor.id);
+          m.recipientIds?.includes(actor.id);
         const isReceivedByPartFromActor =
           !m.isFromParticipant &&
           m.senderName === actor.displayName &&
-          m.recipientIds.includes(partId);
+          m.recipientIds?.includes(partId);
         return isSentByPartToActor || isReceivedByPartFromActor;
       })
       .sort((a, b) => new Date(a.triggeredAt).getTime() - new Date(b.triggeredAt).getTime());

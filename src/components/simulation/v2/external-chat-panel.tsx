@@ -41,11 +41,11 @@ export default function ExternalChatPanel({
           const isSentByMeToActor =
             m.isFromParticipant &&
             m.fromParticipantId === participant.id &&
-            m.recipientIds.includes(selectedActor.id);
+            m.recipientIds?.includes(selectedActor.id);
           const isReceivedFromActor =
             !m.isFromParticipant &&
             m.senderName === selectedActor.displayName &&
-            m.recipientIds.includes(participant.id);
+            m.recipientIds?.includes(participant.id);
           return isSentByMeToActor || isReceivedFromActor;
         })
         .sort((a, b) => new Date(a.triggeredAt).getTime() - new Date(b.triggeredAt).getTime())
