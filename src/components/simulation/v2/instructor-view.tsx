@@ -92,59 +92,71 @@ function InjectPanel({ session, participants, onSent }: {
   }
 
   async function handleSend() {
-    if (!body.trim()) { toast.error("Contenu requis"); return; }
-    const recipients = isGroupMsg ? realParticipants.map(p => p.id) : selectedRecipients;
-    if (recipients.length === 0) { toast.error("Sélectionnez au moins un destinataire"); return; }
+    try {
+      if (!body.trim()) { toast.error("Contenu requis"); return; }
+      const recipients = isGroupMsg ? realParticipants.map(p => p.id) : selectedRecipients;
+      if (recipients.length === 0) { toast.error("Sélectionnez au moins un destinataire"); return; }
 
-    setIsSending(true);
-    const finalSender = senderName === "custom" ? customSender : senderName;
+      setIsSending(true);
+      const finalSender = senderName === "custom" ? customSender : senderName;
 
-    if (isCall && selectedRecipients.length === 1) {
-      // Initiate call
-      const participant = realParticipants.find(p => p.id === selectedRecipients[0]);
-      const instructor = participants.find(p => p.isInstructor);
-      if (participant && instructor) {
-        const r = await initiateCall({
-          sessionId: session.id,
-          callerId: instructor.id,
-          callerName: finalSender,
-          recipientId: participant.id,
-          recipientName: participant.displayName,
-          script: callScript || body,
-          scriptNotes: body,
-        });
-        if (r.success) {
-          toast.success(`📞 Appel initié vers ${participant.displayName}`);
-          setBody(""); setCallScript(""); setSelectedRecipients([]);
-          onSent();
-        } else toast.error(r.error);
-      }
-    } else {
-      // Send message
-      const r = await sendSimMessage({
-        sessionId: session.id,
-        channel,
-        priority,
-        senderName: finalSender,
-        recipientIds: recipients,
-        isGroupMessage: isGroupMsg,
-        groupName: isGroupMsg ? groupName : undefined,
-        subject: subject || undefined,
-        body,
-        callScript: callScript || undefined,
-        expiresInMinutes: expiresIn ? parseInt(expiresIn) : undefined,
-      });
-
-      if (r.success) {
-        const channelLabel = CHANNELS.find(c => c.key === channel)?.label || channel;
-        toast.success(`✅ ${channelLabel} envoyé à ${isGroupMsg ? groupName : `${recipients.length} participant(s)`}`);
-        setBody(""); setSubject(""); setCallScript(""); setSelectedRecipients([]);
-        onSent();
+      if (isCall && selectedRecipients.length === 1) {
+        // Initiate call
+        const participant = realParticipants.find(p => p.id === selectedRecipients[0]);
+        // Fallback to a valid 24-character hex string (ObjectId) if instructor is not in the list
+        const instructorId = participants.find(p => p.isInstructor)?.id || "000000000000000000000000";
+        
+        if (participant) {
+          const r = await initiateCall({
+            sessionId: session.id,
+            callerId: instructorId,
+            callerName: finalSender,
+            recipientId: participant.id,
+            recipientName: participant.displayName,
+            script: callScript || body,
+            scriptNotes: body,
+          });
+          if (r.success) {
+            toast.success(`📞 Appel initié vers ${participant.displayName}`);
+            setBody(""); setCallScript(""); setSelectedRecipients([]);
+            onSent();
+          } else {
+            toast.error(r.error || "Erreur serveur lors de l'appel");
+          }
+        } else {
+          toast.error("Erreur : Participant introuvable dans la liste");
+        }
       } else {
-        toast.error(r.error);
+        // Send message
+        const r = await sendSimMessage({
+          sessionId: session.id,
+          channel,
+          priority,
+          senderName: finalSender,
+          recipientIds: recipients,
+          isGroupMessage: isGroupMsg,
+          groupName: isGroupMsg ? groupName : undefined,
+          subject: subject || undefined,
+          body,
+          callScript: callScript || undefined,
+          expiresInMinutes: expiresIn ? parseInt(expiresIn) : undefined,
+        });
+
+        if (r.success) {
+          const channelLabel = CHANNELS.find(c => c.key === channel)?.label || channel;
+          toast.success(`✅ ${channelLabel} envoyé à ${isGroupMsg ? groupName : `${recipients.length} participant(s)`}`);
+          setBody(""); setSubject(""); setCallScript(""); setSelectedRecipients([]);
+          onSent();
+        } else {
+          toast.error(r.error || "Erreur serveur lors de l'envoi");
+        }
       }
+    } catch (e) {
+      console.error(e);
+      toast.error("Une erreur réseau critique s'est produite.");
+    } finally {
+      setIsSending(false);
     }
-    setIsSending(false);
   }
 
   const channelConfig = CHANNELS.find(c => c.key === channel);
