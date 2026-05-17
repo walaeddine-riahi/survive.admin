@@ -213,7 +213,14 @@ export default function InstructorCrisisLogMonitor({
   initialEntries?: LogEntry[];
 }) {
   const [entries, setEntries] = useState<LogEntry[]>(initialEntries);
-  const [lastPoll, setLastPoll] = useState(new Date().toISOString());
+  const [lastPoll, setLastPoll] = useState(() => {
+    if (initialEntries && initialEntries.length > 0) {
+      const dates = initialEntries.map(e => new Date(e.occurredAt || e.createdAt).getTime());
+      const maxDate = Math.max(...dates);
+      return new Date(maxDate).toISOString();
+    }
+    return new Date().toISOString();
+  });
   const [isExporting, setIsExporting] = useState(false);
   const [filterType, setFilterType] = useState<string>("ALL");
   const pollRef = useRef<NodeJS.Timeout | null>(null);

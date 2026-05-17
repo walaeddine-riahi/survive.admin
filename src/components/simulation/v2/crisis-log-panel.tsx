@@ -471,7 +471,14 @@ export default function CrisisLogPanel({
   const [entries, setEntries] = useState<LogEntry[]>(initialEntries);
   const [showForm, setShowForm] = useState(false);
   const [filter, setFilter] = useState<EntryType | "ALL">("ALL");
-  const [lastPoll, setLastPoll] = useState(new Date().toISOString());
+  const [lastPoll, setLastPoll] = useState(() => {
+    if (initialEntries && initialEntries.length > 0) {
+      const dates = initialEntries.map(e => new Date(e.occurredAt || e.createdAt).getTime());
+      const maxDate = Math.max(...dates);
+      return new Date(maxDate).toISOString();
+    }
+    return new Date().toISOString();
+  });
   const pollRef = useRef<NodeJS.Timeout | null>(null);
 
   const reload = useCallback(async () => {

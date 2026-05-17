@@ -339,7 +339,7 @@ export default function ParticipantView({
   initialMessages,
   initialCalls,
 }: {
-  session: { id: string; title: string; status: string; wsRoomId: string; startedAt?: string | null; durationMinutes?: number | null; simulationId?: string; participants?: any[]; };
+  session: { id: string; title: string; status: string; wsRoomId: string; startedAt?: string | null; durationMinutes?: number | null; simulationId?: string; participants?: any[]; crisisLog?: any[]; };
   participant: { id: string; displayName: string; role: string; team?: string | null; simEmail?: string | null; simPhone?: string | null };
   initialMessages: Msg[];
   initialCalls: Call[];
@@ -695,7 +695,7 @@ export default function ParticipantView({
             {activeChannel === "CHAT" ? (
               <ChatPanel sessionId={session.id} participant={participant} allParticipants={session.participants || []} />
             ) : activeChannel === "CRISIS_LOG" ? (
-              <CrisisLogPanel sessionId={session.id} participant={participant} />
+              <CrisisLogPanel sessionId={session.id} participant={participant} initialEntries={session.crisisLog || []} />
             ) : activeChannel === "CRISIS_DOCS" ? (
               <CrisisDocsPanel sessionId={session.id} simulationId={session.simulationId || ""} participant={participant} />
             ) : filteredMessages.length === 0 ? (

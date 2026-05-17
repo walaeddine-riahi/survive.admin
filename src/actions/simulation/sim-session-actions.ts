@@ -57,6 +57,7 @@ export async function getSimSession(sessionId: string) {
         },
         calls: { orderBy: { createdAt: "desc" }, take: 50 },
         events: { orderBy: { occurredAt: "desc" }, take: 100 },
+        crisisLog: { orderBy: { occurredAt: "asc" } },
       },
     });
     return { success: true, data: session };

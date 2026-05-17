@@ -368,7 +368,7 @@ export default function InstructorView({
   initialCalls,
   initialEvents,
 }: {
-  session: { id: string; title: string; status: string; startedAt?: string | null; durationMinutes?: number | null };
+  session: { id: string; title: string; status: string; startedAt?: string | null; durationMinutes?: number | null; crisisLog?: any[] };
   participants: Participant[];
   initialMessages: Message[];
   initialCalls: Call[];
@@ -725,7 +725,7 @@ export default function InstructorView({
 
             {/* CRISIS LOG TAB */}
             {activeTab === "crisis_log" && (
-              <InstructorCrisisLogMonitor sessionId={session.id} />
+              <InstructorCrisisLogMonitor sessionId={session.id} initialEntries={session.crisisLog || []} />
             )}
 
             {/* FORMS TAB */}
