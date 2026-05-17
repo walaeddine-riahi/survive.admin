@@ -438,6 +438,16 @@ export default function InstructorView({
   usePusherChannel({
     sessionId: session.id,
     isInstructor: true,
+    onInjectSent: useCallback((data: unknown) => {
+      const msg = data as Message;
+      setMessages(prev => {
+        if (prev.some((m: Message) => m.id === msg.id)) return prev;
+        return [msg, ...prev];
+      });
+      if (msg.isFromParticipant) {
+        toast.info(`📬 Nouveau message externe de ${msg.senderName}`);
+      }
+    }, []),
     onReplySent: useCallback((data: unknown) => {
       const d = data as { replyId: string; messageId: string; participantId: string; participantName: string; channel: string; body: string; responseTimeSeconds: number };
       toast.success(`💬 Réponse de ${d.participantName} en ${d.responseTimeSeconds}s`);

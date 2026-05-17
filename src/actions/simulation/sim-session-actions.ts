@@ -280,6 +280,16 @@ export async function sendSimMessage(input: {
       );
     }
 
+    // If message is sent by a participant, also push to the sender's channel so they see it instantly
+    if (input.isFromParticipant && input.fromParticipantId) {
+      await pushToParticipant(
+        input.sessionId,
+        input.fromParticipantId,
+        SIM_EVENTS.NEW_MESSAGE,
+        messagePayload
+      );
+    }
+
     // Also push to instructor channel for real-time feed
     await pushToInstructor(input.sessionId, "inject_sent", {
       ...messagePayload,
