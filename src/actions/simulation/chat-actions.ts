@@ -367,6 +367,28 @@ export async function getChatDelta(sessionId: string, since: string, participant
   }
 }
 
+// ─── Delete message ───────────────────────────────────────────────────────────
+
+export async function deleteChatMessage(messageId: string, userId: string) {
+  try {
+    const message = await prisma.chatMessage.findUnique({ where: { id: messageId } });
+    if (!message) return { success: false, error: "Message non trouvé" };
+    
+    if (message.senderId !== userId) {
+      return { success: false, error: "Non autorisé" };
+    }
+    
+    await prisma.chatMessage.delete({ where: { id: messageId } });
+    
+    await pushToSession(message.sessionId, "chat_message_deleted", { id: messageId, channelId: message.channelId });
+    
+    return { success: true };
+  } catch (error) {
+    console.error("deleteChatMessage:", error);
+    return { success: false, error: "Erreur lors de la suppression" };
+  }
+}
+
 // ─── Chat stats for scoring ───────────────────────────────────────────────────
 
 export async function getChatStats(sessionId: string) {

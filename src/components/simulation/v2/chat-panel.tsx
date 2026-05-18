@@ -7,10 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
   MessageSquare, Send, ChevronLeft, Hash,
-  Megaphone, Users, Lock, AtSign, Plus, Copy,
+  Megaphone, Users, Lock, AtSign, Plus, Copy, Trash2,
 } from "lucide-react";
 import {
-  getChannels, getMessages, sendChatMessage,
+  getChannels, getMessages, sendChatMessage, deleteChatMessage,
   markChannelRead, getChatDelta, createDirectChannel, getAllChannels, createGroupChannel,
 } from "@/actions/simulation/chat-actions";
 
@@ -30,8 +30,8 @@ function formatTime(d: string | Date) {
 }
 
 // ─── Single message bubble ────────────────────────────────────────────────────
-function MessageBubble({ msg, isMine, isInstructor }: {
-  msg: Message; isMine: boolean; isInstructor: boolean;
+function MessageBubble({ msg, isMine, isInstructor, onDelete }: {
+  msg: Message; isMine: boolean; isInstructor: boolean; onDelete?: (id: string) => void;
 }) {
   const isAlert = msg.messageType === "alert";
   const isAnnouncement = isInstructor && !isMine;
@@ -97,6 +97,24 @@ function MessageBubble({ msg, isMine, isInstructor }: {
           >
             <Copy className="h-3 w-3" />
           </button>
+          {isMine && onDelete && (
+            <button
+              onClick={async () => {
+                if (confirm("Supprimer ce message ?")) {
+                  const r = await deleteChatMessage(msg.id, msg.senderId);
+                  if (r.success) {
+                    onDelete(msg.id);
+                  } else {
+                    toast.error(r.error || "Erreur");
+                  }
+                }
+              }}
+              className="text-slate-500 hover:text-red-400 transition-colors"
+              title="Supprimer le message"
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -172,6 +190,7 @@ export default function ChatPanel({
   const [selectedTargetIds, setSelectedTargetIds] = useState<string[]>([]);
   const [dmSearch, setDmSearch] = useState("");
   const [showTagPicker, setShowTagPicker] = useState(false);
+  const [tagSearch, setTagSearch] = useState("");
   const [lastPoll, setLastPoll] = useState(new Date().toISOString());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
@@ -535,6 +554,12 @@ export default function ChatPanel({
                       msg={msg}
                       isMine={msg.senderId === participant.id}
                       isInstructor={msg.isInstructor}
+                      onDelete={(id) => {
+                        setMessages(prev => ({
+                          ...prev,
+                          [activeChannelId!]: (prev[activeChannelId!] || []).filter(m => m.id !== id)
+                        }));
+                      }}
                     />
                   ))}
                   <div ref={messagesEndRef} />
@@ -548,12 +573,20 @@ export default function ChatPanel({
                 {showTagPicker && (
                   <div className="absolute bottom-full mb-2 left-5 right-5 bg-[#0b0f19] border border-slate-800 rounded-lg shadow-lg p-2 max-h-40 overflow-y-auto z-50 no-scrollbar">
                     <p className="text-[10px] text-slate-500 uppercase font-bold mb-1 px-1">Taguer un participant</p>
-                    {allParticipants.filter(p => p.id !== participant.id).map(p => (
+                    {allParticipants
+                      .filter(p => p.id !== participant.id)
+                      .filter(p => p.displayName.toLowerCase().includes(tagSearch.toLowerCase()))
+                      .map(p => (
                       <button
                         key={p.id}
                         onClick={() => {
-                          setInput(prev => prev + `@${p.displayName} `);
+                          setInput(prev => {
+                            const words = prev.split(" ");
+                            words.pop(); // Remove the incomplete tag like "@Ra"
+                            return [...words, `@${p.displayName} `].join(" ");
+                          });
                           setShowTagPicker(false);
+                          setTagSearch("");
                           inputRef.current?.focus();
                         }}
                         className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-900/40 text-left transition-colors"
@@ -567,8 +600,8 @@ export default function ChatPanel({
                         </div>
                       </button>
                     ))}
-                    {allParticipants.filter(p => p.id !== participant.id).length === 0 && (
-                      <p className="text-xs text-slate-600 p-1">Aucun autre participant à taguer.</p>
+                    {allParticipants.filter(p => p.id !== participant.id).filter(p => p.displayName.toLowerCase().includes(tagSearch.toLowerCase())).length === 0 && (
+                      <p className="text-xs text-slate-600 p-1">Aucun résultat.</p>
                     )}
                   </div>
                 )}
@@ -577,7 +610,18 @@ export default function ChatPanel({
                   className="flex-1 h-9.5 bg-slate-950/60 border-slate-800 text-slate-100 placeholder-slate-500 focus-visible:ring-slate-700 rounded-lg text-xs"
                   placeholder={`Écrire dans ${activeChannel.name}...`}
                   value={input}
-                  onChange={e => setInput(e.target.value)}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setInput(val);
+                    const lastWord = val.split(" ").pop() || "";
+                    if (lastWord.startsWith("@")) {
+                      setShowTagPicker(true);
+                      setTagSearch(lastWord.slice(1));
+                    } else {
+                      setShowTagPicker(false);
+                      setTagSearch("");
+                    }
+                  }}
                   onKeyDown={e => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
