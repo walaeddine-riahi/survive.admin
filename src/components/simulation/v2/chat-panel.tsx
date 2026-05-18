@@ -147,6 +147,7 @@ export default function ChatPanel({
   const [showChannelList, setShowChannelList] = useState(true);
   const [showDMPicker, setShowDMPicker] = useState(false);
   const [selectedTargetIds, setSelectedTargetIds] = useState<string[]>([]);
+  const [dmSearch, setDmSearch] = useState("");
   const [lastPoll, setLastPoll] = useState(new Date().toISOString());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
@@ -392,8 +393,18 @@ export default function ChatPanel({
                   )}
                 </div>
                 
+                <div className="relative mt-1 mb-2 px-1">
+                  <Input
+                    className="h-7 text-xs bg-slate-900 border-slate-800 focus-visible:ring-orange-500 text-white rounded-lg placeholder:text-gray-600"
+                    placeholder="Rechercher..."
+                    value={dmSearch}
+                    onChange={(e) => setDmSearch(e.target.value)}
+                  />
+                </div>
                 <div className="max-h-[160px] overflow-y-auto space-y-1 pr-1 no-scrollbar">
-                  {otherParticipants.map(p => {
+                  {otherParticipants
+                    .filter(p => p.displayName.toLowerCase().includes(dmSearch.toLowerCase()))
+                    .map(p => {
                     const isSelected = selectedTargetIds.includes(p.id);
                     return (
                       <button

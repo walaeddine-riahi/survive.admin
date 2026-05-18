@@ -80,6 +80,7 @@ function InjectPanel({ session, participants, onSent }: {
   const [mediaImageUrl, setMediaImageUrl] = useState("");
   const [mediaYoutubeUrl, setMediaYoutubeUrl] = useState("");
   const [mediaPdfUrl, setMediaPdfUrl] = useState("");
+  const [recipientSearch, setRecipientSearch] = useState("");
 
   const isCall = channel === "CALL";
   const realParticipants = participants.filter(p => !p.isInstructor && !p.isObserver);
@@ -273,8 +274,18 @@ function InjectPanel({ session, participants, onSent }: {
             </button>
           </div>
         </div>
+        <div className="relative mt-1 mb-2">
+          <Input
+            className="h-8 text-xs bg-slate-950/40 border-slate-800/80 focus-visible:ring-orange-500 text-white rounded-xl placeholder:text-gray-600"
+            placeholder="Rechercher un destinataire..."
+            value={recipientSearch}
+            onChange={(e) => setRecipientSearch(e.target.value)}
+          />
+        </div>
         <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
-          {realParticipants.map(p => {
+          {realParticipants
+            .filter(p => p.displayName.toLowerCase().includes(recipientSearch.toLowerCase()))
+            .map(p => {
             const isSelected = selectedRecipients.includes(p.id);
             return (
               <button key={p.id}
