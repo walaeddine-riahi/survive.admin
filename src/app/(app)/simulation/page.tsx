@@ -134,11 +134,8 @@ export default function SimulationPage() {
   const [simulations, setSimulations] = useState<Simulation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isSimulationFormOpen, setIsSimulationFormOpen] = useState(false);
   const [selectedSimulation, setSelectedSimulation] = useState<Simulation | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isScenarioFormOpen, setIsScenarioFormOpen] = useState(false);
-  const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
   const { toast } = useToast();
 
   const [filteredSimulations, setFilteredSimulations] = useState<Simulation[]>([]);
@@ -190,46 +187,6 @@ export default function SimulationPage() {
   useEffect(() => {
     fetchSimulations();
   }, []);
-
-  const handleCreateSimulation = async (data: any) => {
-    try {
-      const response = await fetch("/api/simulations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) throw new Error("Failed to create simulation");
-
-      await fetchSimulations();
-      setIsSimulationFormOpen(false);
-      toast({ title: "Simulation créée", description: "La simulation a été créée avec succès." });
-    } catch (error) {
-      console.error("Error creating simulation:", error);
-      toast({ title: "Erreur", description: "Une erreur est survenue lors de la création de la simulation.", variant: "destructive" });
-    }
-  };
-
-  const handleUpdateSimulation = async (data: any) => {
-    if (!selectedSimulation) return;
-    try {
-      const response = await fetch(`/api/simulations/${selectedSimulation.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) throw new Error("Failed to update simulation");
-
-      await fetchSimulations();
-      setIsSimulationFormOpen(false);
-      setSelectedSimulation(null);
-      toast({ title: "Simulation modifiée", description: "La simulation a été modifiée avec succès." });
-    } catch (error) {
-      console.error("Error updating simulation:", error);
-      toast({ title: "Erreur", description: "Une erreur est survenue lors de la modification de la simulation.", variant: "destructive" });
-    }
-  };
 
   const handleDeleteSimulation = async (simulationId: string) => {
     if (!confirm("Êtes-vous sûr de vouloir supprimer cette simulation ?")) return;
@@ -333,8 +290,8 @@ export default function SimulationPage() {
                   <DropdownMenuItem onClick={() => router.push(`/simulation/${sim.id}/instructor-view`)} className="gap-2.5 cursor-pointer rounded-xl hover:bg-orange-600/10 hover:text-orange-300 font-medium text-xs py-2">
                     <Play className="h-3.5 w-3.5 text-orange-400" /> Vue Instructeur
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { setSelectedSimulation(sim); setIsSimulationFormOpen(true); }} className="gap-2.5 cursor-pointer rounded-xl hover:bg-orange-600/10 hover:text-orange-300 font-medium text-xs py-2">
-                    <Edit className="h-3.5 w-3.5 text-orange-400" /> Modifier la Fiche
+                  <DropdownMenuItem onClick={() => router.push(`/simulation/builder/${sim.id}`)} className="gap-2.5 cursor-pointer rounded-xl hover:bg-orange-600/10 hover:text-orange-300 font-medium text-xs py-2">
+                    <Edit className="h-3.5 w-3.5 text-orange-400" /> Modifier (Wizard)
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleDeleteSimulation(sim.id)} className="gap-2.5 cursor-pointer rounded-xl hover:bg-rose-600/10 hover:text-rose-400 text-rose-400 font-medium text-xs py-2">
                     <Trash2 className="h-3.5 w-3.5" /> Supprimer
@@ -377,7 +334,7 @@ export default function SimulationPage() {
               {selectedSimulation.description || "Aucune consigne opérationnelle fournie pour cette simulation."}
             </p>
           </div>
-          <Button onClick={() => { setSelectedScenario(null); setIsScenarioFormOpen(true); }} className="button-premium shadow-lg shadow-orange-950/20 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-xs uppercase tracking-widest h-11 px-5 rounded-xl">
+          <Button onClick={() => router.push(`/simulation/builder/${selectedSimulation.id}`)} className="button-premium shadow-lg shadow-orange-950/20 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-xs uppercase tracking-widest h-11 px-5 rounded-xl">
             <Plus className="mr-2 h-4 w-4" /> Nouveau Scénario
           </Button>
         </div>
@@ -435,7 +392,7 @@ export default function SimulationPage() {
                     <p className="text-xs text-slate-400 leading-relaxed max-w-xl">{scenario.description || "Aucune description opérationnelle spécifiée."}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" className="rounded-xl hover:bg-slate-900/60 text-slate-400 hover:text-white h-9 w-9" onClick={() => { setSelectedScenario(scenario); setIsScenarioFormOpen(true); }}>
+                    <Button variant="ghost" size="icon" className="rounded-xl hover:bg-slate-900/60 text-slate-400 hover:text-white h-9 w-9" onClick={() => router.push(`/simulation/builder/${selectedSimulation.id}`)}>
                       <Edit className="h-4.5 w-4.5" />
                     </Button>
                     <Button variant="ghost" size="icon" className="rounded-xl hover:bg-rose-500/10 text-rose-400 h-9 w-9" onClick={() => handleDeleteScenario(scenario.id)}>
@@ -512,7 +469,7 @@ export default function SimulationPage() {
             <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" /> État du Système: Opérationnel
           </p>
         </div>
-        <Button onClick={() => { setSelectedSimulation(null); setIsSimulationFormOpen(true); }} className="button-premium shadow-lg shadow-orange-950/20 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-xs uppercase tracking-widest h-11 px-5 rounded-xl">
+        <Button onClick={() => router.push("/simulation/builder")} className="button-premium shadow-lg shadow-orange-950/20 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-xs uppercase tracking-widest h-11 px-5 rounded-xl">
           <Plus className="mr-2 h-4 w-4" /> Initialiser Simulation
         </Button>
       </div>
@@ -600,16 +557,6 @@ export default function SimulationPage() {
           </TabsContent>
         </Tabs>
       </div>
-
-      <Dialog open={isSimulationFormOpen} onOpenChange={setIsSimulationFormOpen}>
-        <DialogContent className="max-w-2xl bg-[var(--bg-surface)] border-[var(--border)] p-0 overflow-hidden shadow-2xl rounded-3xl">
-          <SimulationForm
-            initialData={selectedSimulation || undefined}
-            onSave={selectedSimulation ? handleUpdateSimulation : handleCreateSimulation}
-            onCancel={() => setIsSimulationFormOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
