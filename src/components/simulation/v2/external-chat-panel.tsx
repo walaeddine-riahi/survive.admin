@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
-  Mail, Phone, MessageSquare, Send, Users, ShieldAlert, FileText,
+  Mail, Phone, MessageSquare, Send, Users, ShieldAlert, FileText, Bell, Share2,
 } from "lucide-react";
 import { sendSimMessage } from "@/actions/simulation/sim-session-actions";
 
@@ -229,7 +229,7 @@ export default function ExternalChatPanel({
   initialMessages,
 }: ExternalChatPanelProps) {
   const [selectedActorId, setSelectedActorId] = useState<string | null>(null);
-  const [channel, setChannel] = useState<"EMAIL" | "SMS" | "WHATSAPP" | "CALL">("EMAIL");
+  const [channel, setChannel] = useState<"EMAIL" | "SMS" | "WHATSAPP" | "CALL" | "ALERT" | "MEDIA">("EMAIL");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -302,6 +302,8 @@ export default function ExternalChatPanel({
     SMS: { label: "SMS", icon: MessageSquare, color: "#0F6E56", bg: "bg-emerald-950/40 text-emerald-300" },
     WHATSAPP: { label: "WhatsApp", icon: MessageSquare, color: "#25D366", bg: "bg-green-950/40 text-green-300" },
     CALL: { label: "Appel", icon: Phone, color: "#EA580C", bg: "bg-orange-950/40 text-orange-300" },
+    ALERT: { label: "Alerte", icon: Bell, color: "#EF4444", bg: "bg-red-950/40 text-red-300" },
+    MEDIA: { label: "Média", icon: Share2, color: "#8B5CF6", bg: "bg-purple-950/40 text-purple-300" },
   };
 
   return (
