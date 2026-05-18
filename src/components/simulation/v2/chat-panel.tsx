@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
   MessageSquare, Send, ChevronLeft, Hash,
-  Megaphone, Users, Lock, AtSign, Plus,
+  Megaphone, Users, Lock, AtSign, Plus, Copy,
 } from "lucide-react";
 import {
   getChannels, getMessages, sendChatMessage,
@@ -36,6 +36,11 @@ function MessageBubble({ msg, isMine, isInstructor }: {
   const isAlert = msg.messageType === "alert";
   const isAnnouncement = isInstructor && !isMine;
 
+  const handleCopy = () => {
+    navigator.clipboard.writeText(msg.content);
+    toast.success("Message copié !");
+  };
+
   if (isAnnouncement) {
     return (
       <div className="flex justify-center my-2.5">
@@ -47,7 +52,16 @@ function MessageBubble({ msg, isMine, isInstructor }: {
               <p className="text-sm text-gray-200 mt-0.5 leading-relaxed break-all break-words">{msg.content}</p>
             </div>
           </div>
-          <p className="text-[10px] text-slate-500 mt-1 font-mono">{formatTime(msg.sentAt)}</p>
+          <div className="flex items-center justify-center gap-2 mt-1">
+            <p className="text-[10px] text-slate-500 font-mono">{formatTime(msg.sentAt)}</p>
+            <button
+              onClick={handleCopy}
+              className="text-slate-500 hover:text-slate-300 transition-colors"
+              title="Copier le message"
+            >
+              <Copy className="h-3 w-3" />
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -74,7 +88,16 @@ function MessageBubble({ msg, isMine, isInstructor }: {
         }`}>
           {msg.content}
         </div>
-        <p className="text-[9px] text-slate-500 font-mono mt-1 px-1">{formatTime(msg.sentAt)}</p>
+        <div className="flex items-center gap-2 mt-1 px-1">
+          <p className="text-[9px] text-slate-500 font-mono">{formatTime(msg.sentAt)}</p>
+          <button
+            onClick={handleCopy}
+            className="text-slate-500 hover:text-slate-300 transition-colors"
+            title="Copier le message"
+          >
+            <Copy className="h-3 w-3" />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -148,6 +171,7 @@ export default function ChatPanel({
   const [showDMPicker, setShowDMPicker] = useState(false);
   const [selectedTargetIds, setSelectedTargetIds] = useState<string[]>([]);
   const [dmSearch, setDmSearch] = useState("");
+  const [showTagPicker, setShowTagPicker] = useState(false);
   const [lastPoll, setLastPoll] = useState(new Date().toISOString());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
@@ -520,7 +544,34 @@ export default function ChatPanel({
 
             {/* Input */}
             {activeChannel.type !== "BROADCAST" && (
-              <div className="flex items-center gap-2 px-5 py-4 bg-[#090e1a]/80 border-t border-slate-800/80 flex-shrink-0">
+              <div className="flex items-center gap-2 px-5 py-4 bg-[#090e1a]/80 border-t border-slate-800/80 flex-shrink-0 relative">
+                {showTagPicker && (
+                  <div className="absolute bottom-full mb-2 left-5 right-5 bg-[#0b0f19] border border-slate-800 rounded-lg shadow-lg p-2 max-h-40 overflow-y-auto z-50 no-scrollbar">
+                    <p className="text-[10px] text-slate-500 uppercase font-bold mb-1 px-1">Taguer un participant</p>
+                    {allParticipants.filter(p => p.id !== participant.id).map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => {
+                          setInput(prev => prev + `@${p.displayName} `);
+                          setShowTagPicker(false);
+                          inputRef.current?.focus();
+                        }}
+                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-900/40 text-left transition-colors"
+                      >
+                        <div className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 text-[10px] font-bold">
+                          {p.displayName[0]}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-white truncate">{p.displayName}</p>
+                          <p className="text-[9px] text-slate-500 truncate">{p.role}</p>
+                        </div>
+                      </button>
+                    ))}
+                    {allParticipants.filter(p => p.id !== participant.id).length === 0 && (
+                      <p className="text-xs text-slate-600 p-1">Aucun autre participant à taguer.</p>
+                    )}
+                  </div>
+                )}
                 <Input
                   ref={inputRef}
                   className="flex-1 h-9.5 bg-slate-950/60 border-slate-800 text-slate-100 placeholder-slate-500 focus-visible:ring-slate-700 rounded-lg text-xs"
@@ -536,6 +587,14 @@ export default function ChatPanel({
                   disabled={isSending}
                   maxLength={1000}
                 />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-9.5 w-9.5 p-0 text-slate-400 hover:bg-slate-900/40 hover:text-slate-200 rounded-lg"
+                  onClick={() => setShowTagPicker(!showTagPicker)}
+                >
+                  <AtSign className="h-4 w-4" />
+                </Button>
                 <Button
                   size="sm"
                   className="h-9.5 w-9.5 p-0 bg-orange-600 hover:bg-orange-700 text-white rounded-lg shadow-md shadow-orange-950/20 transition-all duration-300"
