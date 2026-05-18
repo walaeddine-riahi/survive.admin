@@ -360,7 +360,7 @@ export default function ChatPanel({
   }
 
   const otherParticipants = allParticipants.filter(
-    p => p.id !== participant.id && !p.isInstructor
+    p => p.id !== participant.id && !p.isInstructor && p.isExternal !== true
   );
 
   return (
