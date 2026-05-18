@@ -1433,7 +1433,7 @@ export default function ParticipantView({
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col select-none">
+    <div className="h-screen bg-gray-950 text-white flex flex-col select-none overflow-hidden">
       {/* Incoming call overlay */}
       {incomingCall && (
         <IncomingCallModal

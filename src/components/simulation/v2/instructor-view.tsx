@@ -655,7 +655,7 @@ export default function InstructorView({
   const totalParticipants = participants.filter(p => !p.isInstructor).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#050914] via-[#091124] to-[#050914] text-white font-sans antialiased overflow-hidden">
+    <div className="h-screen flex flex-col bg-gradient-to-b from-[#050914] via-[#091124] to-[#050914] text-white font-sans antialiased overflow-hidden">
       
       {/* Header — Control Room */}
       <div className="bg-[#0b0f19]/90 backdrop-blur-xl border-b border-slate-800/80 px-6 py-4 flex items-center justify-between gap-6 shadow-md shadow-black/20 relative z-30">
@@ -750,7 +750,7 @@ export default function InstructorView({
         </div>
       </div>
 
-      <div className="flex h-[calc(100vh-73px)] relative z-20">
+      <div className="flex flex-1 min-h-0 relative z-20">
         
         {/* Left Panel — Inject Form */}
         <div className="w-[340px] border-r border-slate-800/80 overflow-y-auto p-4 flex-shrink-0 bg-[#060a13]/80 space-y-4 no-scrollbar">
