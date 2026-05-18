@@ -19,7 +19,7 @@ export async function GET(
         where: { simulationId },
         orderBy: { createdAt: "asc" },
         select: {
-          id: true, title: true, type: true, acknowledged: true, createdAt: true,
+          id: true, title: true, type: true, acknowledged: true, isActive: true, createdAt: true,
           responses: {
             select: { id: true, conformityScore: true },
           },
@@ -78,6 +78,7 @@ export async function GET(
         title: i.title,
         type: i.type,
         acknowledged: i.acknowledged,
+        isActive: i.isActive,
         sentAt: i.createdAt.toISOString(),
         responseCount: i.responses.length,
         conformityScore: i.responses.length > 0

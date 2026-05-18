@@ -18,12 +18,13 @@ type FormData = {
   type: InjectionTypeEnum;
   imageUrl: string | null;
   videoUrl: string | null;
+  documentUrl?: string | null;
   targetUserId: string | null;
   targetUserIds: string[];
   attachments: string;
   payload: string;
 };
-import { Loader2, Sparkles, Search, Check, ChevronsUpDown, X } from "lucide-react";
+import { Loader2, Sparkles, Search, Check, ChevronsUpDown, X, FileUp } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast as sonnerToast } from "sonner";
 
@@ -93,6 +94,7 @@ const injectionFormSchema = z.object({
   }),
   imageUrl: z.union([z.string().url().nullable(), z.literal("")]).optional(),
   videoUrl: z.union([z.string().url().nullable(), z.literal("")]).optional(),
+  documentUrl: z.union([z.string().url().nullable(), z.literal("")]).optional(),
   targetUserId: z.union([z.string().nullable(), z.undefined()]).optional(),
   targetUserIds: z.array(z.string()).default([]),
   attachments: z.string().default("[]"),
@@ -194,6 +196,7 @@ export function InjectionForm({
       type: initialData?.type || InjectionTypeEnum.EMAIL,
       imageUrl: initialData?.imageUrl || "",
       videoUrl: initialData?.videoUrl || "",
+      documentUrl: "",
       targetUserId: initialData?.targetUserId || "",
       targetUserIds: getInitialTargetUserIds(initialData),
       attachments: initialData?.attachments || "",
@@ -217,6 +220,7 @@ export function InjectionForm({
         type: initialData?.type || InjectionTypeEnum.EMAIL,
         imageUrl: initialData?.imageUrl || "",
         videoUrl: initialData?.videoUrl || "",
+        documentUrl: "",
         targetUserId: initialData?.targetUserId || "",
         targetUserIds: getInitialTargetUserIds(initialData),
         attachments: initialData?.attachments || "",
@@ -241,6 +245,35 @@ export function InjectionForm({
     : [];
 
   const handleFormSubmit = (data: FormData) => {
+    // Si un document URL est présent, on l'ajoute aux attachments
+    if (data.documentUrl) {
+      try {
+        let attachments = [];
+        if (data.attachments) {
+          attachments = JSON.parse(data.attachments);
+        }
+        
+        // Vérifier si le document n'est pas déjà présent
+        const exists = attachments.some((a: any) => a.url === data.documentUrl);
+        if (!exists) {
+          attachments.push({
+            name: "Document joint",
+            url: data.documentUrl,
+            type: "pdf"
+          });
+          data.attachments = JSON.stringify(attachments);
+        }
+      } catch (e) {
+        console.error("Erreur lors du parsing des attachments:", e);
+        // En cas d'erreur, on crée un nouveau tableau
+        data.attachments = JSON.stringify([{
+          name: "Document joint",
+          url: data.documentUrl,
+          type: "pdf"
+        }]);
+      }
+    }
+    
     onSubmit(data as InjectionFormData);
   };
 
@@ -709,42 +742,70 @@ export function InjectionForm({
                 )}
               />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={control}
-                  name="imageUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>URL de l&apos;image</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="https://example.com/image.jpg"
-                          {...field}
-                          value={field.value || ""}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              {/* Section Médias et Documents joints (Style Instructeur) */}
+              <div className="border border-stone-800 rounded-xl p-4 bg-stone-900/50 space-y-3">
+                <div className="flex items-center gap-1.5">
+                  <FileUp className="h-4 w-4 text-primary" />
+                  <p className="text-xs font-bold text-primary uppercase tracking-wider">Médias et Documents joints</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormField
+                    control={control}
+                    name="imageUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs text-muted-foreground uppercase">Image URL</FormLabel>
+                        <FormControl>
+                          <Input
+                            className="h-9 text-sm bg-stone-900 border-stone-800 text-white rounded-lg focus-visible:ring-primary"
+                            placeholder="https://images.unsplash.com/..."
+                            {...field}
+                            value={field.value || ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  control={control}
-                  name="videoUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>URL de la vidéo</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="https://example.com/video.mp4"
-                          {...field}
-                          value={field.value || ""}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    control={control}
+                    name="videoUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs text-muted-foreground uppercase">Vidéo URL</FormLabel>
+                        <FormControl>
+                          <Input
+                            className="h-9 text-sm bg-stone-900 border-stone-800 text-white rounded-lg focus-visible:ring-primary"
+                            placeholder="https://youtube.com/watch?v=..."
+                            {...field}
+                            value={field.value || ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={control}
+                    name="documentUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs text-muted-foreground uppercase">Document PDF URL</FormLabel>
+                        <FormControl>
+                          <Input
+                            className="h-9 text-sm bg-stone-900 border-stone-800 text-white rounded-lg focus-visible:ring-primary"
+                            placeholder="https://example.com/document.pdf"
+                            {...field}
+                            value={field.value || ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField

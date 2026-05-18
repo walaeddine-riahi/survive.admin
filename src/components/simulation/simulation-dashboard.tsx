@@ -25,6 +25,7 @@ interface LiveData {
   simulationTitle?: string;
   injections: Array<{
     id: string; title: string; type: string; acknowledged: boolean;
+    isActive: boolean;
     sentAt: string; responseCount: number; conformityScore?: number;
   }>;
   communications: Array<{
@@ -146,6 +147,59 @@ export default function SimulationDashboard({
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [isLive, fetchLiveData]);
 
+  const toggleInjectionActive = async (injectionId: string, currentIsActive: boolean) => {
+    try {
+      const r = await fetch(`/api/injections/${injectionId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: !currentIsActive })
+      });
+      if (r.ok) {
+        fetchLiveData();
+      }
+    } catch (e) {
+      console.error("Error toggling injection:", e);
+    }
+  };
+
+  const deactivateAllInjections = async () => {
+    try {
+      const activeInjections = injections.filter(i => i.isActive);
+      if (activeInjections.length === 0) return;
+      
+      await Promise.all(activeInjections.map(inj => 
+        fetch(`/api/injections/${inj.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isActive: false })
+        })
+      ));
+      fetchLiveData();
+    } catch (e) {
+      console.error("Error deactivating all injections:", e);
+    }
+  };
+
+  const sendWelcomeEmailsToAll = async () => {
+    if (!confirm("Voulez-vous vraiment envoyer l'email de bienvenue à tous les participants ?")) {
+      return;
+    }
+    try {
+      const r = await fetch(`/api/simulation/${simulationId}/send-welcome-email`, {
+        method: "POST"
+      });
+      const res = await r.json();
+      if (r.ok) {
+        alert(res.message || "Emails envoyés avec succès !");
+      } else {
+        alert("Erreur lors de l'envoi des emails: " + (res.error || "Erreur inconnue"));
+      }
+    } catch (e) {
+      console.error("Error sending welcome emails:", e);
+      alert("Erreur lors de l'envoi des emails.");
+    }
+  };
+
   function toggleWidget(id: string) {
     setHiddenWidgets(prev => prev.includes(id) ? prev.filter(w => w !== id) : [...prev, id]);
   }
@@ -240,6 +294,15 @@ export default function SimulationDashboard({
               Analyse IA
             </Button>
           </Link>
+
+          <Button
+            size="sm"
+            className="h-9 gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm"
+            onClick={sendWelcomeEmailsToAll}
+          >
+            <Mail className="h-3.5 w-3.5" />
+            Welcome Email
+          </Button>
 
           <Button
             variant="outline"
@@ -345,9 +408,19 @@ export default function SimulationDashboard({
               <CardTitle className="text-sm font-bold uppercase tracking-wider text-stone-800 dark:text-stone-200">
                 Timeline des injects
               </CardTitle>
-              <Badge className="bg-orange-50 text-[#D97706] border-orange-100 dark:bg-orange-950/30 dark:text-orange-400 text-[10px] font-semibold px-2 py-0.5 uppercase">
-                Inject {injections.length} actif
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-[10px] font-semibold uppercase px-2 py-0.5 text-rose-600 border-rose-100 hover:bg-rose-50 dark:text-rose-400 dark:border-rose-900/40 dark:hover:bg-rose-950/20"
+                  onClick={deactivateAllInjections}
+                >
+                  Tout désactiver
+                </Button>
+                <Badge className="bg-orange-50 text-[#D97706] border-orange-100 dark:bg-orange-950/30 dark:text-orange-400 text-[10px] font-semibold px-2 py-0.5 uppercase">
+                  Inject {injections.length} actif
+                </Badge>
+              </div>
             </CardHeader>
             <CardContent className="p-4 max-h-[360px] overflow-y-auto space-y-3">
               {injections.map((inj, i) => {
@@ -393,16 +466,38 @@ export default function SimulationDashboard({
                       </div>
                     </div>
 
-                    <div className="shrink-0 text-right">
-                      {score !== undefined ? (
-                        <span className={cn("text-sm font-bold tracking-tight", getScoreColor(score))}>
-                          {score}%
-                        </span>
-                      ) : (
-                        <span className="text-xs font-semibold text-amber-600 bg-amber-50 dark:bg-amber-950/20 px-2 py-0.5 rounded-full border border-amber-100 dark:border-amber-900/40">
-                          T+4min
-                        </span>
-                      )}
+                    <div className="shrink-0 flex items-center gap-2">
+                      {/* Bouton Activer/Inactiver */}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className={cn(
+                          "h-8 w-8 p-0 rounded-full",
+                          inj.isActive 
+                            ? "text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20" 
+                            : "text-stone-400 hover:text-stone-500 hover:bg-stone-50 dark:hover:bg-stone-900/50"
+                        )}
+                        onClick={() => toggleInjectionActive(inj.id, inj.isActive)}
+                        title={inj.isActive ? "Désactiver" : "Activer"}
+                      >
+                        {inj.isActive ? (
+                          <CheckCircle2 className="h-4 w-4" />
+                        ) : (
+                          <Play className="h-4 w-4" />
+                        )}
+                      </Button>
+
+                      <div className="text-right min-w-[40px]">
+                        {score !== undefined ? (
+                          <span className={cn("text-sm font-bold tracking-tight", getScoreColor(score))}>
+                            {score}%
+                          </span>
+                        ) : (
+                          <span className="text-xs font-semibold text-amber-600 bg-amber-50 dark:bg-amber-950/20 px-2 py-0.5 rounded-full border border-amber-100 dark:border-amber-900/40">
+                            T+4min
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
