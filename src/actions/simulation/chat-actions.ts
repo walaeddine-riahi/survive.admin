@@ -239,10 +239,10 @@ export async function getMessages(channelId: string, limit = 50, before?: string
         channelId,
         ...(before ? { sentAt: { lt: new Date(before) } } : {}),
       },
-      orderBy: { sentAt: "asc" },
+      orderBy: { sentAt: "desc" },
       take: limit,
     });
-    return { success: true, data: messages };
+    return { success: true, data: messages.reverse() };
   } catch {
     return { success: false, error: "Erreur récupération messages" };
   }
