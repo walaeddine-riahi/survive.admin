@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { pushToSession, pushToParticipant, SIM_EVENTS } from "@/lib/simulation/pusher";
+import { sendSimMessage } from "@/actions/simulation/sim-session-actions";
 
 // Enumérations pour les types d'injection
 enum InjectionType {
@@ -280,6 +282,99 @@ export async function PATCH(
         }
       }
     });
+
+    // Déclencher l'événement Pusher ou ponter vers V2 si l'injection est activée
+    if (isActive) {
+      try {
+        // Recherche d'une session active pour cette simulation
+        const activeSession = await prisma.simSession.findFirst({
+          where: {
+            simulationId: updatedInjection.simulationId,
+            status: "ACTIVE",
+          },
+        });
+
+        if (activeSession) {
+          console.log(`[BRIDGE] Session active trouvée: ${activeSession.id}. Création du message...`);
+          
+          // Mapping du type d'injection vers le canal
+          let channel = "ALERT";
+          switch (updatedInjection.type) {
+            case "EMAIL": channel = "EMAIL"; break;
+            case "SMS": channel = "SMS"; break;
+            case "CALL": channel = "CALL"; break;
+            case "SOCIAL": channel = "SOCIAL_MEDIA"; break;
+            case "NEWS_BROADCAST": channel = "FLASH_INFO"; break;
+            case "NEWSPAPER": channel = "JOURNAL"; break;
+            default: channel = "ALERT";
+          }
+
+          let recipientIds: string[] = [];
+          let isGroupMessage = false;
+
+          if (updatedInjection.targetUserId) {
+            // Trouver le SimParticipant correspondant
+            const participant = await prisma.simParticipant.findFirst({
+              where: {
+                sessionId: activeSession.id,
+                userId: updatedInjection.targetUserId,
+              },
+            });
+
+            if (participant) {
+              recipientIds = [participant.id];
+            } else {
+              console.warn(`[BRIDGE] Participant non trouvé pour userId: ${updatedInjection.targetUserId}`);
+              isGroupMessage = true;
+            }
+          } else {
+            isGroupMessage = true;
+          }
+
+          await sendSimMessage({
+            sessionId: activeSession.id,
+            channel,
+            priority: "NORMAL",
+            senderName: updatedInjection.scenario?.name || "Système",
+            recipientIds,
+            isGroupMessage,
+            subject: updatedInjection.title,
+            body: updatedInjection.content || "",
+          });
+          
+          console.log(`[BRIDGE] Message envoyé avec succès.`);
+        } else {
+          console.log(`[BRIDGE] Aucune session active pour la simulation ${updatedInjection.simulationId}. Fallback V1.`);
+          
+          // Fallback V1 : push direct
+          const payload = {
+            id: updatedInjection.id,
+            title: updatedInjection.title,
+            content: updatedInjection.content,
+            type: updatedInjection.type,
+            scenarioName: updatedInjection.scenario?.name || "",
+            createdAt: updatedInjection.createdAt,
+          };
+
+          if (updatedInjection.targetUserId) {
+            await pushToParticipant(
+              updatedInjection.simulationId,
+              updatedInjection.targetUserId,
+              SIM_EVENTS.NEW_MESSAGE,
+              payload
+            );
+          } else {
+            await pushToSession(
+              updatedInjection.simulationId,
+              SIM_EVENTS.NEW_MESSAGE,
+              payload
+            );
+          }
+        }
+      } catch (bridgeError) {
+        console.error("Erreur lors du pontage V1->V2:", bridgeError);
+      }
+    }
 
     return NextResponse.json(updatedInjection);
   } catch (error) {

@@ -38,6 +38,7 @@ import { CommunicationFeed } from "./components/CommunicationFeed";
 import { InjectionModal } from "./components/InjectionModal";
 import { CommunicationModal } from "./components/CommunicationModal";
 import { ReportModal } from "./components/ReportModal";
+import { usePusherChannel } from "@/components/simulation/v2/use-pusher-channel";
 
 import EmailComposeForm, { EmailFormData } from "@/components/participant-mode/communication-forms/EmailComposeForm";
 import SmsComposeForm, { SmsFormData } from "@/components/participant-mode/communication-forms/SmsComposeForm";
@@ -458,6 +459,30 @@ export default function ParticipantViewFixedPage() {
       }
     };
   }, []);
+
+  // Initialisation de Pusher pour le temps réel
+  usePusherChannel({
+    sessionId: simulationId,
+    participantId: session?.user?.id,
+    onNewMessage: useCallback((data: any) => {
+      console.log("Nouveau message reçu via Pusher:", data);
+      fetchData();
+      toast({
+        title: "Nouvelle injection",
+        description: data.title || "Une nouvelle injection est disponible",
+        variant: "default",
+      });
+    }, [fetchData, toast]),
+    onFlashAlert: useCallback((data: any) => {
+      console.log("Alerte critique reçue via Pusher:", data);
+      fetchData();
+      toast({
+        title: "Alerte Critique",
+        description: data.title || "Une alerte critique est disponible",
+        variant: "destructive",
+      });
+    }, [fetchData, toast]),
+  });
 
   // Effet pour surveiller les changements de thème et forcer la synchronisation
   useEffect(() => {

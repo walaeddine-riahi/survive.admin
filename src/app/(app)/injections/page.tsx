@@ -45,8 +45,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
-import { Plus, MoreHorizontal, Edit, Trash2, Loader2, AlertCircle, RefreshCw, Inbox, Check, CheckSquare, Square, MessageSquare, Bell, Folder, Play, Pause, Radio, PhoneCall, Newspaper } from "lucide-react";
+import { Plus, MoreHorizontal, Edit, Trash2, Loader2, AlertCircle, RefreshCw, Inbox, Check, CheckSquare, Square, MessageSquare, Bell, Folder, Play, Pause, Radio, PhoneCall, Newspaper, CheckCircle2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -577,6 +578,7 @@ export default function InjectionsPage() {
                   <TableHead className="w-[180px]">Déclenchement</TableHead>
                   <TableHead className="w-[150px]">Scénario</TableHead>
                   <TableHead className="w-[120px]">Statut</TableHead>
+                  <TableHead className="w-[120px]">Acquitté</TableHead>
                   <TableHead className="w-[100px] text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -637,6 +639,19 @@ export default function InjectionsPage() {
                             {injection.isActive ? 'Actif' : 'Inactif'}
                           </span>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {injection.acknowledged ? (
+                          <Badge variant="default" className="bg-green-500">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Acquitté
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary">
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            Non acquitté
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
