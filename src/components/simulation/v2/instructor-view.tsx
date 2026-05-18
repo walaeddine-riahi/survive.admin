@@ -801,7 +801,7 @@ export default function InstructorView({
           </div>
 
           {/* Dynamic Render Tab Area */}
-          <div className={`flex-1 overflow-y-auto min-h-0 ${activeTab === "chat" || activeTab === "externes" ? "p-0" : "px-6 pb-6 pt-2"}`}>
+          <div className={`flex-1 min-h-0 ${activeTab === "chat" || activeTab === "externes" ? "p-0 overflow-hidden" : "px-6 pb-6 pt-2 overflow-y-auto"}`}>
             
             {/* FEED TAB */}
             {activeTab === "feed" && (

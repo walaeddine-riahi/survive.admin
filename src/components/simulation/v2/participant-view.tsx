@@ -1622,7 +1622,7 @@ export default function ParticipantView({
           </div>
 
           {/* Messages feed */}
-          <div className={`flex-1 overflow-y-auto p-4 space-y-3 ${activeCall ? "pb-52" : ""} ${activeChannel === "CHAT" ? "p-0" : ""}`}>
+          <div className={`flex-1 space-y-3 ${activeCall ? "pb-52" : ""} ${activeChannel === "CHAT" || activeChannel === "EXTERNAL_CHAT" ? "p-0 overflow-hidden" : "p-4 overflow-y-auto"}`}>
             {activeChannel === "CHAT" ? (
               <ChatPanel sessionId={session.id} participant={participant} allParticipants={participants} />
             ) : activeChannel === "EXTERNAL_CHAT" ? (
