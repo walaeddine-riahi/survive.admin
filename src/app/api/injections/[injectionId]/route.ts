@@ -240,7 +240,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { isActive } = body;
+    const { isActive, targetUserIds, isGroupMessage } = body;
 
     // Valider que isActive est un booléen
     if (typeof isActive !== 'boolean') {
@@ -309,26 +309,31 @@ export async function PATCH(
             default: channel = "ALERT";
           }
 
-          let recipientIds: string[] = [];
-          let isGroupMessage = false;
+          let finalRecipientIds: string[] = [];
+          let finalIsGroupMessage = isGroupMessage !== undefined ? isGroupMessage : false;
 
-          if (updatedInjection.targetUserId) {
-            // Trouver le SimParticipant correspondant
+          if (targetUserIds && targetUserIds.length > 0) {
+            // Trouver les SimParticipant correspondants
+            const participants = await prisma.simParticipant.findMany({
+              where: {
+                sessionId: activeSession.id,
+                userId: { in: targetUserIds },
+              },
+            });
+            finalRecipientIds = participants.map(p => p.id);
+          } else if (!targetUserIds && updatedInjection.targetUserId) {
+            // Fallback to single targetUserId
             const participant = await prisma.simParticipant.findFirst({
               where: {
                 sessionId: activeSession.id,
                 userId: updatedInjection.targetUserId,
               },
             });
-
             if (participant) {
-              recipientIds = [participant.id];
-            } else {
-              console.warn(`[BRIDGE] Participant non trouvé pour userId: ${updatedInjection.targetUserId}`);
-              isGroupMessage = true;
+              finalRecipientIds = [participant.id];
             }
-          } else {
-            isGroupMessage = true;
+          } else if (!targetUserIds && !updatedInjection.targetUserId) {
+            finalIsGroupMessage = true;
           }
 
           await sendSimMessage({
@@ -336,8 +341,8 @@ export async function PATCH(
             channel,
             priority: "NORMAL",
             senderName: updatedInjection.scenario?.name || "Système",
-            recipientIds,
-            isGroupMessage,
+            recipientIds: finalRecipientIds,
+            isGroupMessage: finalIsGroupMessage,
             subject: updatedInjection.title,
             body: updatedInjection.content || "",
           });

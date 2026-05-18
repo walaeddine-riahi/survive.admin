@@ -3,6 +3,14 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
@@ -101,6 +109,10 @@ export default function SimulationDashboard({
 }) {
   const [data, setData] = useState<LiveData>(initialData);
   const [viewRole, setViewRole] = useState<ViewRole>("instructor");
+  const [selectedInjection, setSelectedInjection] = useState<any>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
   const [hiddenWidgets, setHiddenWidgets] = useState<string[]>([]);
   const [isConfiguring, setIsConfiguring] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -147,12 +159,15 @@ export default function SimulationDashboard({
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [isLive, fetchLiveData]);
 
-  const toggleInjectionActive = async (injectionId: string, currentIsActive: boolean) => {
+  const toggleInjectionActive = async (injectionId: string, currentIsActive: boolean, targetUserIds?: string[]) => {
     try {
       const r = await fetch(`/api/injections/${injectionId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isActive: !currentIsActive })
+        body: JSON.stringify({ 
+          isActive: !currentIsActive,
+          targetUserIds: targetUserIds || undefined
+        })
       });
       if (r.ok) {
         fetchLiveData();
@@ -197,6 +212,23 @@ export default function SimulationDashboard({
     } catch (e) {
       console.error("Error sending welcome emails:", e);
       alert("Erreur lors de l'envoi des emails.");
+    }
+  };
+
+  const openInjectionDetails = async (injectionId: string) => {
+    try {
+      setLoadingDetails(true);
+      setIsDetailsOpen(true);
+      setSelectedRecipients([]); // Reset selection
+      const r = await fetch(`/api/injections/${injectionId}`);
+      if (r.ok) {
+        const json = await r.json();
+        setSelectedInjection(json);
+      }
+    } catch (e) {
+      console.error("Error fetching injection details:", e);
+    } finally {
+      setLoadingDetails(false);
     }
   };
 
@@ -449,8 +481,8 @@ export default function SimulationDashboard({
                       {i + 1}
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-stone-900 dark:text-stone-100 truncate tracking-tight">{inj.title}</p>
+                    <div className="flex-1 min-w-0 cursor-pointer" onClick={() => openInjectionDetails(inj.id)}>
+                      <p className="text-sm font-bold text-stone-900 dark:text-stone-100 truncate tracking-tight hover:text-[#D97706] transition-colors">{inj.title}</p>
                       <div className="flex items-center gap-2.5 mt-1 flex-wrap">
                         <span className="text-[10px] font-bold text-stone-400 tracking-wider uppercase">{inj.type}</span>
                         <span className="text-[11px] text-stone-400">·</span>
@@ -761,6 +793,122 @@ export default function SimulationDashboard({
           </Card>
         )}
       </div>
+      
+      {/* Dialog Détails Injection */}
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="sm:max-w-[600px] bg-white dark:bg-[#252220] border-stone-200 dark:border-stone-800">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-stone-900 dark:text-stone-100">
+              {loadingDetails ? "Chargement..." : selectedInjection?.title || "Détails de l'injection"}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-stone-500">
+              Type: {selectedInjection?.type} · Créé le: {selectedInjection?.createdAt && new Date(selectedInjection.createdAt).toLocaleString("fr-FR")}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {loadingDetails ? (
+            <div className="py-8 flex justify-center">
+              <RefreshCw className="h-6 w-6 animate-spin text-stone-400" />
+            </div>
+          ) : selectedInjection ? (
+            <div className="space-y-4 py-2">
+              <div className="space-y-1">
+                <p className="text-xs font-bold text-stone-400 uppercase">Contenu</p>
+                <div className="p-3 bg-stone-50 dark:bg-stone-900/50 rounded-lg border border-stone-100 dark:border-stone-800 text-sm text-stone-700 dark:text-stone-300 whitespace-pre-wrap">
+                  {selectedInjection.content || "Aucun contenu"}
+                </div>
+              </div>
+
+              {/* Sélection des destinataires */}
+              <div className="space-y-1 mt-3">
+                <p className="text-xs font-bold text-stone-400 uppercase">Assigner à</p>
+                <div className="space-y-2 max-h-[150px] overflow-y-auto p-2 border border-stone-100 dark:border-stone-800 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="all"
+                      checked={selectedRecipients.length === data.assignments.length && data.assignments.length > 0}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedRecipients(data.assignments.map(a => a.user.id));
+                        } else {
+                          setSelectedRecipients([]);
+                        }
+                      }}
+                    />
+                    <label htmlFor="all" className="text-sm text-stone-700 dark:text-stone-300 font-medium">Tout le monde</label>
+                  </div>
+                  {data.assignments.map(a => (
+                    <div key={a.id} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id={a.id}
+                        checked={selectedRecipients.includes(a.user.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedRecipients([...selectedRecipients, a.user.id]);
+                          } else {
+                            setSelectedRecipients(selectedRecipients.filter(id => id !== a.user.id));
+                          }
+                        }}
+                      />
+                      <label htmlFor={a.id} className="text-sm text-stone-700 dark:text-stone-300">
+                        {a.user.firstName} {a.user.lastName} ({a.role})
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 mt-4">
+                <Button
+                  size="sm"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  onClick={() => {
+                    toggleInjectionActive(selectedInjection.id, false, selectedRecipients);
+                    setIsDetailsOpen(false);
+                  }}
+                >
+                  Activer pour les sélectionnés
+                </Button>
+              </div>
+              
+              {selectedInjection.imageUrl && (
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-stone-400 uppercase">Image URL</p>
+                  <a href={selectedInjection.imageUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline truncate block">
+                    {selectedInjection.imageUrl}
+                  </a>
+                </div>
+              )}
+              
+              {selectedInjection.videoUrl && (
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-stone-400 uppercase">Vidéo URL</p>
+                  <a href={selectedInjection.videoUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline truncate block">
+                    {selectedInjection.videoUrl}
+                  </a>
+                </div>
+              )}
+              
+              {selectedInjection.attachments && selectedInjection.attachments !== "[]" && (
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-stone-400 uppercase">Pièces jointes</p>
+                  <div className="text-xs text-stone-600 dark:text-stone-400 font-mono bg-stone-50 dark:bg-stone-900/50 p-2 rounded border border-stone-100 dark:border-stone-800">
+                    {selectedInjection.attachments}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-stone-500 py-4">Impossible de charger les détails.</p>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setIsDetailsOpen(false)}>Fermer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

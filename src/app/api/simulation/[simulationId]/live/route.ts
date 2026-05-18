@@ -95,7 +95,7 @@ export async function GET(
       assignments: assignments.map(a => ({
         id: a.id,
         role: a.role,
-        user: { firstName: a.user.firstName, lastName: a.user.lastName },
+        user: { id: a.user.id, firstName: a.user.firstName, lastName: a.user.lastName },
         score: participantScores.find(s => s.assignmentId === a.id)?.scoreGlobal,
         reactedToLastInject: reactedUserIds.has(a.userId),
       })),
