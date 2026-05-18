@@ -21,6 +21,7 @@ import CrisisLogPanel from "./crisis-log-panel";
 import CrisisDocsPanel from "./crisis-docs-panel";
 import ChatPanel from "./chat-panel";
 import ExternalChatPanel from "./external-chat-panel";
+import InternalCommPanel from "./internal-comm-panel";
 import { replyToMessage, markMessageRead, logSimEvent, markParticipantConnected, updateCall, forwardSimMessage } from "@/actions/simulation/sim-session-actions";
 import { getParticipantScoreForSimulation } from "@/actions/simulation/analysis-actions";
 import { usePusherChannel } from "./use-pusher-channel";
@@ -1557,6 +1558,9 @@ export default function ParticipantView({
             <button onClick={() => setActiveChannel("EXTERNAL_CHAT")} className={`flex items-center gap-2 px-3 py-2 w-full text-left rounded-lg text-sm transition-colors ${activeChannel === "EXTERNAL_CHAT" ? "bg-gray-700 text-white" : "text-gray-400 hover:bg-gray-800"}`}>
               <Users className="h-4 w-4 flex-shrink-0" /> <span className="truncate">Comm. Externes</span>
             </button>
+            <button onClick={() => setActiveChannel("INTERNAL_COMM")} className={`flex items-center gap-2 px-3 py-2 w-full text-left rounded-lg text-sm transition-colors ${activeChannel === "INTERNAL_COMM" ? "bg-gray-700 text-white" : "text-gray-400 hover:bg-gray-800"}`}>
+              <Send className="h-4 w-4 flex-shrink-0" /> <span className="truncate">Transmissions</span>
+            </button>
             <button onClick={() => setActiveChannel("CRISIS_LOG")} className={`flex items-center gap-2 px-3 py-2 w-full text-left rounded-lg text-sm transition-colors ${activeChannel === "CRISIS_LOG" ? "bg-gray-700 text-white" : "text-gray-400 hover:bg-gray-800"}`}>
               <Shield className="h-4 w-4 flex-shrink-0" /> <span className="truncate">Main Courante</span>
             </button>
@@ -1627,6 +1631,8 @@ export default function ParticipantView({
               <ChatPanel sessionId={session.id} participant={participant} allParticipants={participants} />
             ) : activeChannel === "EXTERNAL_CHAT" ? (
               <ExternalChatPanel sessionId={session.id} participant={participant} participants={participants} initialMessages={messages} />
+            ) : activeChannel === "INTERNAL_COMM" ? (
+              <InternalCommPanel sessionId={session.id} participant={participant} participants={participants} />
             ) : activeChannel === "CRISIS_LOG" ? (
               <CrisisLogPanel sessionId={session.id} participant={participant} initialEntries={session.crisisLog || []} />
             ) : activeChannel === "CRISIS_DOCS" ? (
