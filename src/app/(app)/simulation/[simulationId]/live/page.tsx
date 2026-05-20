@@ -46,6 +46,7 @@ export default async function LiveSimPage({
         initialCalls={(session.calls ?? []) as any[]}
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         initialEvents={(session.events ?? []) as any[]}
+        simulationId={simulationId}
       />
     );
   }

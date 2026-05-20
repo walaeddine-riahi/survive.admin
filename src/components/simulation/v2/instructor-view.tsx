@@ -14,7 +14,14 @@ import {
   Clock, AlertTriangle, CheckCircle2, Eye, Activity,
   ChevronDown, X, PhoneCall, Timer,
   Shield, ListTodo, MessageSquareText, FileUp, Sparkles, FileStack,
+  Brain, RefreshCw, BookOpen, Star, Target, XCircle, ChevronRight,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import InstructorCrisisLogMonitor from "./instructor-crisis-log";
 import FormSynthesisView from "./form-synthesis";
 import ChatPanel from "./chat-panel";
@@ -485,12 +492,14 @@ export default function InstructorView({
   initialMessages,
   initialCalls,
   initialEvents,
+  simulationId,
 }: {
   session: { id: string; title: string; status: string; startedAt?: string | null; pausedAt?: string | null; durationMinutes?: number | null; crisisLog?: any[] };
   participants: Participant[];
   initialMessages: Message[];
   initialCalls: Call[];
   initialEvents: Event[];
+  simulationId?: string;
 }) {
   const [session, setSession] = useState(initialSession);
   const [participants, setParticipants] = useState<Participant[]>(initialParticipants);
@@ -501,6 +510,12 @@ export default function InstructorView({
   const [elapsed, setElapsed] = useState(0);
   const [activeTab, setActiveTab] = useState<string>("feed");
   const pollRef = useRef<NodeJS.Timeout | null>(null);
+
+  // AI Analysis state
+  const [aiAnalysis, setAiAnalysis] = useState<any>(null);
+  const [isAIOpen, setIsAIOpen] = useState(false);
+  const [isRunningAI, setIsRunningAI] = useState(false);
+  const [aiTab, setAiTab] = useState("synthese");
 
   // Timer
   useEffect(() => {
@@ -651,6 +666,28 @@ export default function InstructorView({
     }
   }
 
+  async function runAIAnalysis() {
+    try {
+      setIsRunningAI(true);
+      setIsAIOpen(true);
+      setAiAnalysis(null);
+      toast.info("Analyse IA en cours avec PCA & PGUI SBC...");
+      const r = await fetch(`/api/simulation/${simulationId ?? session.id}/ai-analysis`, { method: "POST" });
+      if (!r.ok) throw new Error("Erreur API");
+      const result = await r.json();
+      if (result.success) {
+        setAiAnalysis(result.data);
+        toast.success("Analyse PCA/PGUI terminée !");
+      } else {
+        throw new Error(result.error || "Erreur inconnue");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Impossible de lancer l'analyse");
+    } finally {
+      setIsRunningAI(false);
+    }
+  }
+
   const statusBg: Record<string, string> = {
     SETUP: "bg-slate-700/80 border-slate-600 text-gray-300", 
     BRIEFING: "bg-blue-900/60 border-blue-700 text-blue-300 animate-pulse", 
@@ -666,6 +703,7 @@ export default function InstructorView({
   const totalParticipants = participants.filter(p => !p.isInstructor).length;
 
   return (
+    <>
     <div className="h-screen flex flex-col bg-gradient-to-b from-[#050914] via-[#091124] to-[#050914] text-white font-sans antialiased overflow-hidden">
       
       {/* Header — Control Room */}
@@ -758,6 +796,17 @@ export default function InstructorView({
           <div className={`px-3.5 py-1.5 rounded-xl border text-[11px] font-bold uppercase tracking-wider ${statusBg[session.status] || "bg-gray-700 border-gray-600"}`}>
             {session.status}
           </div>
+          <button
+            type="button"
+            onClick={runAIAnalysis}
+            disabled={isRunningAI}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-[11px] font-bold uppercase tracking-wider bg-violet-700/30 border border-violet-500/40 text-violet-300 hover:bg-violet-600/40 hover:text-white transition-all disabled:opacity-60"
+          >
+            {isRunningAI
+              ? <><RefreshCw className="h-3.5 w-3.5 animate-spin" /> Analyse...</>
+              : <><Brain className="h-3.5 w-3.5" /> Analyse IA</>
+            }
+          </button>
         </div>
       </div>
 
@@ -1024,5 +1073,255 @@ export default function InstructorView({
 
       </div>
     </div>
+
+    {/* ─── AI Analysis Dialog ────────────────────────────────────────────── */}
+    <Dialog open={isAIOpen} onOpenChange={setIsAIOpen}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0 bg-[#0b1120] border-slate-700">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-violet-700 to-indigo-700 px-6 py-4 flex items-center gap-3 flex-shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+            <Brain className="h-5 w-5 text-white" />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-white font-bold text-base">Analyse IA — PCA &amp; PGUI SBC</h2>
+            <p className="text-violet-200 text-xs">Analyse enrichie avec les documents officiels de l'organisation</p>
+          </div>
+          {aiAnalysis?.meta?.resourcesUsed?.length > 0 && (
+            <div className="flex gap-2">
+              {(aiAnalysis.meta.resourcesUsed as string[]).map((r: string) => (
+                <span key={r} className="text-[10px] bg-white/15 text-white px-2 py-1 rounded-full flex items-center gap-1">
+                  <BookOpen className="h-3 w-3" /> {r}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {/* Loading */}
+          {isRunningAI && !aiAnalysis && (
+            <div className="flex flex-col items-center justify-center py-24 gap-4">
+              <div className="relative">
+                <div className="w-16 h-16 rounded-full border-4 border-violet-800 border-t-violet-400 animate-spin" />
+                <Brain className="h-6 w-6 text-violet-400 absolute inset-0 m-auto" />
+              </div>
+              <p className="text-slate-300 font-medium">Analyse en cours avec PCA &amp; PGUI SBC...</p>
+              <p className="text-slate-500 text-xs">30 à 60 secondes</p>
+            </div>
+          )}
+
+          {/* Results */}
+          {aiAnalysis && (
+            <div className="p-5 space-y-5">
+              {/* Score banner */}
+              <div className="flex items-center gap-5 p-4 rounded-2xl bg-slate-800/60 border border-slate-700">
+                <div className="text-center flex-shrink-0">
+                  <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg"
+                    style={{ background: (aiAnalysis.scoreGlobal ?? 0) >= 80 ? "linear-gradient(135deg,#16a34a,#0f6e56)" : (aiAnalysis.scoreGlobal ?? 0) >= 60 ? "linear-gradient(135deg,#d97706,#b45309)" : "linear-gradient(135deg,#dc2626,#991b1b)" }}>
+                    {aiAnalysis.scoreGlobal ?? "—"}
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">Score global</p>
+                </div>
+                <div className="flex-1">
+                  <p className="font-bold text-white text-lg">{aiAnalysis.niveauMaturite}</p>
+                  <p className="text-sm text-slate-300 mt-1 leading-relaxed">{aiAnalysis.syntheseExecutive}</p>
+                  {aiAnalysis.conformitePCA?.score != null && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-xs text-slate-400">Conformité PCA</span>
+                      <Progress value={aiAnalysis.conformitePCA.score} className="h-1.5 flex-1" />
+                      <span className="text-xs font-bold text-violet-300">{aiAnalysis.conformitePCA.score}/100</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Tabs */}
+              <Tabs value={aiTab} onValueChange={setAiTab}>
+                <TabsList className="grid grid-cols-5 w-full bg-slate-800 border border-slate-700">
+                  <TabsTrigger value="synthese" className="text-xs gap-1 data-[state=active]:bg-violet-700 data-[state=active]:text-white">
+                    <Star className="h-3 w-3" /> Synthèse
+                  </TabsTrigger>
+                  <TabsTrigger value="conformite" className="text-xs gap-1 data-[state=active]:bg-violet-700 data-[state=active]:text-white">
+                    <Shield className="h-3 w-3" /> PCA/PGUI
+                  </TabsTrigger>
+                  <TabsTrigger value="injects" className="text-xs gap-1 data-[state=active]:bg-violet-700 data-[state=active]:text-white">
+                    <Zap className="h-3 w-3" /> Injects
+                  </TabsTrigger>
+                  <TabsTrigger value="participants" className="text-xs gap-1 data-[state=active]:bg-violet-700 data-[state=active]:text-white">
+                    <Users className="h-3 w-3" /> Participants
+                  </TabsTrigger>
+                  <TabsTrigger value="actions" className="text-xs gap-1 data-[state=active]:bg-violet-700 data-[state=active]:text-white">
+                    <Target className="h-3 w-3" /> Plan d'action
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Synthèse */}
+                <TabsContent value="synthese" className="mt-3 space-y-3">
+                  {aiAnalysis.gestionTemps && (
+                    <div className="border border-blue-700/40 bg-blue-950/30 rounded-xl p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Clock className="h-4 w-4 text-blue-400" />
+                        <span className="text-sm font-semibold text-blue-300">Gestion du temps</span>
+                        <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-bold ${aiAnalysis.gestionTemps.respectRTO ? "bg-green-900 text-green-300" : "bg-red-900 text-red-300"}`}>
+                          {aiAnalysis.gestionTemps.respectRTO ? "RTO respecté" : "RTO dépassé"}
+                        </span>
+                      </div>
+                      {aiAnalysis.gestionTemps.delaiMoyenReaction != null && (
+                        <p className="text-2xl font-bold text-blue-400 mb-1">{aiAnalysis.gestionTemps.delaiMoyenReaction}<span className="text-sm font-normal text-slate-400"> min délai moyen</span></p>
+                      )}
+                      <p className="text-xs text-slate-400">{aiAnalysis.gestionTemps.analyse}</p>
+                    </div>
+                  )}
+                  {aiAnalysis.pointsCritiques?.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold text-red-400 flex items-center gap-1"><AlertTriangle className="h-4 w-4" /> Points critiques</p>
+                      {aiAnalysis.pointsCritiques.map((pt: any, i: number) => (
+                        <div key={i} className={`rounded-xl p-3 border text-xs ${pt.priorite === "HAUTE" ? "border-red-700/50 bg-red-950/30" : pt.priorite === "MOYENNE" ? "border-amber-700/50 bg-amber-950/30" : "border-blue-700/50 bg-blue-950/30"}`}>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-semibold text-white">{pt.titre}</span>
+                            <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-bold ${pt.priorite === "HAUTE" ? "bg-red-900 text-red-300" : pt.priorite === "MOYENNE" ? "bg-amber-900 text-amber-300" : "bg-blue-900 text-blue-300"}`}>{pt.priorite}</span>
+                          </div>
+                          <p className="text-slate-400">{pt.description}</p>
+                          {pt.reference && <p className="text-violet-400 italic mt-1 font-mono text-[10px]">→ {pt.reference}</p>}
+                          {pt.recommandation && <p className="text-green-400 mt-1">✓ {pt.recommandation}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {aiAnalysis.conclusionInstructeur && (
+                    <div className="bg-indigo-950/40 border border-indigo-700/40 rounded-xl p-4">
+                      <p className="text-xs font-semibold text-indigo-300 mb-2 flex items-center gap-1"><Brain className="h-3.5 w-3.5" /> Conclusion instructeur</p>
+                      <p className="text-sm text-indigo-100 leading-relaxed">{aiAnalysis.conclusionInstructeur}</p>
+                    </div>
+                  )}
+                </TabsContent>
+
+                {/* Conformité PCA */}
+                <TabsContent value="conformite" className="mt-3 space-y-3">
+                  {aiAnalysis.conformitePCA && (
+                    <>
+                      <div className="flex items-center gap-4 p-4 bg-slate-800/60 rounded-xl border border-slate-700">
+                        <p className="text-3xl font-bold" style={{ color: (aiAnalysis.conformitePCA.score ?? 0) >= 70 ? "#4ade80" : (aiAnalysis.conformitePCA.score ?? 0) >= 50 ? "#fbbf24" : "#f87171" }}>{aiAnalysis.conformitePCA.score ?? "—"}</p>
+                        <div className="flex-1">
+                          <p className="text-xs text-slate-400 mb-1">Score de conformité PCA/PGUI</p>
+                          <Progress value={aiAnalysis.conformitePCA.score} className="h-2" />
+                        </div>
+                      </div>
+                      {aiAnalysis.conformitePCA.proceduresRespectees?.length > 0 && (
+                        <div className="space-y-1.5">
+                          <p className="text-xs font-semibold text-green-400 flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" /> Procédures respectées</p>
+                          {aiAnalysis.conformitePCA.proceduresRespectees.map((p: string, i: number) => (
+                            <div key={i} className="flex gap-2 p-2 bg-green-950/30 border border-green-800/30 rounded-lg text-xs text-green-300"><span className="flex-shrink-0">✓</span><span>{p}</span></div>
+                          ))}
+                        </div>
+                      )}
+                      {aiAnalysis.conformitePCA.proceduresNonRespectees?.length > 0 && (
+                        <div className="space-y-1.5">
+                          <p className="text-xs font-semibold text-red-400 flex items-center gap-1"><XCircle className="h-3.5 w-3.5" /> Procédures non respectées</p>
+                          {aiAnalysis.conformitePCA.proceduresNonRespectees.map((p: string, i: number) => (
+                            <div key={i} className="flex gap-2 p-2 bg-red-950/30 border border-red-800/30 rounded-lg text-xs text-red-300"><span className="flex-shrink-0">✗</span><span>{p}</span></div>
+                          ))}
+                        </div>
+                      )}
+                      {aiAnalysis.conformitePCA.ecartsIdentifies?.length > 0 && (
+                        <div className="space-y-1.5">
+                          <p className="text-xs font-semibold text-amber-400 flex items-center gap-1"><AlertTriangle className="h-3.5 w-3.5" /> Écarts identifiés</p>
+                          {aiAnalysis.conformitePCA.ecartsIdentifies.map((e: string, i: number) => (
+                            <div key={i} className="flex gap-2 p-2 bg-amber-950/30 border border-amber-800/30 rounded-lg text-xs text-amber-300"><span className="flex-shrink-0">→</span><span>{e}</span></div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </TabsContent>
+
+                {/* Injects */}
+                <TabsContent value="injects" className="mt-3 space-y-2">
+                  {aiAnalysis.analyseInjects?.length > 0 ? aiAnalysis.analyseInjects.map((inj: any, i: number) => (
+                    <div key={i} className="border border-slate-700 rounded-xl p-3 bg-slate-800/40">
+                      <div className="flex items-start gap-3">
+                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${(inj.conformitePlan ?? 0) >= 70 ? "bg-green-900 text-green-300" : (inj.conformitePlan ?? 0) >= 40 ? "bg-amber-900 text-amber-300" : "bg-red-900 text-red-300"}`}>{inj.conformitePlan ?? "—"}</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-white">{inj.titre} <span className="text-xs text-slate-500 font-normal">({inj.type})</span></p>
+                          <p className="text-xs text-slate-400 mt-1">{inj.reponseEquipe}</p>
+                          {inj.proceduреApplicable && <p className="text-[10px] text-violet-400 font-mono mt-1 italic">📋 {inj.proceduреApplicable}</p>}
+                          {inj.ecart && <p className="text-[10px] text-red-400 mt-1 flex items-center gap-1"><AlertTriangle className="h-3 w-3" />{inj.ecart}</p>}
+                        </div>
+                      </div>
+                    </div>
+                  )) : <p className="text-center text-slate-500 text-sm py-8">Aucune analyse d'inject disponible</p>}
+                </TabsContent>
+
+                {/* Participants */}
+                <TabsContent value="participants" className="mt-3 space-y-2">
+                  {aiAnalysis.analyseParticipants?.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      {aiAnalysis.analyseParticipants.map((p: any, i: number) => (
+                        <div key={i} className="border border-slate-700 bg-slate-800/40 rounded-xl p-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                              style={{ background: (p.scoreGlobal ?? 0) >= 70 ? "#166534" : (p.scoreGlobal ?? 0) >= 50 ? "#92400e" : "#991b1b" }}>
+                              {p.nom?.split(" ").map((n: string) => n[0]).join("").substring(0, 2)}
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold text-white leading-tight">{p.nom}</p>
+                              <p className="text-[10px] text-slate-400">{p.role}</p>
+                            </div>
+                            <span className="text-lg font-bold" style={{ color: (p.scoreGlobal ?? 0) >= 70 ? "#4ade80" : (p.scoreGlobal ?? 0) >= 50 ? "#fbbf24" : "#f87171" }}>{p.scoreGlobal ?? "—"}</span>
+                          </div>
+                          {p.conformiteRole && <p className="text-[10px] text-slate-400 italic mb-1">{p.conformiteRole}</p>}
+                          <div className="flex flex-wrap gap-1">
+                            {p.pointsForts?.map((f: string, j: number) => <span key={j} className="text-[10px] bg-green-900/40 text-green-300 px-1.5 py-0.5 rounded-full">✓ {f}</span>)}
+                            {p.pointsAmeliorer?.map((a: string, j: number) => <span key={j} className="text-[10px] bg-amber-900/40 text-amber-300 px-1.5 py-0.5 rounded-full">→ {a}</span>)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : <p className="text-center text-slate-500 text-sm py-8">Aucune analyse participant disponible</p>}
+                </TabsContent>
+
+                {/* Plan d'action */}
+                <TabsContent value="actions" className="mt-3 space-y-3">
+                  {aiAnalysis.recommandations?.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold text-blue-300 flex items-center gap-2"><Target className="h-4 w-4" /> Plan d'amélioration</p>
+                      {aiAnalysis.recommandations.map((r: any, i: number) => (
+                        <div key={i} className="border border-slate-700 bg-slate-800/40 rounded-xl p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-sm font-semibold text-white">{r.domaine}</span>
+                            <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-bold ${r.echeance === "IMMEDIAT" ? "bg-red-900 text-red-300" : r.echeance === "1_MOIS" ? "bg-orange-900 text-orange-300" : r.echeance === "3_MOIS" ? "bg-amber-900 text-amber-300" : "bg-blue-900 text-blue-300"}`}>{r.echeance?.replace("_", " ")}</span>
+                          </div>
+                          <p className="text-xs text-slate-400">{r.action}</p>
+                          {r.referencePCA && <p className="text-[10px] text-violet-400 font-mono mt-1 italic">📋 {r.referencePCA}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {aiAnalysis.prochainExercice && (
+                    <div className="border-2 border-dashed border-indigo-700/50 bg-indigo-950/20 rounded-xl p-4">
+                      <p className="text-sm font-semibold text-indigo-300 flex items-center gap-2 mb-2"><Star className="h-4 w-4" /> Prochain exercice</p>
+                      {aiAnalysis.prochainExercice.focusPrioritaire?.map((f: string, i: number) => (
+                        <div key={i} className="flex items-start gap-2 text-xs text-indigo-200 mb-1"><ChevronRight className="h-3 w-3 mt-0.5 flex-shrink-0" /><span>{f}</span></div>
+                      ))}
+                      {aiAnalysis.prochainExercice.scenariosRecommandes?.map((s: string, i: number) => (
+                        <div key={i} className="flex items-start gap-2 text-xs text-indigo-300 mb-1"><Zap className="h-3 w-3 mt-0.5 flex-shrink-0" /><span>{s}</span></div>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-slate-700 px-5 py-3 flex justify-between items-center flex-shrink-0 bg-slate-900">
+          <p className="text-[10px] text-slate-500">
+            {aiAnalysis?.meta?.generatedAt ? `Généré le ${new Date(aiAnalysis.meta.generatedAt).toLocaleString("fr-FR")}` : ""}
+          </p>
+          <Button size="sm" variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-800" onClick={() => setIsAIOpen(false)}>Fermer</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
