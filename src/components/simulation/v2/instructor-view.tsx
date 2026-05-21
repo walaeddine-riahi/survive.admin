@@ -26,6 +26,7 @@ import InstructorCrisisLogMonitor from "./instructor-crisis-log";
 import FormSynthesisView from "./form-synthesis";
 import ChatPanel from "./chat-panel";
 import InstructorExternalActorsMonitor from "./instructor-external-actors";
+import InstructorNotesPanel from "./instructor-notes-panel";
 import {
   sendSimMessage, updateSessionStatus, initiateCall,
   updateCall, logSimEvent, addExternalActor,
@@ -835,6 +836,7 @@ export default function InstructorView({
                 { key: "externes", label: "Acteurs Externes", count: 0, icon: Radio },
                 { key: "crisis_log", label: "Main Courante", count: 0, icon: Shield },
                 { key: "forms", label: "Formulaires", count: 0, icon: ListTodo },
+                { key: "notes", label: "Notes", count: 0, icon: FileText },
               ].map(tab => {
                 const TabIcon = tab.icon;
                 const isActive = activeTab === tab.key;
@@ -1033,6 +1035,14 @@ export default function InstructorView({
             {activeTab === "forms" && (
               <FormSynthesisView sessionId={session.id} />
             )}
+
+            {/* NOTES TAB */}
+            {activeTab === "notes" && (
+              <InstructorNotesPanel 
+                sessionId={session.id} 
+                sessionTitle={session.title}
+              />
+            )}
           </div>
         </div>
 
@@ -1044,6 +1054,7 @@ export default function InstructorView({
               Main Courante V2
             </p>
             <p className="text-[10px] text-gray-500 font-semibold tracking-wider uppercase mt-0.5">Activité de l'exercice</p>
+            <p className="text-[10px] text-gray-400 mt-1">{events.length} événement{events.length > 1 ? "s" : ""}</p>
           </div>
           
           <div className="relative pl-1">
@@ -1051,7 +1062,7 @@ export default function InstructorView({
             <div className="absolute left-3 top-2 bottom-2 w-px bg-slate-800" />
             
             <div className="space-y-4">
-              {events.slice(0, 30).map((event: Event) => (
+              {events.map((event: Event) => (
                 <div key={event.id} className="relative flex gap-4 pl-7 text-xs group">
                   {/* Bullet */}
                   <div className="absolute left-[9px] top-1.5 w-2 h-2 rounded-full bg-orange-600/30 border border-orange-500 shadow-sm transition-transform duration-300 group-hover:scale-125" />
